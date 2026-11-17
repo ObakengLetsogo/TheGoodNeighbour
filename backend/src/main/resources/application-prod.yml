@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${TGN_DB_URL:jdbc:postgresql://localhost:5432/tgn}
+    username: ${TGN_DB_USER:tgn}
+    password: ${TGN_DB_PASSWORD}
+  jpa:
+    hibernate:
+      # TODO before launch: replace schema auto-update with Flyway/Liquibase migrations.
+      ddl-auto: update
+
+tgn:
+  seed-sample-catalog: ${TGN_SEED_SAMPLE_CATALOG:false}
