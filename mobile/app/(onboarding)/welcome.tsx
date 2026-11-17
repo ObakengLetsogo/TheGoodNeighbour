@@ -24,7 +24,7 @@ export default function Welcome() {
       <View style={[styles.blob, { backgroundColor: colors.olive, bottom: 120, left: -120, opacity: 0.08, width: 300, height: 300 }]} />
 
       <Animated.View style={[styles.hero, { opacity: fade, transform: [{ translateY: rise }] }]}>
-        <Logo size={96} showName />
+        <Logo size={132} showName />
         <View style={styles.rule} />
         <Text style={styles.tagline}>Here when it matters.</Text>
         <Text variant="body" color={colors.muted} style={styles.support}>

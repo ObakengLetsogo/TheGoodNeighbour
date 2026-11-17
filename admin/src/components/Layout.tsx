@@ -1,16 +1,14 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth';
 
+/** The TGN mark, from brand/logo-mark.svg. */
 function Mark() {
   return (
-    <svg width="30" height="30" viewBox="0 0 80 80" aria-hidden="true">
-      <circle cx="30" cy="12" r="7" fill="#D45B38" /><circle cx="55" cy="20" r="7" fill="#4A5728" />
-      <path d="M42 64 V46 A15 15 0 0 1 72 46 V64" stroke="#4A5728" strokeWidth="8" strokeLinecap="round" fill="none" />
-      <path d="M10 64 V42 A17 17 0 0 1 44 42" stroke="#D45B38" strokeWidth="8" strokeLinecap="round" fill="none" />
-      <path d="M42 52 V46" stroke="#4A5728" strokeWidth="8" strokeLinecap="round" fill="none" />
-    </svg>
+    <svg height="34" viewBox="12 12 406 462" aria-hidden="true" dangerouslySetInnerHTML={{ __html: MARK }} />
   );
 }
+
+const MARK = `<circle cx="111" cy="60" r="43" fill="#E05A19"/><circle cx="310" cy="114" r="39" fill="#4A5728"/><path d="M319 392L370.9 441Q395.8 464.5 395.8 430.2L395.8 294.5A115 115 0 0 0 165.8 294.5L165.8 294.5A84.5 84.5 0 0 0 324.5 334.8" stroke="#4A5728" fill="none" stroke-width="36.2" stroke-linejoin="round"/><circle cx="324.5" cy="334.8" r="18.1" fill="#4A5728"/><path d="M118.5 327.5L60.9 380.5Q35.8 403.8 35.8 369.5L35.8 236.2A112.8 112.8 0 0 1 261.2 236.2L261.2 236.2A77.5 77.5 0 0 1 108.9 256.3" stroke="#E05A19" fill="none" stroke-width="36.2" stroke-linejoin="round"/><circle cx="108.9" cy="256.3" r="18.1" fill="#E05A19"/><clipPath id="tgn-weave"><circle cx="167" cy="311" r="38"/></clipPath><path d="M319 392L370.9 441Q395.8 464.5 395.8 430.2L395.8 294.5A115 115 0 0 0 165.8 294.5L165.8 294.5A84.5 84.5 0 0 0 324.5 334.8" stroke="#4A5728" fill="none" stroke-width="36.2" stroke-linejoin="round" clip-path="url(#tgn-weave)"/>`;
 
 const NAV = [
   { to: '/', label: 'Dashboard', end: true },

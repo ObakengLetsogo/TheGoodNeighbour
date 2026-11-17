@@ -1,32 +1,47 @@
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, Path } from 'react-native-svg';
 import { View } from 'react-native';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
 import { Text } from './Text';
 
-/** Two interlocking neighbours: Ember Orange and Olive. */
+/**
+ * The TGN mark: two neighbours (Ember Orange and Olive) as interlocking speech-bubble figures.
+ * Geometry was traced from the approved logo artwork; the orange passes over the olive at the top
+ * and the olive passes back over the orange at the bottom left.
+ */
+export const LOGO_ORANGE = '#E05A19';
+export const LOGO_OLIVE = '#4A5728';
+const ORANGE_PATH = 'M118.5 327.5L60.9 380.5Q35.8 403.8 35.8 369.5L35.8 236.2A112.8 112.8 0 0 1 261.2 236.2L261.2 236.2A77.5 77.5 0 0 1 108.9 256.3';
+const OLIVE_PATH = 'M319 392L370.9 441Q395.8 464.5 395.8 430.2L395.8 294.5A115 115 0 0 0 165.8 294.5L165.8 294.5A84.5 84.5 0 0 0 324.5 334.8';
+
+/** @param size height in px; width follows the artwork's proportions. */
 export function LogoMark({ size = 72 }: { size?: number }) {
+  const w = (size * 406) / 462;
+  const stroke = { fill: 'none' as const, strokeWidth: 36.2, strokeLinejoin: 'round' as const };
   return (
-    <Svg width={size} height={size} viewBox="0 0 80 80" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Circle cx={30} cy={12} r={7} fill={colors.ember} />
-      <Circle cx={55} cy={20} r={7} fill={colors.olive} />
-      {/* olive neighbour (behind) */}
-      <Path d="M42 64 V46 A15 15 0 0 1 72 46 V64" stroke={colors.olive} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      {/* ember neighbour */}
-      <Path d="M10 64 V42 A17 17 0 0 1 44 42" stroke={colors.ember} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      {/* weave: olive passes back over ember */}
-      <Path d="M42 52 V46" stroke={colors.olive} strokeWidth={8} strokeLinecap="round" fill="none" />
+    <Svg width={w} height={size} viewBox="12 12 406 462" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Defs>
+        <ClipPath id="tgn-weave"><Circle cx={167} cy={311} r={38} /></ClipPath>
+      </Defs>
+      <Circle cx={111} cy={60} r={43} fill={LOGO_ORANGE} />
+      <Circle cx={310} cy={114} r={39} fill={LOGO_OLIVE} />
+      <Path d={OLIVE_PATH} stroke={LOGO_OLIVE} {...stroke} />
+      <Circle cx={324.5} cy={334.8} r={18.1} fill={LOGO_OLIVE} />
+      <Path d={ORANGE_PATH} stroke={LOGO_ORANGE} {...stroke} />
+      <Circle cx={108.9} cy={256.3} r={18.1} fill={LOGO_ORANGE} />
+      <Path d={OLIVE_PATH} stroke={LOGO_OLIVE} {...stroke} clipPath="url(#tgn-weave)" />
     </Svg>
   );
 }
 
+/** Full lockup: mark, TGN, The Good Neighbour. (The rule and tagline are added by the splash/welcome screens.) */
 export function Logo({ size = 72, showName = false, align = 'center' }: { size?: number; showName?: boolean; align?: 'center' | 'flex-start' }) {
   return (
     <View style={{ alignItems: align, gap: spacing.sm }} accessible accessibilityLabel="TGN, The Good Neighbour">
       <LogoMark size={size} />
-      <Text variant="display" style={{ fontSize: size * 0.62, lineHeight: size * 0.68, letterSpacing: -2 }}>TGN</Text>
+      <Text variant="display" style={{ fontFamily: 'Urbanist_900Black', fontSize: size * 0.79, lineHeight: size * 0.76, letterSpacing: -size * 0.03 }}>TGN</Text>
       {showName ? (
-        <Text variant="body" style={{ fontSize: 17 }}>
-          The <Text variant="cardTitle" style={{ fontFamily: 'Urbanist_800ExtraBold' }}>Good</Text>Neighbour
+        <Text variant="body" style={{ fontSize: Math.max(16, size * 0.235), letterSpacing: -0.4 }}>
+          The <Text variant="cardTitle" style={{ fontFamily: 'Urbanist_800ExtraBold', fontSize: Math.max(16, size * 0.235) }}>Good</Text>Neighbour
         </Text>
       ) : null}
     </View>

@@ -1,5 +1,5 @@
 import {
-  Urbanist_400Regular, Urbanist_500Medium, Urbanist_600SemiBold, Urbanist_700Bold, Urbanist_800ExtraBold,
+  Urbanist_400Regular, Urbanist_500Medium, Urbanist_600SemiBold, Urbanist_700Bold, Urbanist_800ExtraBold, Urbanist_900Black,
 } from '@expo-google-fonts/urbanist';
 import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { useFonts } from 'expo-font';
@@ -19,7 +19,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function Routes() {
   const { ready, user } = useAuth();
   const [fontsLoaded, fontError] = useFonts({
-    Urbanist_400Regular, Urbanist_500Medium, Urbanist_600SemiBold, Urbanist_700Bold, Urbanist_800ExtraBold,
+    Urbanist_400Regular, Urbanist_500Medium, Urbanist_600SemiBold, Urbanist_700Bold, Urbanist_800ExtraBold, Urbanist_900Black,
     InstrumentSerif_400Regular_Italic,
   });
   const done = ready && (fontsLoaded || !!fontError);
