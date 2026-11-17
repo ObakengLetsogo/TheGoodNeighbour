@@ -4,9 +4,9 @@ import { label } from '../format';
 const DOT: Record<string, string> = { olive: 'var(--olive)', ember: 'var(--ember)', gold: 'var(--gold)', berry: 'var(--berry)' };
 
 /** The TGN folder-tab card. */
-export function Card({ tab, accent = 'olive', children, style }: { tab?: string; accent?: keyof typeof DOT; children: ReactNode; style?: CSSProperties }) {
+export function Card({ tab, accent = 'olive', children, style, tint }: { tab?: string; accent?: keyof typeof DOT; children: ReactNode; style?: CSSProperties; tint?: boolean }) {
   return (
-    <section className="card" style={{ ...style, ['--dot' as string]: DOT[accent] }}>
+    <section className={`card${tint ? ' tinted' : ''}`} data-accent={accent} style={{ ...style, ['--dot' as string]: DOT[accent] }}>
       {tab ? <span className="tab">{tab}</span> : null}
       {children}
     </section>
@@ -14,13 +14,13 @@ export function Card({ tab, accent = 'olive', children, style }: { tab?: string;
 }
 
 const TONE: Record<string, string> = {
-  active: 'ok', approved: 'ok', paid: 'ok', under_review: 'ok',
+  active: 'ok', approved: 'ok', delivered: 'ok', under_review: 'ok',
   pending_review: 'warn', submitted: 'warn', lapsed: 'warn',
   declined: 'bad', cancelled: 'bad',
 };
 export const STATUS_LABEL: Record<string, string> = {
   pending_review: 'Pending Review', approved: 'Approved', active: 'Active', lapsed: 'Lapsed', declined: 'Declined', cancelled: 'Cancelled',
-  submitted: 'Submitted', under_review: 'Under Review', paid: 'Paid',
+  submitted: 'Submitted', under_review: 'Under Review', delivered: 'Provisions Delivered',
 };
 export function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${TONE[status] ?? ''}`}>{STATUS_LABEL[status] ?? label(status)}</span>;

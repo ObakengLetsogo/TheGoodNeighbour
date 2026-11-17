@@ -14,7 +14,8 @@ const NAV = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/policies', label: 'Policies' },
   { to: '/claims', label: 'Claims' },
-  { to: '/plans', label: 'Plans & Pricing' },
+  { to: '/cover', label: 'Cover & Pricing' },
+  { to: '/herd', label: 'Herd & Capacity' },
   { to: '/audit', label: 'Audit Log' },
 ];
 

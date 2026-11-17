@@ -2,8 +2,9 @@
 
 *Here when it matters.*
 
-Funeral plans for South African families: choose a plan, add family members for a small monthly fee each,
-pay monthly by debit order, and claim when it matters. Three independent projects live in this repo
+Funeral cover for South African families, paid as a monthly subscription. The customer builds their own
+cover (a grocery hamper, sheep, a cow), adds family members, pays monthly by debit order, and when someone
+passes away the bundle is delivered to the family. Three independent projects live in this repo
 (it is **not** a monorepo: no shared workspace tooling, each has its own dependencies and build).
 
 ```
@@ -30,19 +31,39 @@ cd admin && npm install && npm run dev            # VITE_API_BASE_URL defaults t
 On a physical phone, set `EXPO_PUBLIC_API_BASE_URL` to your computer's LAN address. Environment variables are
 listed in `mobile/.env.example`, `admin/.env.example` and `backend/src/main/resources/application.yml`.
 
-## How a plan works
+## How it works
 
-1. A customer applies (ID number, debit date, family members). The server prices it and stores it as **pending review**.
-2. Staff review it in the admin dashboard and **approve** or **decline** it (a reason is required to decline).
-3. Cover becomes **active only when a first payment covering the monthly total is recorded**, by the payment provider
-   integration or by staff recording money that really arrived. The waiting period starts then.
-4. Family members can be added or removed (each with a fee, age limits and a per-person waiting period).
-5. Claims are submitted in the app and worked through submitted → under review → approved → paid by staff.
-   Claims inside a waiting period are flagged.
+1. **Build.** The customer picks one grocery hamper (the full grocery list is shown), 0 to 3 sheep and 0 to 2 cows. The server prices it live.
+2. **Apply.** ID number, debit date and family members. Every member needs a **relationship** to the main member
+   (spouse, child, parent, parent-in-law, grandparent, sibling, other) and an **ID number** (optional for under 16s).
+3. **Review.** Staff approve or decline (a reason is required to decline).
+4. **Cover starts** only when a first payment covering the monthly total is recorded, by the payment provider
+   integration or by staff recording money that really arrived. Never from the app.
+5. **Claim.** The family submits cause of death and delivery details. Staff work it: submitted, under review, approved, provisions delivered.
 
-Plans, premiums, family-member fees, cover, age limits and waiting periods are **data**, edited in the admin
-dashboard (audited), never hard-coded. **All sample numbers are placeholders**: real pricing and rules must
-come from your underwriter.
+### Business rules (current defaults)
+
+Every number below is **data** edited in the admin dashboard (Cover & Pricing), audited, and is a **placeholder
+until your underwriter signs it off**.
+
+| Rule | Default |
+|---|---|
+| One bundle per death | The bundle in force is delivered, whoever on the cover passes away |
+| Monthly price (main member) | Bundle cost to the company × **1.6%** |
+| Family member fee | Main member's price × relationship %: spouse 100, child 40, parent 150, parent-in-law 150, grandparent 180, sibling 110, other 130 |
+| Minimum bundle | Worth at least R2 500 |
+| Main member | Joins 18 to 65, cover ends at 85 |
+| Joining ages | Spouse 18–65, child 0–21, parents and in-laws and grandparents 18–75, sibling and other 18–65 |
+| Cover ends | Children 24, parents/in-laws/grandparents 90, others 85 (over-age claims are flagged) |
+| Max family | 10 people; per relationship: 1 spouse, 6 children, 2 parents, 2 in-laws, 2 grandparents, 3 siblings, 3 other |
+| ID number | Required from age 16; checked (Luhn and date of birth), unique on the cover |
+| Waiting period | 180 days natural causes; none for accidents; people added later get their own 180 days |
+| Upgrade | The increase only pays out after 180 days; the earlier bundle stays payable meanwhile (accidents: immediate) |
+| Downgrade | Applies immediately |
+| Missed payments | Lapses after 2 missed (staff action until collections exist); reinstate within 90 days without a new waiting period |
+| Yearly increase | Reviewed yearly, capped at 10%, with notice |
+| Livestock | From your own farm. A herd guard stops selling more animal promises than **herd size × 25**, so a bundle that can't be honoured is never offered |
+| Preparation | Slaughter and dressing is separate and not included |
 
 ## Security and payments
 
@@ -61,7 +82,8 @@ come from your underwriter.
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).
   Lapsing is a manual staff action until collections exist.
 - Database migrations (Flyway/Liquibase), staff roles beyond a single admin role, SMS/OTP login, push notifications.
-- Document uploads for claims, beneficiaries, and policy documents.
+- Document uploads for claims, and policy documents.
+- Scheduling and tracking of livestock deliveries and herd movements (the herd is a count plus a promise limit).
 - Brand photography/illustration beyond the logo mark.
 
 ## Before you sell cover (not legal advice)

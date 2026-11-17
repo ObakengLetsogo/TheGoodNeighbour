@@ -20,13 +20,13 @@ export function PoliciesPage() {
       <Card tab={`${data?.length ?? 0} policies`}>
         {loading ? <Loading /> : error ? <ErrorBox message={error} onRetry={reload} /> : !data?.length ? <Empty>No policies here yet.</Empty> : (
           <table>
-            <thead><tr><th>Reference</th><th>Customer</th><th>Plan</th><th>Status</th><th className="num">Monthly</th><th className="num">Family</th><th>Applied</th></tr></thead>
+            <thead><tr><th>Reference</th><th>Customer</th><th className="num">Bundle worth</th><th>Status</th><th className="num">Monthly</th><th className="num">Family</th><th>Applied</th></tr></thead>
             <tbody>
               {data.map(({ policy: p, customer: c }) => (
                 <tr key={p.id} className="click" tabIndex={0} onClick={() => navigate(`/policies/${p.id}`)} onKeyDown={(e) => e.key === 'Enter' && navigate(`/policies/${p.id}`)}>
                   <td><strong>{p.reference}</strong></td>
                   <td>{p.holder.name}<div className="muted small">{c ? displayPhone(c.phone) : ''}</div></td>
-                  <td>{p.planName}</td>
+                  <td className="num">{zar(p.bundle.bundleValueCents)}</td>
                   <td><StatusBadge status={p.status} /></td>
                   <td className="num">{zar(p.monthlyTotalCents)}</td>
                   <td className="num">{p.members.length}</td>

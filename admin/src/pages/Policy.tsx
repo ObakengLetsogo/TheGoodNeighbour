@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
 import { dateShort, displayPhone, label, ordinal, today, zar } from '../format';
-import type { AdminPolicy } from '../types';
+import type { AdminPolicy, BundleLine } from '../types';
 
 export function PolicyPage() {
   const { id = '' } = useParams();
@@ -44,7 +44,7 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         <div>
           <Link to="/policies" className="small">← Policies</Link>
           <h1>{p.reference} <StatusBadge status={p.status} /></h1>
-          <p className="muted">{p.planName} · {zar(p.coverCents)} cover · applied {dateShort(p.createdAt)}</p>
+          <p className="muted">{zar(p.bundle.bundleValueCents)} bundle · {zar(p.monthlyTotalCents)} a month · applied {dateShort(p.createdAt)}</p>
         </div>
       </div>
       {msg ? <p className={msg.ok ? 'ok-msg' : 'err'} role="status">{msg.text}</p> : null}
@@ -62,6 +62,7 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         </Card>
         <Card tab="Billing" accent="gold">
           <dl className="dl">
+            <dt>Main member</dt><dd>{zar(p.baseMonthlyCents)}</dd>
             <dt>Every month</dt><dd>{zar(p.monthlyTotalCents)}</dd>
             <dt>Debit day</dt><dd>The {ordinal(p.debitDay)}</dd>
             <dt>Debit order</dt><dd>{label(p.mandateStatus)}</dd>
@@ -71,6 +72,21 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
           </dl>
         </Card>
       </div>
+
+      <Card tab={`Bundle (version ${p.bundle.version})`} accent="ember">
+        <BundleList lines={p.bundle.lines} />
+        {p.bundle.upgradeWaitingEndsOn ? <p className="muted small">The increase in this version only applies to natural-cause claims from {dateShort(p.bundle.upgradeWaitingEndsOn)}. Before then the previous version applies.</p> : null}
+        {p.bundleHistory.length > 1 ? (
+          <details style={{ marginTop: 10 }}><summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>Bundle history ({p.bundleHistory.length} versions)</summary>
+            <table style={{ marginTop: 8 }}>
+              <thead><tr><th>Version</th><th>From</th><th>Waiting ends</th><th className="num">Worth</th><th>Items</th></tr></thead>
+              <tbody>{p.bundleHistory.map((v) => (
+                <tr key={v.version}><td>{v.version}</td><td>{dateShort(v.effectiveFrom)}</td><td>{dateShort(v.upgradeWaitingEndsOn)}</td><td className="num">{zar(v.bundleValueCents)}</td><td className="small">{v.lines.map((l) => `${l.quantity}× ${l.name}`).join(', ')}</td></tr>
+              ))}</tbody>
+            </table>
+          </details>
+        ) : null}
+      </Card>
 
       <Card tab="Decision" accent="ember">
         {p.status === 'pending_review' ? (
@@ -100,9 +116,9 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
       <Card tab={`Family (${p.members.length})`} accent="ember">
         {p.members.length === 0 ? <Empty>No family members on this plan.</Empty> : (
           <table>
-            <thead><tr><th>Name</th><th>Relationship</th><th>ID number</th><th>Born</th><th className="num">Fee</th><th className="num">Cover</th><th>Covered from</th></tr></thead>
+            <thead><tr><th>Name</th><th>Relationship to member</th><th>ID number</th><th>Born</th><th className="num">Monthly fee</th><th>Covered from</th></tr></thead>
             <tbody>{p.members.map((m) => (
-              <tr key={m.id}><td>{m.fullName}</td><td>{label(m.type)}</td><td>{m.idNumber ?? '–'}</td><td>{dateShort(m.dateOfBirth)}</td><td className="num">{zar(m.feeCents)}</td><td className="num">{zar(m.coverCents)}</td><td>{dateShort(m.coverStartsOn)}</td></tr>
+              <tr key={m.id}><td>{m.fullName}</td><td>{label(m.relationship)}</td><td>{m.idNumber ?? '–'}</td><td>{dateShort(m.dateOfBirth)}</td><td className="num">{zar(m.feeCents)}</td><td>{dateShort(m.coverStartsOn)}</td></tr>
             ))}</tbody>
           </table>
         )}
@@ -131,5 +147,24 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         ) : null}
       </Card>
     </>
+  );
+}
+
+export function BundleList({ lines }: { lines: BundleLine[] }) {
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {lines.map((l) => (
+        <div key={l.itemId}>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <strong>{l.quantity > 1 ? `${l.quantity} × ` : ''}{l.name}</strong><span>{zar(l.valueCents)}</span>
+          </div>
+          {l.contents.length ? (
+            <details><summary className="small muted" style={{ cursor: 'pointer' }}>Grocery list ({l.contents.length} items)</summary>
+              <ul className="small" style={{ margin: '6px 0 0', paddingLeft: 20 }}>{l.contents.map((c) => <li key={c}>{c}</li>)}</ul>
+            </details>
+          ) : null}
+        </div>
+      ))}
+    </div>
   );
 }

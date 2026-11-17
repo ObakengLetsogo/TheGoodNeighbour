@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
 import { dateShort, displayPhone } from '../format';
+import { BundleList } from './Policy';
 import type { Claim } from '../types';
 
 const NEXT: Record<string, { status: string; label: string; needsNote?: boolean; tone?: 'danger' }[]> = {
   submitted: [{ status: 'under_review', label: 'Start Review' }, { status: 'declined', label: 'Decline…', needsNote: true, tone: 'danger' }],
   under_review: [{ status: 'approved', label: 'Approve' }, { status: 'declined', label: 'Decline…', needsNote: true, tone: 'danger' }],
-  approved: [{ status: 'paid', label: 'Mark As Paid' }],
+  approved: [{ status: 'delivered', label: 'Mark As Delivered' }],
 };
 
 export function ClaimsPage() {
@@ -20,7 +21,7 @@ export function ClaimsPage() {
       <Card tab={`${data?.length ?? 0} claims`} accent="berry">
         {loading ? <Loading /> : error ? <ErrorBox message={error} onRetry={reload} /> : !data?.length ? <Empty>No claims yet.</Empty> : (
           <table>
-            <thead><tr><th>Reference</th><th>Deceased</th><th>Passed away</th><th>Policy</th><th>Status</th><th>Flags</th></tr></thead>
+            <thead><tr><th>Reference</th><th>Deceased</th><th>Passed away</th><th>Cause</th><th>Policy</th><th>Status</th><th>Flags</th></tr></thead>
             <tbody>{data.map((c) => (
               <ClaimRows key={c.id} c={c} open={open === c.id} onToggle={() => setOpen(open === c.id ? undefined : c.id)} onChange={replace} />
             ))}</tbody>
@@ -44,12 +45,26 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
   return (
     <>
       <tr className="click" onClick={onToggle} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onToggle()} aria-expanded={open}>
-        <td><strong>{c.reference}</strong></td><td>{c.deceasedName}</td><td>{dateShort(c.dateOfDeath)}</td><td>{c.policyReference}</td>
+        <td><strong>{c.reference}</strong></td><td>{c.deceasedName}</td><td>{dateShort(c.dateOfDeath)}</td><td>{c.causeOfDeath === 'accidental' ? 'Accident' : 'Natural'}</td><td>{c.policyReference}</td>
         <td><StatusBadge status={c.status} /></td>
-        <td>{c.withinWaitingPeriod ? <span className="badge warn">Within waiting period</span> : null}</td>
+        <td>{c.withinWaitingPeriod ? <span className="badge warn">{c.causeOfDeath === 'accidental' ? 'Before cover started' : 'Within waiting period'}</span> : null}{c.overAgeLimit ? <span className="badge bad" style={{ marginLeft: 6 }}>Over age limit</span> : null}</td>
       </tr>
       {open ? (
-        <tr><td colSpan={6} style={{ background: 'var(--bg)' }}>
+        <tr><td colSpan={7} style={{ background: 'var(--bg)' }}>
+          <div className="grid two" style={{ marginBottom: 12 }}>
+            <div>
+              <h3>What to deliver (bundle version {c.bundle.version})</h3>
+              <BundleList lines={c.bundle.lines} />
+            </div>
+            <div>
+              <h3>Deliver to</h3>
+              <dl className="dl" style={{ marginTop: 8 }}>
+                <dt>Recipient</dt><dd>{c.delivery.recipientName} · {displayPhone(c.delivery.recipientPhone)}</dd>
+                <dt>Address</dt><dd>{c.delivery.addressLine}, {c.delivery.suburb}<br />{c.delivery.city}, {c.delivery.province} {c.delivery.postalCode}</dd>
+                {c.delivery.instructions ? <><dt>Instructions</dt><dd>{c.delivery.instructions}</dd></> : null}
+              </dl>
+            </div>
+          </div>
           <dl className="dl" style={{ marginBottom: 12 }}>
             <dt>Claimant</dt><dd>{c.claimantName} · {displayPhone(c.claimantPhone)}</dd>
             <dt>Submitted</dt><dd>{dateShort(c.createdAt)}</dd>

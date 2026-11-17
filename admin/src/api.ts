@@ -1,4 +1,4 @@
-import type { AdminPolicy, AuditEvent, Claim, Dashboard, Plan, Session, Staff } from './types';
+import type { AdminPolicy, AuditEvent, BenefitItem, Claim, CoverConfig, Dashboard, Herd, Session, Staff } from './types';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
 const TOKEN_KEY = 'tgn.admin.token';
@@ -51,11 +51,13 @@ export const api = {
     request<AdminPolicy>(`/policies/${id}/payments`, post({ amountCents, paidOn, reference })),
   claims: () => request<Claim[]>('/claims'),
   setClaimStatus: (id: string, status: string, note?: string) => request<Claim>(`/claims/${id}/status`, post({ status, note })),
-  plans: () => request<Plan[]>('/plans'),
-  updatePlan: (p: Plan) => request<Plan>(`/plans/${p.id}`, {
+  cover: () => request<CoverConfig>('/cover'),
+  updateCover: (c: CoverConfig) => request<CoverConfig>('/cover', { method: 'PUT', body: JSON.stringify(c) }),
+  benefits: () => request<BenefitItem[]>('/benefits'),
+  updateBenefit: (i: BenefitItem) => request<BenefitItem>(`/benefits/${i.id}`, {
     method: 'PUT',
-    body: JSON.stringify({ name: p.name, description: p.description, coverCents: p.coverCents, premiumCents: p.premiumCents,
-      waitingPeriodDays: p.waitingPeriodDays, minAge: p.minAge, maxAge: p.maxAge, active: p.active, memberRules: p.memberRules }),
+    body: JSON.stringify({ name: i.name, description: i.description, valueCents: i.valueCents, costCents: i.costCents, maxQty: i.maxQty, active: i.active, onFarm: i.kind === 'livestock' ? i.onFarm ?? 0 : null, contents: i.contents }),
   }),
+  herd: () => request<Herd[]>('/herd'),
   audit: () => request<AuditEvent[]>('/audit'),
 };

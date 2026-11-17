@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { Card, ErrorBox, Loading, useLoad } from '../components/ui';
 import { dateTime, zar } from '../format';
+import { HerdCard } from './Herd';
 
 export function DashboardPage() {
   const d = useLoad(api.dashboard);
   const audit = useLoad(api.audit);
+  const herd = useLoad(api.herd);
   return (
     <>
       <div className="page-head"><h1>Good day, <span className="serif">team</span>.</h1></div>
@@ -16,9 +18,15 @@ export function DashboardPage() {
           <Stat tab="Active" n={d.data.active} l="Active policies" to="/policies?status=active" />
           <Stat tab="Lapsed" accent="berry" n={d.data.lapsed} l="Need attention" to="/policies?status=lapsed" />
           <Stat tab="Claims" accent="berry" n={d.data.openClaims} l="Open claims" to="/claims" />
-          <Card tab="Recurring" accent="olive"><div className="stat"><div className="n">{zar(d.data.monthlyRecurringCents)}</div><div className="l">Monthly premiums on active policies</div></div></Card>
+          <Card tab="Recurring" accent="olive" tint><div className="stat"><div className="n">{zar(d.data.monthlyRecurringCents)}</div><div className="l">Monthly premiums on active policies</div></div></Card>
         </div>
       )}
+      {herd.data && herd.data.length > 0 ? (
+        <>
+          <h2 style={{ marginTop: 30 }}>Herd</h2>
+          <div className="grid two">{herd.data.map((h) => <HerdCard key={h.itemId} h={h} />)}</div>
+        </>
+      ) : null}
       <Card tab="Recent activity" accent="gold">
         {audit.loading ? <Loading /> : audit.error ? <p className="err">{audit.error}</p> : (audit.data ?? []).length === 0 ? <p className="muted">Nothing yet.</p> : (
           <table>
@@ -35,7 +43,7 @@ export function DashboardPage() {
 
 function Stat({ tab, n, l, to, accent }: { tab: string; n: number; l: string; to: string; accent?: 'ember' | 'gold' | 'berry' }) {
   return (
-    <Card tab={tab} accent={accent}>
+    <Card tab={tab} accent={accent} tint>
       <Link to={to} style={{ color: 'inherit', textDecoration: 'none' }}><div className="stat"><div className="n">{n}</div><div className="l">{l}</div></div></Link>
     </Card>
   );
