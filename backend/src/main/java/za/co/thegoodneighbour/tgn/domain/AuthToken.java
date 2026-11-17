@@ -10,13 +10,16 @@ public class AuthToken {
     @Id private String tokenHash;
     private String userId;
     private Instant expiresAt;
+    /** True for staff (admin dashboard) tokens. Customer and staff tokens are never interchangeable. */
+    private boolean staff;
 
     protected AuthToken() {}
 
-    public AuthToken(String tokenHash, String userId, Instant expiresAt) {
-        this.tokenHash = tokenHash; this.userId = userId; this.expiresAt = expiresAt;
+    public AuthToken(String tokenHash, String userId, Instant expiresAt, boolean staff) {
+        this.tokenHash = tokenHash; this.userId = userId; this.expiresAt = expiresAt; this.staff = staff;
     }
 
     public String getUserId() { return userId; }
     public Instant getExpiresAt() { return expiresAt; }
+    public boolean isStaff() { return staff; }
 }

@@ -4,75 +4,74 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.util.List;
 
-/** Wire contracts. Field names mirror mobile/src/types so the app can consume them as-is. */
+/** Wire contracts. Customer-facing shapes are mirrored in mobile/src/types and admin/src/types. */
 public final class Dtos {
     private Dtos() {}
 
-    // ---------- Catalogue ----------
-    public record CategoryDto(String id, String name, String group, String accent, String icon, String blurb) {}
-    public record VariantDto(String id, String label, long priceCents, String availability) {}
-    public record ServiceOptionDto(String id, String name, String description, long priceCents) {}
-    public record ProductDto(String id, String categoryId, String kind, String name, String description, String unitLabel,
-                             long priceCents, List<VariantDto> variants, List<ServiceOptionDto> serviceOptions,
-                             String availability, Integer stock, String imageUrl, List<String> includes,
-                             String deliveryInfo, List<String> tags, String supplierId) {}
-    public record PackageLineDto(String productId, String variantId, int quantity, boolean optional) {}
-    public record PackageDto(String id, String name, String description, String accommodates, String accent,
-                             List<String> occasions, List<PackageLineDto> lines, int discountBps, String imageUrl) {}
-    public record DeliveryZoneDto(String province, String provinceCode, long feeCents, String note) {}
-    public record CatalogDto(List<CategoryDto> categories, List<ProductDto> products, List<PackageDto> packages,
-                             List<DeliveryZoneDto> deliveryZones) {}
+    static final String PHONE = "^\\+27[678]\\d{8}$";
+    static final String DATE = "^\\d{4}-\\d{2}-\\d{2}$";
+
+    // ---------- Plans ----------
+    public record MemberRuleDto(@NotBlank String type, @PositiveOrZero long feeCents, @PositiveOrZero long coverCents,
+                                @Min(0) @Max(20) int maxCount, @Min(0) @Max(120) int minAge, @Min(0) @Max(120) int maxAge) {}
+    public record PlanDto(String id, String name, String description, long coverCents, long premiumCents, int waitingPeriodDays,
+                          int minAge, int maxAge, String accent, boolean active, List<MemberRuleDto> memberRules) {}
+    public record PlanUpdate(@NotBlank @Size(max = 100) String name, @Size(max = 1000) String description,
+                             @Positive long coverCents, @Positive long premiumCents, @Min(0) @Max(730) int waitingPeriodDays,
+                             @Min(0) @Max(120) int minAge, @Min(0) @Max(120) int maxAge, boolean active,
+                             @NotNull @Valid List<MemberRuleDto> memberRules) {}
 
     // ---------- Auth ----------
     public record RegisterRequest(
             @NotBlank @Size(min = 2, max = 100) String fullName,
-            @NotBlank @Pattern(regexp = "^\\+27[678]\\d{8}$", message = "Please use a valid South African mobile number.") String phone,
+            @NotBlank @Pattern(regexp = PHONE, message = "Please use a valid South African mobile number.") String phone,
             @Email String email,
             @NotBlank @Size(min = 8, max = 100, message = "Use at least 8 characters.") String password) {}
     public record LoginRequest(@NotBlank String phone, @NotBlank String password) {}
     public record UserDto(String id, String fullName, String phone, String email) {}
     public record SessionDto(UserDto user, String token) {}
     public record ProfileRequest(@NotBlank @Size(min = 2, max = 100) String fullName, @Email String email) {}
+    public record StaffLoginRequest(@NotBlank String email, @NotBlank String password) {}
+    public record StaffDto(String id, String email, String fullName, String role) {}
+    public record StaffSessionDto(StaffDto staff, String token) {}
 
-    // ---------- Orders ----------
-    public record OptionRef(@NotBlank String id) {}
-    /** The client's prices are ignored: the server prices every line from the catalogue. */
-    public record BasketLineIn(@NotBlank String productId, String variantId, List<OptionRef> serviceOptions,
-                               @Min(1) @Max(99) int quantity, String packageInstanceId) {}
-    public record BasketPackageIn(@NotBlank String instanceId, @NotBlank String packageId, String instructions) {}
-    public record BasketIn(@NotEmpty @Valid List<BasketLineIn> lines, List<@Valid BasketPackageIn> packages,
-                           @Size(max = 1000) String notes) {}
-    public record DeliveryIn(
-            @NotBlank @Size(max = 100) String recipientName,
-            @NotBlank @Pattern(regexp = "^\\+27[678]\\d{8}$") String recipientPhone,
-            @NotBlank @Size(max = 200) String addressLine,
-            @NotBlank @Size(max = 100) String suburb,
-            @NotBlank @Size(max = 100) String city,
-            @NotBlank String provinceCode,
-            @Pattern(regexp = "^\\d{4}$", message = "Postal codes have 4 digits.") String postalCode,
-            @NotBlank @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$") String date,
-            @NotBlank @Pattern(regexp = "^(morning|midday|afternoon)$") String window,
-            @Size(max = 1000) String instructions) {}
-    public record NewOrderRequest(@NotNull @Valid BasketIn basket, @NotNull @Valid DeliveryIn delivery) {}
+    // ---------- Policies ----------
+    public record MemberIn(@NotBlank String type, @NotBlank @Size(min = 2, max = 100) String fullName,
+                           @Pattern(regexp = "^\\d{13}$", message = "ID numbers have 13 digits.") String idNumber,
+                           @NotBlank @Pattern(regexp = DATE, message = "Use the format yyyy-mm-dd for dates.") String dateOfBirth) {}
+    public record ApplyRequest(@NotBlank String planId,
+                               @NotBlank @Pattern(regexp = "^\\d{13}$", message = "ID numbers have 13 digits.") String holderIdNumber,
+                               @Min(1) @Max(31) int debitDay, List<@Valid MemberIn> members) {}
+    public record MemberDto(String id, String type, String fullName, String idNumber, String dateOfBirth, long feeCents,
+                            long coverCents, String status, String coverStartsOn) {}
+    public record PaymentDto(String id, long amountCents, String paidOn, String status, String source, String reference) {}
+    public record HolderDto(String name, String idNumber, String dateOfBirth) {}
+    public record PolicyDto(String id, String reference, String planId, String planName, long coverCents, String status,
+                            HolderDto holder, int debitDay, long monthlyTotalCents, String mandateStatus, String createdAt,
+                            String startDate, String waitingEndsOn, String nextDebitDate, List<MemberDto> members,
+                            List<PaymentDto> payments) {}
+    public record DebitOrderState(String state, String message) {}
 
-    public record ServiceOptionLine(String id, String name, long priceCents) {}
-    public record PricedLineDto(String key, String productId, String productName, String kind, String categoryId,
-                                String variantId, String variantLabel, String unitLabel, long unitPriceCents,
-                                List<ServiceOptionLine> serviceOptions, int quantity, String packageInstanceId,
-                                long lineTotalCents) {}
-    public record PricedPackageDto(String instanceId, String packageId, String name, int discountBps, String instructions,
-                                   long subtotalCents, long savingCents) {}
-    public record TotalsDto(long itemsCents, long packageSavingCents, long subtotalCents, Long deliveryCents, Long totalCents) {}
-    public record DeliveryDto(String recipientName, String recipientPhone, String addressLine, String suburb, String city,
-                              String provinceCode, String province, String postalCode, String date, String window,
-                              String instructions) {}
-    public record PlacedByDto(String name, String phone) {}
-    public record OrderDto(String id, String reference, String createdAt, String status, String paymentStatus,
-                           List<PricedLineDto> lines, List<PricedPackageDto> packages, TotalsDto totals,
-                           DeliveryDto delivery, PlacedByDto placedBy, String notes) {}
+    // ---------- Claims ----------
+    public record ClaimIn(@NotBlank String policyId, String memberId,
+                          @NotBlank @Pattern(regexp = DATE) String dateOfDeath,
+                          @NotBlank @Size(min = 2, max = 100) String claimantName,
+                          @NotBlank @Pattern(regexp = PHONE) String claimantPhone) {}
+    public record ClaimDto(String id, String reference, String policyId, String policyReference, String deceasedName,
+                           String dateOfDeath, String claimantName, String claimantPhone, String status,
+                           boolean withinWaitingPeriod, String staffNote, String createdAt, String updatedAt) {}
 
     // ---------- Support ----------
-    public record SupportRequestIn(@NotBlank @Pattern(regexp = "^(order_enquiry|problem)$") String kind, String orderRef,
+    public record SupportRequestIn(@NotBlank @Pattern(regexp = "^(policy_enquiry|claim_enquiry|problem)$") String kind, String reference,
                                    @NotBlank @Size(min = 5, max = 4000) String message,
-                                   @NotBlank @Pattern(regexp = "^\\+27[678]\\d{8}$") String contactPhone) {}
+                                   @NotBlank @Pattern(regexp = PHONE) String contactPhone) {}
+
+    // ---------- Admin ----------
+    public record AdminPolicyDto(PolicyDto policy, UserDto customer) {}
+    public record StatusChange(@NotBlank String status, @Size(max = 1000) String note) {}
+    public record RecordPayment(@Positive long amountCents, @NotBlank @Pattern(regexp = DATE) String paidOn,
+                                @NotBlank @Size(max = 100) String reference) {}
+    public record Dashboard(long pendingReview, long approvedAwaitingPayment, long active, long lapsed, long openClaims,
+                            long monthlyRecurringCents) {}
+    public record AuditDto(String at, String actor, String action, String entityType, String entityId, String detail) {}
 }

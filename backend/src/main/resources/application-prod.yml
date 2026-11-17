@@ -9,4 +9,4 @@ spring:
       ddl-auto: update
 
 tgn:
-  seed-sample-catalog: ${TGN_SEED_SAMPLE_CATALOG:false}
+  seed-sample-plans: ${TGN_SEED_SAMPLE_PLANS:false}

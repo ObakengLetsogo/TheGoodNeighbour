@@ -54,7 +54,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public Optional<AppUser> authenticate(String bearerToken) {
         return tokens.findById(hash(bearerToken))
-                .filter(t -> t.getExpiresAt().isAfter(Instant.now()))
+                .filter(t -> !t.isStaff() && t.getExpiresAt().isAfter(Instant.now()))
                 .flatMap(t -> users.findById(t.getUserId()));
     }
 
@@ -66,11 +66,11 @@ public class AuthService {
         byte[] raw = new byte[32];
         RANDOM.nextBytes(raw);
         String token = HexFormat.of().formatHex(raw);
-        tokens.save(new AuthToken(hash(token), user.getId(), Instant.now().plus(TOKEN_TTL)));
+        tokens.save(new AuthToken(hash(token), user.getId(), Instant.now().plus(TOKEN_TTL), false));
         return new SessionDto(toDto(user), token);
     }
 
-    private static String hash(String token) {
+    static String hash(String token) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.NoSuchAlgorithmException e) {
