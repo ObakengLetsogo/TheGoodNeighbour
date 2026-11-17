@@ -12,7 +12,7 @@ class PiiCryptoTest {
     private static PiiCrypto crypto(String key, String... profiles) {
         MockEnvironment env = new MockEnvironment();
         env.setActiveProfiles(profiles);
-        return new PiiCrypto(new TgnProperties(null, false, key, null, null, "log"), env);
+        return new PiiCrypto(new TgnProperties(null, false, key, null, null, "log", null), env);
     }
 
     @Test void encryptsWithAFreshIvAndRoundTrips() {

@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 import za.co.thegoodneighbour.tgn.payment.LoggingSmsGateway;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "tgn.bootstrap-admin-email=staff@tgn.test", "tgn.bootstrap-admin-password=correct-horse-battery"})
+        "tgn.bootstrap-admin-email=staff@tgn.test", "tgn.bootstrap-admin-password=correct-horse-battery", "tgn.seed-base-rate-bps=160"})
 class AccountFlowTest {
     @LocalServerPort int port;
     @Autowired LoggingSmsGateway sms;
