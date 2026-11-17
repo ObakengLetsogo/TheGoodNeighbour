@@ -39,7 +39,24 @@ public final class Dtos {
             @Email String email,
             @NotBlank @Size(min = 8, max = 100, message = "Use at least 8 characters.") String password) {}
     public record LoginRequest(@NotBlank String phone, @NotBlank String password) {}
-    public record UserDto(String id, String fullName, String phone, String email) {}
+    public record UserDto(String id, String fullName, String phone, String email, boolean phoneVerified, boolean notifyClaims,
+                          boolean notifyPayments, boolean notifyNews) {}
+    public record MeDto(UserDto user, boolean smsEnabled) {}
+    public record PhoneIn(@NotBlank @Pattern(regexp = PHONE, message = "Please use a valid South African mobile number.") String phone) {}
+    public record CodeIn(@NotBlank @Pattern(regexp = "^\\d{6}$", message = "Codes have 6 digits.") String code) {}
+    public record PasswordResetConfirm(@NotBlank @Pattern(regexp = PHONE) String phone, @NotBlank @Pattern(regexp = "^\\d{6}$", message = "Codes have 6 digits.") String code,
+                                       @NotBlank @Size(min = 8, max = 100, message = "Use at least 8 characters.") String newPassword) {}
+    public record ChangePasswordIn(@NotBlank String currentPassword, @NotBlank @Size(min = 8, max = 100, message = "Use at least 8 characters.") String newPassword) {}
+    public record ChangePhoneConfirm(@NotBlank @Pattern(regexp = PHONE) String newPhone, @NotBlank @Pattern(regexp = "^\\d{6}$", message = "Codes have 6 digits.") String code) {}
+    public record NotificationsIn(boolean claims, boolean payments, boolean news) {}
+    public record DeleteAccountIn(@NotBlank String password) {}
+    public record DeleteAccountResult(String state, String message) {}
+    public record Accepted(String message) {}
+
+    // ---------- Legal ----------
+    public record LegalSummaryDto(String slug, String title, int version, boolean draft) {}
+    public record LegalDocDto(String slug, String title, String body, int version, boolean draft, String updatedAt) {}
+    public record LegalUpdate(@NotBlank @Size(max = 200) String title, @NotBlank @Size(max = 60000) String body, boolean draft) {}
     public record SessionDto(UserDto user, String token) {}
     public record ProfileRequest(@NotBlank @Size(min = 2, max = 100) String fullName, @Email String email) {}
     public record StaffLoginRequest(@NotBlank String email, @NotBlank String password) {}
@@ -52,7 +69,8 @@ public final class Dtos {
                            @NotBlank @Pattern(regexp = DATE, message = "Use the format yyyy-mm-dd for dates.") String dateOfBirth) {}
     public record ApplyRequest(@NotEmpty List<@Valid BundleLineIn> items,
                                @NotBlank @Pattern(regexp = ID13, message = "ID numbers have 13 digits.") String holderIdNumber,
-                               @Min(1) @Max(31) int debitDay, List<@Valid MemberIn> members) {}
+                               @Min(1) @Max(31) int debitDay, List<@Valid MemberIn> members,
+                               @NotNull Integer acceptedTermsVersion, @NotNull Integer acceptedPrivacyVersion) {}
     public record BundleChangeRequest(@NotEmpty List<@Valid BundleLineIn> items) {}
     public record MemberDto(String id, String relationship, String fullName, String idNumber, String dateOfBirth, long feeCents,
                             String status, String coverStartsOn) {}
@@ -87,6 +105,10 @@ public final class Dtos {
 
     // ---------- Admin ----------
     public record AdminPolicyDto(PolicyDto policy, UserDto customer) {}
+    public record SupportItemDto(String id, String kind, String reference, String message, String contactPhone, String status, String staffNote,
+                                 String createdAt, UserDto customer) {}
+    public record CustomerDto(String id, String fullName, String phone, String email, boolean phoneVerified, String createdAt,
+                              String policyId, String policyReference, String policyStatus) {}
     public record StatusChange(@NotBlank String status, @Size(max = 1000) String note) {}
     public record RecordPayment(@Positive long amountCents, @NotBlank @Pattern(regexp = DATE) String paidOn,
                                 @NotBlank @Size(max = 100) String reference) {}

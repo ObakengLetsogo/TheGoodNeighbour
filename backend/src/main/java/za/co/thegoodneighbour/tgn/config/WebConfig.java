@@ -54,7 +54,7 @@ public class WebConfig implements WebMvcConfigurer {
                 req.setAttribute(USER_ATTR, user);
                 return true;
             }
-        }).addPathPatterns("/api/policies/**", "/api/claims/**", "/api/me", "/api/support-requests");
+        }).addPathPatterns("/api/policies/**", "/api/claims/**", "/api/me", "/api/me/**", "/api/support-requests");
 
         registry.addInterceptor(new HandlerInterceptor() {
             @Override public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) {

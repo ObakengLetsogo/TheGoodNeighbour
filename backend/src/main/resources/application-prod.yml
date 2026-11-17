@@ -10,3 +10,4 @@ spring:
 
 tgn:
   seed-sample-cover: ${TGN_SEED_SAMPLE_COVER:false}
+  sms-mode: ${TGN_SMS_MODE:disabled}

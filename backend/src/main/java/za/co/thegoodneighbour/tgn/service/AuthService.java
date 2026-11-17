@@ -38,12 +38,26 @@ public class AuthService {
         return session(user);
     }
 
-    @Transactional
+    /** Five wrong passwords lock the account for 15 minutes. A recorded failure must persist even though we then throw. */
+    @Transactional(noRollbackFor = ApiException.class)
     public SessionDto login(LoginRequest r) {
-        AppUser user = users.findByPhone(r.phone()).filter(u -> encoder.matches(r.password(), u.getPasswordHash()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "That number and password don't match. Please check and try again."));
+        Instant now = Instant.now();
+        AppUser user = users.findByPhone(r.phone()).orElse(null);
+        if (user != null && user.isLocked(now))
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Too many attempts. Please try again in about " + Math.max(1, java.time.Duration.between(now, user.getLockedUntil()).toMinutes() + 1) + " minutes, or reset your password.");
+        if (user == null || !encoder.matches(r.password(), user.getPasswordHash())) {
+            if (user != null) users.save(recordFailure(user, now));
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "That number and password don't match. Please check and try again.");
+        }
+        user.clearFailedLogins();
+        users.save(user);
         return session(user);
     }
+
+    private static AppUser recordFailure(AppUser u, Instant now) { u.recordFailedLogin(now); return u; }
+
+    @Transactional
+    public SessionDto newSession(AppUser user) { return session(user); }
 
     @Transactional
     public UserDto updateProfile(AppUser user, ProfileRequest r) {
@@ -59,7 +73,7 @@ public class AuthService {
     }
 
     public static UserDto toDto(AppUser u) {
-        return new UserDto(u.getId(), u.getFullName(), u.getPhone(), u.getEmail());
+        return new UserDto(u.getId(), u.getFullName(), u.getPhone(), u.getEmail(), u.isPhoneVerified(), u.isNotifyClaims(), u.isNotifyPayments(), u.isNotifyNews());
     }
 
     private SessionDto session(AppUser user) {

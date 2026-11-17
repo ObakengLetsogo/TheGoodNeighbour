@@ -33,6 +33,10 @@ public class Policy {
     private String mandateStatus = "not_set_up";
     private Instant createdAt = Instant.now();
     private Instant reviewedAt;
+    /** Which versions of the terms and privacy notice the customer accepted, and when. */
+    private Integer termsVersion;
+    private Integer privacyVersion;
+    private Instant consentAt;
     private String startDate;
     private String waitingEndsOn;
 
@@ -47,6 +51,11 @@ public class Policy {
         this.holderDob = holderDob; this.debitDay = debitDay;
         this.reference = "TGN-P-" + id.substring(0, 6).toUpperCase();
     }
+
+    public void recordConsent(int terms, int privacy) { this.termsVersion = terms; this.privacyVersion = privacy; this.consentAt = Instant.now(); }
+    public Integer getTermsVersion() { return termsVersion; }
+    public Integer getPrivacyVersion() { return privacyVersion; }
+    public Instant getConsentAt() { return consentAt; }
 
     public void addMember(PolicyMember m) { members.add(m); m.setPolicy(this); }
     public List<PolicyMember> activeMembers() { return members.stream().filter(m -> "active".equals(m.getStatus())).toList(); }

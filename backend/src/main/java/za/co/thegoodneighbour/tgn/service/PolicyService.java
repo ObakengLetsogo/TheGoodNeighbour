@@ -28,12 +28,14 @@ public class PolicyService {
     private final CoverService cover;
     private final AuditService audit;
     private final DebitOrderGateway debitOrders;
+    private final LegalService legal;
+    private final OtpService otp;
     private final Clock clock;
 
     public PolicyService(PolicyRepository policies, PaymentRecordRepository payments, AppUserRepository users, CoverService cover,
-                         AuditService audit, DebitOrderGateway debitOrders, Clock clock) {
+                         AuditService audit, DebitOrderGateway debitOrders, LegalService legal, OtpService otp, Clock clock) {
         this.policies = policies; this.payments = payments; this.users = users; this.cover = cover; this.audit = audit;
-        this.debitOrders = debitOrders; this.clock = clock;
+        this.debitOrders = debitOrders; this.legal = legal; this.otp = otp; this.clock = clock;
     }
 
     private LocalDate today() { return LocalDate.now(clock); }
@@ -44,6 +46,11 @@ public class PolicyService {
     public PolicyDto apply(AppUser user, ApplyRequest r) {
         LocalDate today = today();
         CoverConfig cfg = cover.config();
+        if (otp.smsEnabled() && !users.findById(user.getId()).map(AppUser::isPhoneVerified).orElse(false))
+            throw CoverService.unprocessable("Please verify your mobile number first.");
+        int termsV = legal.version("terms"), privacyV = legal.version("privacy");
+        if (r.acceptedTermsVersion() != termsV || r.acceptedPrivacyVersion() != privacyV)
+            throw CoverService.unprocessable("Our terms have changed. Please review and accept them again.");
         if (policies.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().anyMatch(p -> Policy.OPEN_FOR_CHANGES.contains(p.getStatus())))
             throw new ApiException(HttpStatus.CONFLICT, "You already have a cover in progress. You can change it or add family members instead.");
         if (!CoverService.DEBIT_DAYS.contains(r.debitDay())) throw CoverService.unprocessable("Please choose one of the available debit dates.");
@@ -61,6 +68,7 @@ public class PolicyService {
         Policy policy = new Policy(user.getId(), user.getFullName(), r.holderIdNumber(), dob.toString(), r.debitDay());
         Set<String> ids = new HashSet<>(List.of(r.holderIdNumber()));
         for (MemberIn m : members) policy.addMember(buildMember(cfg, m, ids, today, null));
+        policy.recordConsent(termsV, privacyV);
         policy.setBundle(cover.write(List.of(new BundleVersionDto(1, today.toString(), null, q.bundleValueCents(), q.baseMonthlyCents(), q.lines()))), q.baseMonthlyCents());
         recompute(policy);
         return toDto(policies.save(policy), false);

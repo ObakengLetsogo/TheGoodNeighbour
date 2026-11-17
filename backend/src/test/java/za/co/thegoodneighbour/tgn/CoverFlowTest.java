@@ -8,7 +8,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import za.co.thegoodneighbour.tgn.payment.LoggingSmsGateway;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -17,6 +19,7 @@ import tools.jackson.databind.json.JsonMapper;
         "tgn.bootstrap-admin-email=staff@tgn.test", "tgn.bootstrap-admin-password=correct-horse-battery"})
 class CoverFlowTest {
     @LocalServerPort int port;
+    @Autowired LoggingSmsGateway sms;
     private final HttpClient http = HttpClient.newHttpClient();
     private final JsonMapper json = JsonMapper.builder().build();
     private static int phoneSeq = 0;
@@ -33,9 +36,21 @@ class CoverFlowTest {
         return r.body().isBlank() ? null : json.readTree(r.body());
     }
 
+    /** Registers a customer and verifies their phone with the code the dev SMS gateway "sent". */
     private String customer() throws Exception {
         String phone = "+2782333" + String.format("%04d", ++phoneSeq);
-        return ok(call("POST", "/api/auth/register", null, "{\"fullName\":\"Thandi Mokoena\",\"phone\":\"" + phone + "\",\"password\":\"password123\"}"), 201).get("token").asString();
+        String token = ok(call("POST", "/api/auth/register", null, "{\"fullName\":\"Thandi Mokoena\",\"phone\":\"" + phone + "\",\"password\":\"password123\"}"), 201).get("token").asString();
+        ok(call("POST", "/api/me/phone-verification/start", token, null), 202);
+        String code = sms.lastMessageTo(phone).replaceAll("^.*is (\\d{6}).*$", "$1");
+        ok(call("POST", "/api/me/phone-verification/confirm", token, "{\"code\":\"" + code + "\"}"), 200);
+        return token;
+    }
+
+    private String consent() throws Exception {
+        JsonNode docs = ok(call("GET", "/api/legal", null, null), 200);
+        int terms = 0, privacy = 0;
+        for (JsonNode d : docs) { if ("terms".equals(d.get("slug").asString())) terms = d.get("version").asInt(); if ("privacy".equals(d.get("slug").asString())) privacy = d.get("version").asInt(); }
+        return ",\"acceptedTermsVersion\":" + terms + ",\"acceptedPrivacyVersion\":" + privacy;
     }
 
     private String staff() throws Exception {
@@ -46,8 +61,8 @@ class CoverFlowTest {
     private static final String SPOUSE = "{\"relationship\":\"spouse\",\"fullName\":\"Sipho Mokoena\",\"idNumber\":\"8506155000084\",\"dateOfBirth\":\"1985-06-15\"}";
     private static final String CHILD = "{\"relationship\":\"child\",\"fullName\":\"Lerato Mokoena\",\"dateOfBirth\":\"2015-03-10\"}";
 
-    private static String apply(String items, String members) {
-        return "{\"items\":" + items + ",\"holderIdNumber\":\"9001015000085\",\"debitDay\":25,\"members\":[" + members + "]}";
+    private String apply(String items, String members) throws Exception {
+        return "{\"items\":" + items + ",\"holderIdNumber\":\"9001015000085\",\"debitDay\":25,\"members\":[" + members + "]" + consent() + "}";
     }
 
     private String today() { return LocalDate.now(java.time.ZoneId.of("Africa/Johannesburg")).toString(); }

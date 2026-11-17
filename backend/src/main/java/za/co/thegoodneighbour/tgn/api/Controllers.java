@@ -26,10 +26,23 @@ public final class Controllers {
         @PostMapping("/quote") public QuoteDto quote(@Valid @RequestBody QuoteRequest r) { return cover.quote(r.items(), r.members(), null); }
     }
 
+    @RestController @RequestMapping("/api/legal")
+    public static class LegalController {
+        private final LegalService legal;
+        public LegalController(LegalService legal) { this.legal = legal; }
+        @GetMapping public List<LegalSummaryDto> list() { return legal.list(); }
+        @GetMapping("/{slug}") public LegalDocDto get(@PathVariable String slug) { return legal.get(slug); }
+    }
+
     @RestController @RequestMapping("/api/auth")
     public static class AuthController {
         private final AuthService auth;
-        public AuthController(AuthService auth) { this.auth = auth; }
+        private final AccountService account;
+        public AuthController(AuthService auth, AccountService account) { this.auth = auth; this.account = account; }
+        @PostMapping("/password-reset/request") @ResponseStatus(HttpStatus.ACCEPTED)
+        public Accepted resetRequest(@Valid @RequestBody PhoneIn r) { return account.requestPasswordReset(r.phone()); }
+        @PostMapping("/password-reset/confirm")
+        public Accepted resetConfirm(@Valid @RequestBody PasswordResetConfirm r) { return account.confirmPasswordReset(r); }
         @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED) public SessionDto register(@Valid @RequestBody RegisterRequest r) { return auth.register(r); }
         @PostMapping("/login") public SessionDto login(@Valid @RequestBody LoginRequest r) { return auth.login(r); }
     }
@@ -37,8 +50,22 @@ public final class Controllers {
     @RestController @RequestMapping("/api/me")
     public static class MeController {
         private final AuthService auth;
-        public MeController(AuthService auth) { this.auth = auth; }
+        private final AccountService account;
+        public MeController(AuthService auth, AccountService account) { this.auth = auth; this.account = account; }
+        @GetMapping public MeDto me(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return account.me(user); }
         @PutMapping public UserDto update(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody ProfileRequest r) { return auth.updateProfile(user, r); }
+        @PostMapping("/password") public SessionDto password(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody ChangePasswordIn r) { return account.changePassword(user, r); }
+        @PostMapping("/phone-verification/start") @ResponseStatus(HttpStatus.ACCEPTED)
+        public Accepted verifyStart(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return account.startPhoneVerification(user); }
+        @PostMapping("/phone-verification/confirm")
+        public MeDto verifyConfirm(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody CodeIn r) { return account.confirmPhoneVerification(user, r.code()); }
+        @PostMapping("/phone/start") @ResponseStatus(HttpStatus.ACCEPTED)
+        public Accepted phoneStart(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody PhoneIn r) { return account.startChangePhone(user, r.phone()); }
+        @PostMapping("/phone/confirm")
+        public MeDto phoneConfirm(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody ChangePhoneConfirm r) { return account.confirmChangePhone(user, r); }
+        @PutMapping("/notifications") public UserDto notifications(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @RequestBody NotificationsIn r) { return account.setNotifications(user, r); }
+        @PostMapping("/sign-out-all") public Accepted signOutAll(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return account.signOutEverywhere(user); }
+        @PostMapping("/delete") public DeleteAccountResult delete(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody DeleteAccountIn r) { return account.deleteAccount(user, r.password()); }
     }
 
     @RestController @RequestMapping("/api/policies")
@@ -87,10 +114,13 @@ public final class Controllers {
         private final PolicyService policies;
         private final ClaimService claims;
         private final CoverAdminService coverAdmin;
+        private final AdminDirectoryService directory;
+        private final LegalService legal;
         private final AuditEventRepository audit;
 
-        public AdminController(StaffAuthService staffAuth, PolicyService policies, ClaimService claims, CoverAdminService coverAdmin, AuditEventRepository audit) {
-            this.staffAuth = staffAuth; this.policies = policies; this.claims = claims; this.coverAdmin = coverAdmin; this.audit = audit;
+        public AdminController(StaffAuthService staffAuth, PolicyService policies, ClaimService claims, CoverAdminService coverAdmin,
+                               AdminDirectoryService directory, LegalService legal, AuditEventRepository audit) {
+            this.staffAuth = staffAuth; this.policies = policies; this.claims = claims; this.coverAdmin = coverAdmin; this.directory = directory; this.legal = legal; this.audit = audit;
         }
 
         @PostMapping("/auth/login") public StaffSessionDto login(@Valid @RequestBody StaffLoginRequest r) { return staffAuth.login(r); }
@@ -115,6 +145,16 @@ public final class Controllers {
         @PutMapping("/benefits/{id}")
         public BenefitItemAdminDto updateBenefit(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody BenefitItemUpdate u) { return coverAdmin.updateItem(s, id, u); }
         @GetMapping("/herd") public List<HerdDto> herd() { return coverAdmin.herd(); }
+
+        @GetMapping("/support") public List<SupportItemDto> support() { return directory.inbox(); }
+        @PostMapping("/support/{id}/status")
+        public SupportItemDto supportStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return directory.setStatus(s, id, c); }
+        @GetMapping("/customers") public List<CustomerDto> customers() { return directory.customers(); }
+
+        @GetMapping("/legal") public List<LegalSummaryDto> legalList() { return legal.list(); }
+        @GetMapping("/legal/{slug}") public LegalDocDto legalGet(@PathVariable String slug) { return legal.get(slug); }
+        @PutMapping("/legal/{slug}")
+        public LegalDocDto legalUpdate(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String slug, @Valid @RequestBody LegalUpdate u) { return legal.update(s, slug, u); }
 
         @GetMapping("/audit")
         public List<AuditDto> audit() {

@@ -12,7 +12,9 @@ import za.co.thegoodneighbour.tgn.domain.BenefitItem;
 import za.co.thegoodneighbour.tgn.domain.CoverConfig;
 import za.co.thegoodneighbour.tgn.domain.CoverConfig.RelationshipRule;
 import za.co.thegoodneighbour.tgn.repo.BenefitItemRepository;
+import za.co.thegoodneighbour.tgn.domain.LegalDocument;
 import za.co.thegoodneighbour.tgn.repo.CoverConfigRepository;
+import za.co.thegoodneighbour.tgn.repo.LegalDocumentRepository;
 
 /**
  * Seeds PLACEHOLDER rules and a sample catalogue so the apps can be used. Every number here (rates,
@@ -26,9 +28,10 @@ public class SampleCoverSeeder implements ApplicationRunner {
     private final CoverConfigRepository configs;
     private final BenefitItemRepository items;
     private final StaffAuthService staff;
+    private final LegalDocumentRepository legal;
 
-    public SampleCoverSeeder(TgnProperties props, CoverConfigRepository configs, BenefitItemRepository items, StaffAuthService staff) {
-        this.props = props; this.configs = configs; this.items = items; this.staff = staff;
+    public SampleCoverSeeder(TgnProperties props, CoverConfigRepository configs, BenefitItemRepository items, StaffAuthService staff, LegalDocumentRepository legal) {
+        this.props = props; this.configs = configs; this.items = items; this.staff = staff; this.legal = legal;
     }
 
     private static long r(int rand) { return rand * 100L; }
@@ -37,6 +40,7 @@ public class SampleCoverSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         staff.createIfNone(props.bootstrapAdminEmail(), props.bootstrapAdminPassword());
+        seedLegalPlaceholders();
         if (!props.seedSampleCover() || configs.count() > 0) return;
 
         configs.save(new CoverConfig(160, r(2_500), 180, 0, 180, 18, 65, 85, 10, 25, 2, 90, 1000, List.of(
@@ -63,5 +67,66 @@ public class SampleCoverSeeder implements ApplicationRunner {
         items.save(new BenefitItem("sheep", "livestock", "Sheep", "Healthy sheep from our own farm. Choose one, two or three.", "sheep", r(3_200), r(1_500), 3, null, true, 4, 120, List.of()));
         items.save(new BenefitItem("cattle", "livestock", "Cow", "A cow from our own farm.", "cow", r(14_500), r(7_000), 2, null, true, 5, 30, List.of()));
         log.warn("Seeded SAMPLE cover rules and catalogue (placeholder numbers). Not for production use.");
+    }
+
+    /**
+     * PLACEHOLDER legal text so the apps have something to show and consent can be recorded. It is marked as a
+     * draft to customers and is NOT legal advice or approved wording. Replace it in the admin dashboard with text
+     * approved by your lawyer and underwriter, then untick "draft".
+     */
+    private void seedLegalPlaceholders() {
+        if (legal.findById("terms").isEmpty()) legal.save(new LegalDocument("terms", "Terms Of Use", """
+## About this draft
+This is placeholder text. It must be replaced with wording approved by your lawyer and underwriter before anyone buys cover.
+
+## 1. Who we are
+To be completed: the registered company name, registration number, physical address, and the name of the licensed insurer that provides the cover.
+
+## 2. The cover
+To be completed: what is covered, who can be covered, the bundle that is delivered when someone covered passes away, and what is not covered.
+
+## 3. Waiting periods
+To be completed: the waiting period for natural causes, the position for accidental death, and the waiting period that applies to people added later or to an increased bundle.
+
+## 4. Your monthly price
+To be completed: how the price is worked out, when it is collected by debit order, yearly reviews and the notice we give.
+
+## 5. Changing your cover
+To be completed: reducing or increasing the bundle, and adding or removing family members.
+
+## 6. Making a claim
+To be completed: what we need from the family, how we review a claim, and how and when the bundle is delivered.
+
+## 7. Missed payments, cancelling and reinstating
+To be completed: when cover lapses, how it can be reinstated, how to cancel, and any cooling-off period.
+
+## 8. Complaints and contact
+To be completed: how to complain, how to contact us, and the ombud details.
+""", true));
+        if (legal.findById("privacy").isEmpty()) legal.save(new LegalDocument("privacy", "Privacy Notice", """
+## About this draft
+This is placeholder text. It must be replaced with a POPIA-compliant notice approved by your lawyer before you collect real customers' information.
+
+## 1. Who is responsible for your information
+To be completed: the responsible party's name and contact details, and the information officer.
+
+## 2. What we collect and why
+To be completed: your name, mobile number, email, ID number, date of birth, and your family members' details; why each is needed for the cover.
+
+## 3. How we protect it
+To be completed: ID numbers are encrypted when stored; who can see them.
+
+## 4. Who we share it with
+To be completed: the insurer, payment provider and delivery partners, and why.
+
+## 5. How long we keep it
+To be completed: retention periods, including records we must keep for cover and claims.
+
+## 6. Your rights
+To be completed: access, correction and deletion, and how to ask. You can ask for your account and data to be deleted in the app.
+
+## 7. Complaints
+To be completed: how to contact us, and the Information Regulator's details.
+""", true));
     }
 }

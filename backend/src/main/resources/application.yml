@@ -21,3 +21,5 @@ tgn:
   # Creates the first staff account if none exist. Password must be at least 12 characters.
   bootstrap-admin-email: ${TGN_BOOTSTRAP_ADMIN_EMAIL:}
   bootstrap-admin-password: ${TGN_BOOTSTRAP_ADMIN_PASSWORD:}
+  # log = development (one-time codes are written to the server log). disabled = no SMS provider connected.
+  sms-mode: ${TGN_SMS_MODE:log}
