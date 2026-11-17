@@ -17,11 +17,13 @@ import za.co.thegoodneighbour.tgn.service.*;
 public final class Controllers {
     private Controllers() {}
 
-    @RestController @RequestMapping("/api/plans")
-    public static class PlanController {
-        private final PlanService plans;
-        public PlanController(PlanService plans) { this.plans = plans; }
-        @GetMapping public List<PlanDto> list() { return plans.listPublic(); }
+    /** Public: the cover catalogue and a live price quote. Cost to the company is never returned. */
+    @RestController @RequestMapping("/api/cover")
+    public static class CoverController {
+        private final CoverService cover;
+        public CoverController(CoverService cover) { this.cover = cover; }
+        @GetMapping public CoverOptionsDto options() { return cover.options(); }
+        @PostMapping("/quote") public QuoteDto quote(@Valid @RequestBody QuoteRequest r) { return cover.quote(r.items(), r.members(), null); }
     }
 
     @RestController @RequestMapping("/api/auth")
@@ -52,6 +54,8 @@ public final class Controllers {
         public PolicyDto addMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody MemberIn m) { return policies.addMember(u, id, m); }
         @DeleteMapping("/{id}/members/{memberId}")
         public PolicyDto removeMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String memberId) { return policies.removeMember(u, id, memberId); }
+        @PostMapping("/{id}/bundle")
+        public PolicyDto changeBundle(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody BundleChangeRequest r) { return policies.changeBundle(u, id, r); }
         @PostMapping("/{id}/debit-order")
         public DebitOrderState debitOrder(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id) { return policies.setUpDebitOrder(u, id); }
     }
@@ -82,11 +86,11 @@ public final class Controllers {
         private final StaffAuthService staffAuth;
         private final PolicyService policies;
         private final ClaimService claims;
-        private final PlanService plans;
+        private final CoverAdminService coverAdmin;
         private final AuditEventRepository audit;
 
-        public AdminController(StaffAuthService staffAuth, PolicyService policies, ClaimService claims, PlanService plans, AuditEventRepository audit) {
-            this.staffAuth = staffAuth; this.policies = policies; this.claims = claims; this.plans = plans; this.audit = audit;
+        public AdminController(StaffAuthService staffAuth, PolicyService policies, ClaimService claims, CoverAdminService coverAdmin, AuditEventRepository audit) {
+            this.staffAuth = staffAuth; this.policies = policies; this.claims = claims; this.coverAdmin = coverAdmin; this.audit = audit;
         }
 
         @PostMapping("/auth/login") public StaffSessionDto login(@Valid @RequestBody StaffLoginRequest r) { return staffAuth.login(r); }
@@ -104,9 +108,13 @@ public final class Controllers {
         @PostMapping("/claims/{id}/status")
         public ClaimDto claimStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return claims.setStatus(s, id, c); }
 
-        @GetMapping("/plans") public List<PlanDto> plans() { return plans.listAll(); }
-        @PutMapping("/plans/{id}")
-        public PlanDto updatePlan(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody PlanUpdate u) { return plans.update(s, id, u); }
+        @GetMapping("/cover") public CoverConfigDto cover() { return coverAdmin.config(); }
+        @PutMapping("/cover")
+        public CoverConfigDto updateCover(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @Valid @RequestBody CoverConfigDto u) { return coverAdmin.updateConfig(s, u); }
+        @GetMapping("/benefits") public List<BenefitItemAdminDto> benefits() { return coverAdmin.listItems(); }
+        @PutMapping("/benefits/{id}")
+        public BenefitItemAdminDto updateBenefit(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody BenefitItemUpdate u) { return coverAdmin.updateItem(s, id, u); }
+        @GetMapping("/herd") public List<HerdDto> herd() { return coverAdmin.herd(); }
 
         @GetMapping("/audit")
         public List<AuditDto> audit() {

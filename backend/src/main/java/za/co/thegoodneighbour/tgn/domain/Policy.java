@@ -20,12 +20,14 @@ public class Policy {
     @Id private String id = UUID.randomUUID().toString();
     @Column(unique = true) private String reference;
     private String userId;
-    private String planId;
     private String status = "pending_review";
     private String holderName;
     @Convert(converter = PiiCrypto.class) private String holderIdNumber;
     private String holderDob;
     private int debitDay;
+    /** JSON list of bundle versions (what the family is owed). The last is current; earlier ones can still apply during an upgrade's waiting period. */
+    @Column(columnDefinition = "text") private String bundleVersionsJson;
+    private long baseMonthlyCents;
     private long monthlyTotalCents;
     /** DebiCheck mandate state. Written only from the payment provider's confirmation. */
     private String mandateStatus = "not_set_up";
@@ -40,8 +42,8 @@ public class Policy {
 
     protected Policy() {}
 
-    public Policy(String userId, String planId, String holderName, String holderIdNumber, String holderDob, int debitDay) {
-        this.userId = userId; this.planId = planId; this.holderName = holderName; this.holderIdNumber = holderIdNumber;
+    public Policy(String userId, String holderName, String holderIdNumber, String holderDob, int debitDay) {
+        this.userId = userId; this.holderName = holderName; this.holderIdNumber = holderIdNumber;
         this.holderDob = holderDob; this.debitDay = debitDay;
         this.reference = "TGN-P-" + id.substring(0, 6).toUpperCase();
     }
@@ -55,11 +57,13 @@ public class Policy {
         if (startDate == null) { startDate = today.toString(); waitingEndsOn = waitingEnds.toString(); }
     }
     public void setMonthlyTotalCents(long v) { this.monthlyTotalCents = v; }
+    public void setBundle(String versionsJson, long baseMonthlyCents) { this.bundleVersionsJson = versionsJson; this.baseMonthlyCents = baseMonthlyCents; }
 
     public String getId() { return id; }
     public String getReference() { return reference; }
     public String getUserId() { return userId; }
-    public String getPlanId() { return planId; }
+    public String getBundleVersionsJson() { return bundleVersionsJson; }
+    public long getBaseMonthlyCents() { return baseMonthlyCents; }
     public String getStatus() { return status; }
     public String getHolderName() { return holderName; }
     public String getHolderIdNumber() { return holderIdNumber; }

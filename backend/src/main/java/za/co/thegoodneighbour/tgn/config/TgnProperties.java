@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param bootstrapAdminEmail/Password create the first staff account when no staff exist.
  */
 @ConfigurationProperties(prefix = "tgn")
-public record TgnProperties(List<String> corsAllowedOrigins, boolean seedSamplePlans, String piiKey,
+public record TgnProperties(List<String> corsAllowedOrigins, boolean seedSampleCover, String piiKey,
                             String bootstrapAdminEmail, String bootstrapAdminPassword) {
     public TgnProperties {
         corsAllowedOrigins = corsAllowedOrigins == null ? List.of() : corsAllowedOrigins;

@@ -9,12 +9,14 @@ import za.co.thegoodneighbour.tgn.config.PiiCrypto;
 public class PolicyMember {
     @Id private String id = UUID.randomUUID().toString();
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "policy_id") private Policy policy;
-    private String type;
+    /** Relationship to the main member: spouse, child, parent, parent_in_law, grandparent, sibling, other. */
+    private String relationship;
     private String fullName;
     @Convert(converter = PiiCrypto.class) private String idNumber;
     private String dateOfBirth;
+    /** The fee is the main member's monthly premium times this multiplier, so it follows bundle changes. */
+    private int multiplierBps;
     private long feeCents;
-    private long coverCents;
     /** "active" or "removed". Removed members are kept for the audit trail but are no longer billed. */
     private String status = "active";
     private String addedOn;
@@ -22,23 +24,24 @@ public class PolicyMember {
 
     protected PolicyMember() {}
 
-    public PolicyMember(String type, String fullName, String idNumber, String dateOfBirth, long feeCents, long coverCents,
+    public PolicyMember(String relationship, String fullName, String idNumber, String dateOfBirth, int multiplierBps, long feeCents,
                         String addedOn, String coverStartsOn) {
-        this.type = type; this.fullName = fullName; this.idNumber = idNumber; this.dateOfBirth = dateOfBirth;
-        this.feeCents = feeCents; this.coverCents = coverCents; this.addedOn = addedOn; this.coverStartsOn = coverStartsOn;
+        this.relationship = relationship; this.fullName = fullName; this.idNumber = idNumber; this.dateOfBirth = dateOfBirth;
+        this.multiplierBps = multiplierBps; this.feeCents = feeCents; this.addedOn = addedOn; this.coverStartsOn = coverStartsOn;
     }
 
     void setPolicy(Policy p) { this.policy = p; }
     public void remove() { this.status = "removed"; }
     public void setCoverStartsOn(String d) { this.coverStartsOn = d; }
+    public void setFeeCents(long fee) { this.feeCents = fee; }
 
     public String getId() { return id; }
-    public String getType() { return type; }
+    public String getRelationship() { return relationship; }
     public String getFullName() { return fullName; }
     public String getIdNumber() { return idNumber; }
     public String getDateOfBirth() { return dateOfBirth; }
     public long getFeeCents() { return feeCents; }
-    public long getCoverCents() { return coverCents; }
+    public int getMultiplierBps() { return multiplierBps; }
     public String getStatus() { return status; }
     public String getAddedOn() { return addedOn; }
     public String getCoverStartsOn() { return coverStartsOn; }
