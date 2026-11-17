@@ -46,11 +46,14 @@ public class SampleCoverSeeder implements ApplicationRunner {
         configs.save(new CoverConfig(160, r(2_500), 180, 0, 180, 18, 65, 85, 10, 25, 2, 90, 1000, 31, List.of(
                 new RelationshipRule("spouse", 10000, 18, 65, 85, 1),
                 new RelationshipRule("child", 4000, 0, 21, 24, 6),
-                new RelationshipRule("parent", 15000, 18, 75, 90, 2),
-                new RelationshipRule("parent_in_law", 15000, 18, 75, 90, 2),
-                new RelationshipRule("grandparent", 18000, 18, 75, 90, 2),
-                new RelationshipRule("sibling", 11000, 18, 65, 85, 3),
-                new RelationshipRule("other", 13000, 18, 65, 85, 3))));
+                new RelationshipRule("parent", 10000, 18, 75, 90, 2),
+                new RelationshipRule("parent_in_law", 10000, 18, 75, 90, 2),
+                new RelationshipRule("grandparent", 10000, 18, 75, 90, 2),
+                new RelationshipRule("sibling", 10000, 18, 65, 85, 3),
+                new RelationshipRule("other", 11000, 18, 65, 85, 3)),
+                List.of(new CoverConfig.AgeBand(0, 17, 10000), new CoverConfig.AgeBand(18, 35, 10000), new CoverConfig.AgeBand(36, 45, 12000),
+                        new CoverConfig.AgeBand(46, 55, 15000), new CoverConfig.AgeBand(56, 65, 20000), new CoverConfig.AgeBand(66, 75, 28000),
+                        new CoverConfig.AgeBand(76, 120, 38000))));
 
         List<String> base = List.of("Maize meal 12.5 kg × 2", "Long-grain rice 10 kg", "Sunflower oil 5 L", "Cake flour 5 kg", "White sugar 5 kg", "Salt 1 kg", "Tea bags 100s", "Instant coffee 250 g");
         items.save(new BenefitItem("grocery-2500", "grocery", "Grocery Hamper R2 500", "The staples to feed the household through the first days.", "hamper", r(2_500), r(1_950), 1, "grocery", true, 0, null, base));

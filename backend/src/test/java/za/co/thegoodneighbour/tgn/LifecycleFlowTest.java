@@ -57,7 +57,7 @@ class LifecycleFlowTest {
     }
 
     private JsonNode apply(String t) throws Exception {
-        return ok(call("POST", "/api/policies", t, "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1},{\"itemId\":\"sheep\",\"quantity\":1}],\"holderIdNumber\":\"9001015000085\",\"debitDay\":25,\"members\":[]" + consent() + "}"), 201);
+        return ok(call("POST", "/api/policies", t, "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1},{\"itemId\":\"sheep\",\"quantity\":1}],\"holderIdNumber\":\"" + TestData.HOLDER_ID + "\",\"debitDay\":25,\"members\":[]" + consent() + "}"), 201);
     }
 
     private String activePolicy(String t, String s) throws Exception {

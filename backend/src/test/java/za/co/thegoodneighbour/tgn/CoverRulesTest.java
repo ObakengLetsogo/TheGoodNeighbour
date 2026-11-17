@@ -12,7 +12,8 @@ import za.co.thegoodneighbour.tgn.service.CoverRules;
 class CoverRulesTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 17);
     private final CoverConfig cfg = new CoverConfig(160, 250_000, 180, 0, 180, 18, 65, 85, 3, 25, 2, 90, 1000, 31, List.of(
-            new RelationshipRule("spouse", 10000, 18, 65, 85, 1), new RelationshipRule("child", 4000, 0, 21, 24, 2)));
+            new RelationshipRule("spouse", 10000, 18, 65, 85, 1), new RelationshipRule("child", 4000, 0, 21, 24, 2)),
+            List.of(new CoverConfig.AgeBand(0, 35, 10000), new CoverConfig.AgeBand(36, 55, 15000), new CoverConfig.AgeBand(56, 120, 30000)));
 
     @Test void premiumIsBundleCostTimesRateAndRoundsHalfUp() {
         assertEquals(8_480, CoverRules.baseMonthly(530_000, 160));   // R5 300 at 1.6% = R84.80
@@ -56,5 +57,22 @@ class CoverRulesTest {
         assertTrue(CoverRules.withinCoolingOff(LocalDate.of(2026, 11, 1), 31, LocalDate.of(2026, 12, 2)));
         assertFalse(CoverRules.withinCoolingOff(LocalDate.of(2026, 11, 1), 31, LocalDate.of(2026, 12, 3)));
         assertFalse(CoverRules.withinCoolingOff(null, 31, LocalDate.of(2026, 11, 1)));  // not started: nothing to cool off from
+    }
+
+    @Test void ageBandsScaleThePriceAndEdgesBelongToTheBandTheyNameInclusively() {
+        assertEquals(10000, cfg.ageMultiplierBps(0));
+        assertEquals(10000, cfg.ageMultiplierBps(35));
+        assertEquals(15000, cfg.ageMultiplierBps(36));
+        assertEquals(15000, cfg.ageMultiplierBps(55));
+        assertEquals(30000, cfg.ageMultiplierBps(56));
+        assertEquals(30000, cfg.ageMultiplierBps(200));   // beyond the last band uses the last band
+    }
+
+    @Test void aPersonsFeeIsBaseTimesRelationshipTimesAgeRoundedOnce() {
+        assertEquals(8_480, CoverRules.personFee(8_480, 10000, 10000));
+        assertEquals(3_392, CoverRules.personFee(8_480, 4000, 10000));
+        assertEquals(5_088, CoverRules.personFee(8_480, 4000, 15000));   // R84.80 x 40% x 150%
+        assertEquals(25_440, CoverRules.personFee(8_480, 10000, 30000));
+        assertEquals(1, CoverRules.personFee(3, 4000, 10000));           // 1.2 rounds to 1, not truncated to 0 per factor
     }
 }

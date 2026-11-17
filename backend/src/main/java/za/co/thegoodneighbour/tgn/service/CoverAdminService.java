@@ -40,11 +40,20 @@ public class CoverAdminService {
             if (r.minAge() > r.maxAge() || r.maxAge() > r.coverEndAge()) throw bad("Check the age limits for " + r.relationship() + ".");
             return new CoverConfig.RelationshipRule(r.relationship(), r.multiplierBps(), r.minAge(), r.maxAge(), r.coverEndAge(), r.maxCount());
         }).toList();
+        List<AgeBandDto> bands = u.ageBands().stream().sorted(java.util.Comparator.comparingInt(AgeBandDto::fromAge)).toList();
+        if (bands.isEmpty()) throw bad("Add at least one age band.");
+        if (bands.get(0).fromAge() != 0) throw bad("The first age band must start at 0.");
+        for (int i = 0; i < bands.size(); i++) {
+            if (bands.get(i).fromAge() > bands.get(i).toAge()) throw bad("Check the age band " + bands.get(i).fromAge() + " to " + bands.get(i).toAge() + ".");
+            if (i > 0 && bands.get(i).fromAge() != bands.get(i - 1).toAge() + 1) throw bad("Age bands must follow on from each other with no gaps or overlaps.");
+        }
+        if (bands.get(bands.size() - 1).toAge() < 110) throw bad("The last age band must reach at least age 110.");
         CoverConfig c = cover.config();
         String before = "rate=" + c.getBaseRateBps() + "bps natural=" + c.getNaturalWaitingDays() + "d min=" + c.getMinBundleValueCents();
         c.apply(u.baseRateBps(), u.minBundleValueCents(), u.naturalWaitingDays(), u.accidentalWaitingDays(), u.upgradeWaitingDays(), u.mainMinAge(),
                 u.mainMaxAge(), u.mainCoverEndAge(), u.maxMembers(), u.maxCommitmentMultiple(), u.lapseAfterMissedPayments(), u.reinstateWithinDays(),
-                u.escalationCapBps(), u.coolingOffDays(), rules);
+                u.escalationCapBps(), u.coolingOffDays(), rules,
+                bands.stream().map(b -> new CoverConfig.AgeBand(b.fromAge(), b.toAge(), b.multiplierBps())).toList());
         audit.record(staff.getEmail(), "cover.config.updated", "cover_config", CoverConfig.ID,
                 before + " -> rate=" + u.baseRateBps() + "bps natural=" + u.naturalWaitingDays() + "d min=" + u.minBundleValueCents());
         return toDto(configs.save(c));
@@ -82,7 +91,8 @@ public class CoverAdminService {
         return new CoverConfigDto(c.getBaseRateBps(), c.getMinBundleValueCents(), c.getNaturalWaitingDays(), c.getAccidentalWaitingDays(),
                 c.getUpgradeWaitingDays(), c.getMainMinAge(), c.getMainMaxAge(), c.getMainCoverEndAge(), c.getMaxMembers(), c.getMaxCommitmentMultiple(),
                 c.getLapseAfterMissedPayments(), c.getReinstateWithinDays(), c.getEscalationCapBps(), c.getCoolingOffDays(),
-                c.getRules().stream().map(r -> new RelationshipRuleDto(r.relationship(), r.multiplierBps(), r.minAge(), r.maxAge(), r.coverEndAge(), r.maxCount())).toList());
+                c.getRules().stream().map(r -> new RelationshipRuleDto(r.relationship(), r.multiplierBps(), r.minAge(), r.maxAge(), r.coverEndAge(), r.maxCount())).toList(),
+                c.getAgeBands().stream().map(b -> new AgeBandDto(b.fromAge(), b.toAge(), b.multiplierBps())).toList());
     }
 
     static BenefitItemAdminDto toDto(BenefitItem i) {

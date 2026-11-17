@@ -18,7 +18,8 @@ public final class Dtos {
     /** monthlyCents is what one unit adds to the main member's monthly premium. Cost to the company is never exposed. */
     public record BenefitItemDto(String id, String kind, String name, String description, String unitLabel, long valueCents, long monthlyCents,
                                  int maxQty, String groupId, List<String> contents, boolean available) {}
-    public record CoverOptionsDto(List<BenefitItemDto> items, List<RelationshipRuleDto> relationships, long minBundleValueCents,
+    public record AgeBandDto(@Min(0) @Max(130) int fromAge, @Min(0) @Max(130) int toAge, @Min(0) @Max(100000) int multiplierBps) {}
+    public record CoverOptionsDto(List<BenefitItemDto> items, List<RelationshipRuleDto> relationships, List<AgeBandDto> ageBands, long minBundleValueCents,
                                   int mainMinAge, int mainMaxAge, int maxMembers, int naturalWaitingDays, int accidentalWaitingDays,
                                   int upgradeWaitingDays, int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapPercent,
                                   List<Integer> debitDays) {}
@@ -26,11 +27,13 @@ public final class Dtos {
     // ---------- Quote ----------
     public record BundleLineIn(@NotBlank String itemId, @Min(0) @Max(20) int quantity) {}
     public record QuoteMemberIn(@NotBlank String relationship, @Pattern(regexp = DATE) String dateOfBirth) {}
-    public record QuoteRequest(@NotNull List<@Valid BundleLineIn> items, List<@Valid QuoteMemberIn> members) {}
+    public record QuoteRequest(@NotNull List<@Valid BundleLineIn> items, List<@Valid QuoteMemberIn> members,
+                               @Pattern(regexp = DATE) String holderDateOfBirth) {}
     public record BundleLineDto(String itemId, String kind, String name, int quantity, long valueCents, long monthlyCents, List<String> contents) {}
-    public record MemberQuoteDto(String relationship, long feeCents) {}
+    /** One person's price: base x relationship % x age %. role is "you" for the main member, otherwise the relationship. age is null while unknown. */
+    public record PersonQuoteDto(String role, Integer age, int relationshipBps, int ageBps, long feeCents) {}
     public record QuoteDto(boolean valid, List<String> problems, List<BundleLineDto> lines, long bundleValueCents, long baseMonthlyCents,
-                           List<MemberQuoteDto> members, long totalMonthlyCents) {}
+                           PersonQuoteDto main, List<PersonQuoteDto> members, long totalMonthlyCents) {}
 
     // ---------- Auth ----------
     public record RegisterRequest(
@@ -73,14 +76,14 @@ public final class Dtos {
                                @NotNull Integer acceptedTermsVersion, @NotNull Integer acceptedPrivacyVersion) {}
     public record BundleChangeRequest(@NotEmpty List<@Valid BundleLineIn> items) {}
     public record MemberDto(String id, String relationship, String fullName, String idNumber, String dateOfBirth, long feeCents,
-                            String status, String coverStartsOn) {}
+                            String status, String coverStartsOn, int age, int relationshipBps, int ageBps) {}
     public record PaymentDto(String id, long amountCents, String paidOn, String status, String source, String reference) {}
     public record HolderDto(String name, String idNumber, String dateOfBirth) {}
     /** What the family is owed. Earlier versions stay on record because an upgrade only applies after its waiting period. */
     public record BundleVersionDto(int version, String effectiveFrom, String upgradeWaitingEndsOn, long bundleValueCents,
                                    long baseMonthlyCents, List<BundleLineDto> lines) {}
     public record PolicyDto(String id, String reference, String status, HolderDto holder, int debitDay, long monthlyTotalCents,
-                            long baseMonthlyCents, String mandateStatus, String createdAt, String startDate, String waitingEndsOn,
+                            long baseMonthlyCents, long mainFeeCents, int mainAgeBps, int holderAge, String mandateStatus, String createdAt, String startDate, String waitingEndsOn,
                             String nextDebitDate, BundleVersionDto bundle, List<BundleVersionDto> bundleHistory,
                             List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt,
                             String lapsedAt, String reinstateUntil, String cancelledAt, String cancelRequestedAt, String reinstateRequestedAt,
@@ -126,7 +129,7 @@ public final class Dtos {
                                  @Min(1) @Max(50) int maxMembers, @Min(1) @Max(1000) int maxCommitmentMultiple,
                                  @Min(1) @Max(12) int lapseAfterMissedPayments, @Min(0) @Max(730) int reinstateWithinDays,
                                  @Min(0) @Max(10000) int escalationCapBps, @Min(0) @Max(365) int coolingOffDays,
-                                 @NotNull @Valid List<RelationshipRuleDto> relationships) {}
+                                 @NotNull @Valid List<RelationshipRuleDto> relationships, @NotNull @Valid List<AgeBandDto> ageBands) {}
     public record BenefitItemAdminDto(String id, String kind, String name, String description, String unitLabel, long valueCents, long costCents,
                                       int maxQty, String groupId, boolean active, Integer onFarm, List<String> contents) {}
     public record BenefitItemUpdate(@NotBlank @Size(max = 100) String name, @Size(max = 1000) String description, @Positive long valueCents,

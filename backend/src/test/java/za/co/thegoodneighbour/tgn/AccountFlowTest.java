@@ -122,7 +122,7 @@ class AccountFlowTest {
         assertTrue(ok(call("GET", "/api/me", t, null), 200).get("smsEnabled").asBoolean());
     }
 
-    private static final String APPLY = "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1}],\"holderIdNumber\":\"9001015000085\",\"debitDay\":25,\"members\":[]%s}";
+    private static final String APPLY = "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1}],\"holderIdNumber\":\"" + TestData.HOLDER_ID + "\",\"debitDay\":25,\"members\":[]%s}";
 
     private String consent() throws Exception {
         int terms = 0, privacy = 0;

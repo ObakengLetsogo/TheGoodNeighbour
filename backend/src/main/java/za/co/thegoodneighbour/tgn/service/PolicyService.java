@@ -63,7 +63,7 @@ public class PolicyService {
             throw CoverService.unprocessable("This cover is for people aged " + cfg.getMainMinAge() + " to " + cfg.getMainMaxAge() + ".");
 
         List<MemberIn> members = r.members() == null ? List.of() : r.members();
-        QuoteDto q = cover.quote(r.items(), members.stream().map(m -> new QuoteMemberIn(m.relationship(), m.dateOfBirth())).toList(), null);
+        QuoteDto q = cover.quote(r.items(), members.stream().map(m -> new QuoteMemberIn(m.relationship(), m.dateOfBirth())).toList(), dob, null);
         if (!q.valid()) throw CoverService.unprocessable(q.problems().get(0));
 
         Policy policy = new Policy(user.getId(), user.getFullName(), r.holderIdNumber(), dob.toString(), r.debitDay());
@@ -80,7 +80,7 @@ public class PolicyService {
         Policy policy = owned(user, policyId);
         requireOpen(policy);
         CoverConfig cfg = cover.config();
-        QuoteDto q = cover.quote(r.items(), memberQuote(policy), policy.getId());
+        QuoteDto q = cover.quote(r.items(), memberQuote(policy), LocalDate.parse(policy.getHolderDob()), policy.getId());
         if (!q.valid()) throw CoverService.unprocessable(q.problems().get(0));
         List<BundleVersionDto> versions = new ArrayList<>(cover.versions(policy));
         BundleVersionDto old = versions.get(versions.size() - 1);
@@ -107,7 +107,7 @@ public class PolicyService {
         List<QuoteMemberIn> all = new ArrayList<>(memberQuote(policy));
         all.add(new QuoteMemberIn(m.relationship(), m.dateOfBirth()));
         BundleVersionDto cur = cover.current(policy);
-        QuoteDto q = cover.quote(cur.lines().stream().map(l -> new BundleLineIn(l.itemId(), l.quantity())).toList(), all, policy.getId());
+        QuoteDto q = cover.quote(cur.lines().stream().map(l -> new BundleLineIn(l.itemId(), l.quantity())).toList(), all, LocalDate.parse(policy.getHolderDob()), policy.getId());
         // Only the new person can be a problem here; the existing bundle was valid when it was set.
         List<String> mine = q.problems().stream().filter(p -> !p.startsWith("Your cover needs") && !p.contains("temporarily unavailable")).toList();
         if (!mine.isEmpty()) throw CoverService.unprocessable(mine.get(0));
@@ -277,12 +277,21 @@ public class PolicyService {
         return p.activeMembers().stream().map(m -> new QuoteMemberIn(m.getRelationship(), m.getDateOfBirth())).toList();
     }
 
-    /** Fees are the main member's premium times each relationship's multiplier, so they follow bundle changes. */
+    /**
+     * Everyone's fee is the reference base price times their relationship factor times the factor for their CURRENT age,
+     * so fees follow bundle changes and move up as people age into a higher band (when the cover is next recalculated).
+     */
     void recompute(Policy policy) {
+        CoverConfig cfg = cover.config();
+        LocalDate today = today();
         long base = policy.getBaseMonthlyCents();
-        long total = base;
+        int mainBps = cfg.ageMultiplierBps(CoverRules.age(LocalDate.parse(policy.getHolderDob()), today));
+        long mainFee = CoverRules.personFee(base, 10000, mainBps);
+        policy.setMainPricing(mainBps, mainFee);
+        long total = mainFee;
         for (PolicyMember m : policy.activeMembers()) {
-            m.setFeeCents(CoverRules.memberFee(base, m.getMultiplierBps()));
+            int ageBps = cfg.ageMultiplierBps(CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today));
+            m.setPricing(CoverRules.personFee(base, m.getMultiplierBps(), ageBps), ageBps);
             total += m.getFeeCents();
         }
         policy.setMonthlyTotalCents(total);
@@ -326,13 +335,14 @@ public class PolicyService {
     PolicyDto toDto(Policy p, boolean full) {
         List<MemberDto> members = p.getMembers().stream().filter(m -> "active".equals(m.getStatus())).map(m ->
                 new MemberDto(m.getId(), m.getRelationship(), m.getFullName(), full ? m.getIdNumber() : SaId.mask(m.getIdNumber()), m.getDateOfBirth(),
-                        m.getFeeCents(), m.getStatus(), m.getCoverStartsOn())).toList();
+                        m.getFeeCents(), m.getStatus(), m.getCoverStartsOn(), CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today()), m.getMultiplierBps(), m.getAgeBps())).toList();
         List<PaymentDto> pays = new ArrayList<>();
         payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).forEach(x -> pays.add(new PaymentDto(x.getId(), x.getAmountCents(), x.getPaidOn(), x.getStatus(), x.getSource(), x.getReference())));
         List<BundleVersionDto> history = cover.versions(p);
         return new PolicyDto(p.getId(), p.getReference(), p.getStatus(),
                 new HolderDto(p.getHolderName(), full ? p.getHolderIdNumber() : SaId.mask(p.getHolderIdNumber()), p.getHolderDob()),
-                p.getDebitDay(), p.getMonthlyTotalCents(), p.getBaseMonthlyCents(), p.getMandateStatus(),
+                p.getDebitDay(), p.getMonthlyTotalCents(), p.getBaseMonthlyCents(), p.getMainFeeCents(), p.getMainAgeBps(),
+                CoverRules.age(LocalDate.parse(p.getHolderDob()), today()), p.getMandateStatus(),
                 DateTimeFormatter.ISO_INSTANT.format(p.getCreatedAt().atOffset(ZoneOffset.UTC)), p.getStartDate(), p.getWaitingEndsOn(),
                 nextDebitDate(p), history.isEmpty() ? null : history.get(history.size() - 1), history, members, pays,
                 p.getTermsVersion(), p.getPrivacyVersion(), p.getConsentAt() == null ? null : DateTimeFormatter.ISO_INSTANT.format(p.getConsentAt().atOffset(ZoneOffset.UTC)),

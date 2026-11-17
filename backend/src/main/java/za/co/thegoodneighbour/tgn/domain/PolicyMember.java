@@ -16,6 +16,7 @@ public class PolicyMember {
     private String dateOfBirth;
     /** The fee is the main member's monthly premium times this multiplier, so it follows bundle changes. */
     private int multiplierBps;
+    private int ageBps = 10000;
     private long feeCents;
     /** "active" or "removed". Removed members are kept for the audit trail but are no longer billed. */
     private String status = "active";
@@ -33,7 +34,8 @@ public class PolicyMember {
     void setPolicy(Policy p) { this.policy = p; }
     public void remove() { this.status = "removed"; }
     public void setCoverStartsOn(String d) { this.coverStartsOn = d; }
-    public void setFeeCents(long fee) { this.feeCents = fee; }
+    public void setPricing(long fee, int ageBps) { this.feeCents = fee; this.ageBps = ageBps; }
+    public int getAgeBps() { return ageBps; }
 
     public String getId() { return id; }
     public String getRelationship() { return relationship; }

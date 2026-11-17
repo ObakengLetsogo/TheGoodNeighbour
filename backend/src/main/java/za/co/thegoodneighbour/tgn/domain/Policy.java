@@ -27,7 +27,10 @@ public class Policy {
     private int debitDay;
     /** JSON list of bundle versions (what the family is owed). The last is current; earlier ones can still apply during an upgrade's waiting period. */
     @Column(columnDefinition = "text") private String bundleVersionsJson;
+    /** The reference monthly price: the bundle's cost times the base rate, before anyone's relationship or age is applied. */
     private long baseMonthlyCents;
+    private int mainAgeBps = 10000;
+    private long mainFeeCents;
     private long monthlyTotalCents;
     /** DebiCheck mandate state. Written only from the payment provider's confirmation. */
     private String mandateStatus = "not_set_up";
@@ -82,6 +85,9 @@ public class Policy {
     public Instant getReinstateRequestedAt() { return reinstateRequestedAt; }
 
     public void setMonthlyTotalCents(long v) { this.monthlyTotalCents = v; }
+    public void setMainPricing(int ageBps, long feeCents) { this.mainAgeBps = ageBps; this.mainFeeCents = feeCents; }
+    public int getMainAgeBps() { return mainAgeBps; }
+    public long getMainFeeCents() { return mainFeeCents; }
     public void setBundle(String versionsJson, long baseMonthlyCents) { this.bundleVersionsJson = versionsJson; this.baseMonthlyCents = baseMonthlyCents; }
 
     public String getId() { return id; }

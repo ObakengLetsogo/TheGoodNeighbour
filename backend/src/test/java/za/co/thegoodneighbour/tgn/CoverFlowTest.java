@@ -58,11 +58,11 @@ class CoverFlowTest {
     }
 
     private static final String BUNDLE = "[{\"itemId\":\"grocery-5000\",\"quantity\":1},{\"itemId\":\"sheep\",\"quantity\":1}]";   // R8 200 value, R5 300 cost
-    private static final String SPOUSE = "{\"relationship\":\"spouse\",\"fullName\":\"Sipho Mokoena\",\"idNumber\":\"8506155000084\",\"dateOfBirth\":\"1985-06-15\"}";
-    private static final String CHILD = "{\"relationship\":\"child\",\"fullName\":\"Lerato Mokoena\",\"dateOfBirth\":\"2015-03-10\"}";
+    private static final String SPOUSE = TestData.member("spouse", "Sipho Mokoena", 32, true, 1);   // 18 to 35 band: 100%
+    private static final String CHILD = TestData.member("child", "Lerato Mokoena", 10, false, 2);     // child 40%, age band 100%
 
     private String apply(String items, String members) throws Exception {
-        return "{\"items\":" + items + ",\"holderIdNumber\":\"9001015000085\",\"debitDay\":25,\"members\":[" + members + "]" + consent() + "}";
+        return "{\"items\":" + items + ",\"holderIdNumber\":\"" + TestData.HOLDER_ID + "\",\"debitDay\":25,\"members\":[" + members + "]" + consent() + "}";
     }
 
     private String today() { return LocalDate.now(java.time.ZoneId.of("Africa/Johannesburg")).toString(); }
@@ -72,6 +72,7 @@ class CoverFlowTest {
         JsonNode c = ok(res, 200);
         assertEquals(6, c.get("items").size());
         assertEquals(7, c.get("relationships").size());
+        assertEquals(7, c.get("ageBands").size());
         assertEquals(180, c.get("naturalWaitingDays").asInt());
         assertEquals(0, c.get("accidentalWaitingDays").asInt());
         assertFalse(res.body().contains("costCents"), "the company's cost must never reach customers");
@@ -79,11 +80,13 @@ class CoverFlowTest {
     }
 
     @Test void quotePricesTheBundleAndFamilyAndExplainsProblems() throws Exception {
-        JsonNode q = ok(call("POST", "/api/cover/quote", null, "{\"items\":" + BUNDLE + ",\"members\":[{\"relationship\":\"spouse\"},{\"relationship\":\"child\",\"dateOfBirth\":\"2015-03-10\"}]}"), 200);
+        JsonNode q = ok(call("POST", "/api/cover/quote", null, "{\"items\":" + BUNDLE + ",\"members\":[{\"relationship\":\"spouse\"},{\"relationship\":\"child\",\"dateOfBirth\":\"" + TestData.dobAged(10) + "\"}]}"), 200);
         assertTrue(q.get("valid").asBoolean());
         assertEquals(820_000, q.get("bundleValueCents").asLong());
         assertEquals(8_480, q.get("baseMonthlyCents").asLong());                   // R5 300 cost x 1.6%
-        assertEquals(8_480 + 8_480 + 3_392, q.get("totalMonthlyCents").asLong());  // + spouse 100% + child 40%
+        assertEquals(8_480 + 8_480 + 3_392, q.get("totalMonthlyCents").asLong());  // you + spouse 100% + child 40%, all in the 100% age bands
+        assertEquals("you", q.get("main").get("role").asString());
+        assertEquals(3_392, q.get("members").get(1).get("feeCents").asLong());
 
         JsonNode two = ok(call("POST", "/api/cover/quote", null, "{\"items\":[{\"itemId\":\"grocery-2500\",\"quantity\":1},{\"itemId\":\"grocery-5000\",\"quantity\":1}]}"), 200);
         assertFalse(two.get("valid").asBoolean());
@@ -99,31 +102,81 @@ class CoverFlowTest {
         assertEquals(20_352, p.get("monthlyTotalCents").asLong());
         assertEquals("pending_review", p.get("status").asString());
         assertEquals("not_set_up", p.get("mandateStatus").asString());
-        assertEquals("*********0085", p.get("holder").get("idNumber").asString());
+        assertEquals("*********" + TestData.HOLDER_ID.substring(9), p.get("holder").get("idNumber").asString());
         assertEquals(2, p.get("bundle").get("lines").size());
         assertEquals("spouse", p.get("members").get(0).get("relationship").asString());
         assertEquals(0, p.get("payments").size());
         String id = p.get("id").asString();
 
         JsonNode more = ok(call("POST", "/api/policies/" + id + "/members", t,
-                "{\"relationship\":\"parent\",\"fullName\":\"Joyce Mokoena\",\"idNumber\":\"7008205000082\",\"dateOfBirth\":\"1970-08-20\"}"), 201);
-        assertEquals(20_352 + 12_720, more.get("monthlyTotalCents").asLong()); // parent 150%
+                TestData.member("parent", "Joyce Mokoena", 60, true, 3)), 201);
+        assertEquals(20_352 + 16_960, more.get("monthlyTotalCents").asLong()); // a 60 year old is in the 56 to 65 band: 200% of R84.80
+        assertEquals(60, more.get("members").get(2).get("age").asInt());
+        assertEquals(20_000, more.get("members").get(2).get("ageBps").asInt());
         String joyce = more.get("members").get(2).get("id").asString();
         assertEquals(20_352, ok(call("DELETE", "/api/policies/" + id + "/members/" + joyce, t, null), 200).get("monthlyTotalCents").asLong());
     }
 
     @Test void membersNeedAnIdNumberFromSixteenAndMustFollowTheRelationshipRules() throws Exception {
         String t = customer();
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE.replace(",\"idNumber\":\"8506155000084\"", ""))).statusCode()); // adult without ID
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE.replace("1985-06-15", "1985-06-16"))).statusCode());              // dob != ID
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE + "," + SPOUSE.replace("8506155000084", "0101015000082").replace("1985-06-15", "2001-01-01"))).statusCode()); // two spouses
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, CHILD.replace("2015-03-10", "1990-03-10"))).statusCode());               // child too old
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, CHILD.replace("\"child\"", "\"cousin\""))).statusCode());                // unknown relationship
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE.replace("8506155000084", "9001015000085"))).statusCode());        // same ID as holder
-        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, "").replace("9001015000085", "9001015000086")).statusCode());            // bad checksum
+        String holder = TestData.HOLDER_ID;
+        java.time.LocalDate spouseDob = TestData.dobAged(32);
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE.replaceAll(",\"idNumber\":\"\\d+\"", ""))).statusCode());                       // adult without ID
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE.replace(spouseDob.toString(), spouseDob.plusDays(1).toString()))).statusCode()); // dob != ID
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE + "," + TestData.member("spouse", "Second Spouse", 31, true, 9))).statusCode());   // two spouses
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, TestData.member("child", "Too Old", 30, false, 4))).statusCode());                          // child too old to join
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, CHILD.replace("\"child\"", "\"cousin\""))).statusCode());                                  // unknown relationship
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, SPOUSE.replaceAll("\"idNumber\":\"\\d+\"", "\"idNumber\":\"" + holder + "\"").replace(spouseDob.toString(), TestData.dobAged(30).toString()))).statusCode()); // same ID as the holder
+        assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, "").replace(holder, holder.substring(0, 12) + (holder.charAt(12) == '0' ? '1' : '0'))).statusCode()); // bad checksum
         assertEquals(422, call("POST", "/api/policies", t, apply(BUNDLE, "").replace("\"debitDay\":25", "\"debitDay\":3")).statusCode());
         ok(call("POST", "/api/policies", t, apply(BUNDLE, CHILD)), 201);                       // a child under 16 needs no ID
         assertEquals(409, call("POST", "/api/policies", t, apply(BUNDLE, "")).statusCode());   // one open cover per customer
+    }
+
+    @Test void everyonesPriceDependsOnTheirAgeAsWellAsTheirRelationship() throws Exception {
+        // reference base for BUNDLE is R84.80. Bands: 18-35 100%, 36-45 120%, 56-65 200%, 66-75 280%.
+        String body = "{\"items\":" + BUNDLE + ",\"holderDateOfBirth\":\"" + TestData.dobAged(40) + "\",\"members\":["
+                + "{\"relationship\":\"spouse\",\"dateOfBirth\":\"" + TestData.dobAged(30) + "\"},"
+                + "{\"relationship\":\"parent\",\"dateOfBirth\":\"" + TestData.dobAged(70) + "\"},"
+                + "{\"relationship\":\"child\",\"dateOfBirth\":\"" + TestData.dobAged(10) + "\"}]}";
+        JsonNode q = ok(call("POST", "/api/cover/quote", null, body), 200);
+        assertTrue(q.get("valid").asBoolean(), q.toString());
+        assertEquals(40, q.get("main").get("age").asInt());
+        assertEquals(12_000, q.get("main").get("ageBps").asInt());
+        assertEquals(10_176, q.get("main").get("feeCents").asLong());            // R84.80 x 100% x 120%
+        assertEquals(8_480, q.get("members").get(0).get("feeCents").asLong());   // spouse, 30: 100% x 100%
+        assertEquals(23_744, q.get("members").get(1).get("feeCents").asLong());  // parent, 70: 100% x 280%
+        assertEquals(3_392, q.get("members").get(2).get("feeCents").asLong());   // child, 10: 40% x 100%
+        assertEquals(10_176 + 8_480 + 23_744 + 3_392, q.get("totalMonthlyCents").asLong());
+        // an older main member costs more than a younger one for the same bundle
+        long young = ok(call("POST", "/api/cover/quote", null, "{\"items\":" + BUNDLE + ",\"holderDateOfBirth\":\"" + TestData.dobAged(25) + "\"}"), 200).get("totalMonthlyCents").asLong();
+        long old = ok(call("POST", "/api/cover/quote", null, "{\"items\":" + BUNDLE + ",\"holderDateOfBirth\":\"" + TestData.dobAged(60) + "\"}"), 200).get("totalMonthlyCents").asLong();
+        assertTrue(old > young);
+        assertFalse(ok(call("POST", "/api/cover/quote", null, "{\"items\":" + BUNDLE + ",\"holderDateOfBirth\":\"" + TestData.dobAged(80) + "\"}"), 200).get("valid").asBoolean()); // too old to join
+
+        // and the saved cover prices the main member by age too
+        String t = customer();
+        String id40 = TestData.saId(TestData.dobAged(40), 7);
+        JsonNode p = ok(call("POST", "/api/policies", t, "{\"items\":" + BUNDLE + ",\"holderIdNumber\":\"" + id40 + "\",\"debitDay\":25,\"members\":[]" + consent() + "}"), 201);
+        assertEquals(10_176, p.get("mainFeeCents").asLong());
+        assertEquals(10_176, p.get("monthlyTotalCents").asLong());
+        assertEquals(8_480, p.get("baseMonthlyCents").asLong());
+        assertEquals(40, p.get("holderAge").asInt());
+    }
+
+    @Test void ageBandsMustCoverEveryAgeWithoutGapsAndStaffCanEditThem() throws Exception {
+        String s = staff();
+        String cfg = ok(call("GET", "/api/admin/cover", s, null), 200).toString();
+        assertEquals(7, json.readTree(cfg).get("ageBands").size());
+        try {
+            String gap = cfg.replace("\"fromAge\":36", "\"fromAge\":38");
+            assertEquals(422, call("PUT", "/api/admin/cover", s, gap).statusCode());   // a hole at 36 and 37
+            String raised = cfg.replaceFirst("\"fromAge\":56,\"toAge\":65,\"multiplierBps\":20000", "\"fromAge\":56,\"toAge\":65,\"multiplierBps\":25000");
+            assertEquals(200, call("PUT", "/api/admin/cover", s, raised).statusCode());
+            assertEquals(25_000, ok(call("GET", "/api/cover", null, null), 200).get("ageBands").get(4).get("multiplierBps").asInt());
+        } finally {
+            ok(call("PUT", "/api/admin/cover", s, cfg), 200);
+        }
     }
 
     @Test void policiesArePrivateToTheirOwner() throws Exception {
@@ -149,7 +202,7 @@ class CoverFlowTest {
         assertEquals("active", active.get("status").asString());
         assertEquals(LocalDate.parse(today()).plusDays(180).toString(), active.get("waitingEndsOn").asString());
         assertEquals(active.get("waitingEndsOn").asString(), active.get("members").get(0).get("coverStartsOn").asString());
-        assertEquals("9001015000085", active.get("holder").get("idNumber").asString()); // staff see the full ID
+        assertEquals(TestData.HOLDER_ID, active.get("holder").get("idNumber").asString()); // staff see the full ID
         assertTrue(ok(call("GET", "/api/admin/audit", s, null), 200).toString().contains("payment.recorded"));
     }
 

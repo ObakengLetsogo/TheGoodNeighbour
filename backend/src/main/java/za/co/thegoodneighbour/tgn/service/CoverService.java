@@ -49,6 +49,7 @@ public class CoverService {
                 hasRoom(i, cfg, promised.getOrDefault(i.getId(), 0L), 1))).toList();
         return new CoverOptionsDto(list,
                 cfg.getRules().stream().map(r -> new RelationshipRuleDto(r.relationship(), r.multiplierBps(), r.minAge(), r.maxAge(), r.coverEndAge(), r.maxCount())).toList(),
+                cfg.getAgeBands().stream().map(b -> new AgeBandDto(b.fromAge(), b.toAge(), b.multiplierBps())).toList(),
                 cfg.getMinBundleValueCents(), cfg.getMainMinAge(), cfg.getMainMaxAge(), cfg.getMaxMembers(), cfg.getNaturalWaitingDays(),
                 cfg.getAccidentalWaitingDays(), cfg.getUpgradeWaitingDays(), cfg.getLapseAfterMissedPayments(), cfg.getReinstateWithinDays(),
                 cfg.getEscalationCapBps() / 100, DEBIT_DAYS);
@@ -58,7 +59,7 @@ public class CoverService {
 
     /** Prices a bundle and family and reports every problem. Never throws for rule problems. */
     @Transactional(readOnly = true)
-    public QuoteDto quote(List<BundleLineIn> lines, List<QuoteMemberIn> members, String excludePolicyId) {
+    public QuoteDto quote(List<BundleLineIn> lines, List<QuoteMemberIn> members, LocalDate holderDob, String excludePolicyId) {
         CoverConfig cfg = config();
         LocalDate today = LocalDate.now(clock);
         List<String> problems = new ArrayList<>();
@@ -86,9 +87,18 @@ public class CoverService {
             problems.add("Your cover needs to be worth at least " + CoverRules.rand(cfg.getMinBundleValueCents()) + ". Add a grocery hamper or livestock.");
 
         long base = CoverRules.baseMonthly(cost, cfg.getBaseRateBps());
-        List<MemberQuoteDto> fees = new ArrayList<>();
+        // Until someone's age is known, price them as a typical adult (age 30) so the customer sees a sensible estimate.
+        int typical = cfg.ageMultiplierBps(30);
+
+        Integer holderAge = holderDob == null ? null : CoverRules.age(holderDob, today);
+        if (holderAge != null && (holderAge < cfg.getMainMinAge() || holderAge > cfg.getMainMaxAge()))
+            problems.add("This cover is for people aged " + cfg.getMainMinAge() + " to " + cfg.getMainMaxAge() + ".");
+        int mainAgeBps = holderAge == null ? typical : cfg.ageMultiplierBps(holderAge);
+        PersonQuoteDto main = new PersonQuoteDto("you", holderAge, 10000, mainAgeBps, CoverRules.personFee(base, 10000, mainAgeBps));
+
+        List<PersonQuoteDto> people = new ArrayList<>();
         Map<String, Long> counts = new HashMap<>();
-        long total = base;
+        long total = main.feeCents();
         List<QuoteMemberIn> ms = members == null ? List.of() : members;
         for (int i = 0; i < ms.size(); i++) {
             QuoteMemberIn m = ms.get(i);
@@ -97,12 +107,15 @@ public class CoverService {
             long existing = counts.getOrDefault(m.relationship(), 0L);
             CoverRules.memberProblem(cfg, m.relationship(), dob, existing, i, today).ifPresent(problems::add);
             counts.merge(m.relationship(), 1L, Long::sum);
-            long fee = cfg.rule(m.relationship()).map(r -> CoverRules.memberFee(base, r.multiplierBps())).orElse(0L);
-            fees.add(new MemberQuoteDto(m.relationship(), fee));
-            total += fee;
+            Integer age = dob == null ? null : CoverRules.age(dob, today);
+            int relBps = cfg.rule(m.relationship()).map(CoverConfig.RelationshipRule::multiplierBps).orElse(0);
+            int ageBps = age == null ? typical : cfg.ageMultiplierBps(age);
+            PersonQuoteDto person = new PersonQuoteDto(m.relationship(), age, relBps, ageBps, CoverRules.personFee(base, relBps, ageBps));
+            people.add(person);
+            total += person.feeCents();
         }
         List<String> distinct = problems.stream().distinct().toList();
-        return new QuoteDto(distinct.isEmpty(), distinct, out, value, base, fees, total);
+        return new QuoteDto(distinct.isEmpty(), distinct, out, value, base, main, people, total);
     }
 
     // ---------------- herd capacity ----------------

@@ -18,6 +18,14 @@ public final class CoverRules {
     /** A family member's monthly fee is the main member's premium times their relationship multiplier. */
     public static long memberFee(long baseMonthlyCents, int multiplierBps) { return Math.round(baseMonthlyCents * multiplierBps / 10000.0); }
 
+    /**
+     * Anyone's monthly price: the reference base price, scaled by their relationship factor and by the factor for their
+     * current age. Rounded once, half-up, so the parts always add up to the total.
+     */
+    public static long personFee(long baseMonthlyCents, int relationshipBps, int ageBps) {
+        return Math.round(baseMonthlyCents * (double) relationshipBps * ageBps / 100_000_000.0);
+    }
+
     public static String label(String relationship) {
         return switch (relationship) {
             case "spouse" -> "spouse";
