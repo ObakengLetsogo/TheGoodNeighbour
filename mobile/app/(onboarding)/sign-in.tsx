@@ -6,7 +6,7 @@ import { Button } from '../../src/components/Button';
 import { Input, type InputRef } from '../../src/components/Input';
 import { EditorialHeading, Text } from '../../src/components/Text';
 import { normaliseSAPhone } from '../../src/lib/format';
-import { AuthError } from '../../src/services';
+import { AuthError } from '../../src/services/api';
 import { useAuth } from '../../src/store/AuthContext';
 import { colors, spacing } from '../../src/theme';
 

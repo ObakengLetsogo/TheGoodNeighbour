@@ -8,24 +8,24 @@ import { Screen, ScreenHeader } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { displayPhone, normaliseSAPhone } from '../../src/lib/format';
 import { openWhatsApp } from '../../src/lib/support';
-import { supportService } from '../../src/services';
+import { supportService } from '../../src/services/api';
 import { useAuth } from '../../src/store/AuthContext';
-import { useOrders } from '../../src/store/OrdersContext';
+import { useCover } from '../../src/store/CoverContext';
 import { colors, spacing } from '../../src/theme';
 
 export default function SupportRequest() {
-  const { kind, topic, orderRef: initialRef } = useLocalSearchParams<{ kind?: string; topic?: string; orderRef?: string }>();
+  const { kind, topic, reference: initialRef } = useLocalSearchParams<{ kind?: string; topic?: string; reference?: string }>();
   const { user } = useAuth();
-  const { orders } = useOrders();
-  const isOrder = kind === 'order_enquiry';
-  const [orderRef, setOrderRef] = useState<string | undefined>(initialRef);
+  const { policies } = useCover();
+  const isPolicy = kind === 'policy_enquiry';
+  const [reference, setReference] = useState<string | undefined>(initialRef);
   const [message, setMessage] = useState(topic ? `I'd like to ask about: ${topic}.\n\n` : '');
   const [phone, setPhone] = useState(user ? displayPhone(user.phone) : '');
   const [errors, setErrors] = useState<{ message?: string; phone?: string; form?: string }>({});
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<'sent' | 'not_sent' | null>(null);
 
-  const composed = () => `${orderRef ? `[Order ${orderRef}] ` : ''}${message.trim()}`;
+  const composed = () => `${reference ? `[${reference}] ` : ''}${message.trim()}`;
 
   const submit = async () => {
     const e164 = normaliseSAPhone(phone);
@@ -36,8 +36,8 @@ export default function SupportRequest() {
     if (next.message || !e164) return;
     setBusy(true);
     try {
-      const r = await supportService.submit({ kind: isOrder ? 'order_enquiry' : 'problem', orderRef, message: message.trim(), contactPhone: e164 });
-      setResult(r.delivered ? 'sent' : 'not_sent');
+      await supportService.submit({ kind: isPolicy ? 'policy_enquiry' : 'problem', reference, message: message.trim(), contactPhone: e164 });
+      setResult('sent');
     } catch (e) {
       setErrors({ form: e instanceof Error ? e.message : "We couldn't send that just now. Please try again." });
     } finally {
@@ -65,14 +65,14 @@ export default function SupportRequest() {
 
   return (
     <Screen>
-      <ScreenHeader title={isOrder ? 'Ask About An Order' : topic ? 'Ask Us' : 'Report A Problem'} onBack={() => router.back()} />
+      <ScreenHeader title={isPolicy ? 'Ask About My Plan' : topic ? 'Ask Us' : 'Report A Problem'} onBack={() => router.back()} />
       <View style={{ gap: spacing.lg, marginTop: spacing.md }}>
-        <Text variant="body" color={colors.muted}>{isOrder ? 'Tell us what you would like to know.' : "We're sorry something isn't right. Tell us what happened and we'll help."}</Text>
-        {isOrder && orders.length > 0 ? (
+        <Text variant="body" color={colors.muted}>{isPolicy ? 'Tell us what you would like to know.' : "We're sorry something isn't right. Tell us what happened and we'll help."}</Text>
+        {isPolicy && policies.length > 0 ? (
           <View style={{ gap: spacing.sm }}>
-            <Text variant="label" color={colors.inkSoft}>Which order?</Text>
+            <Text variant="label" color={colors.inkSoft}>Which plan?</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-              {orders.slice(0, 6).map((o) => <Chip key={o.id} label={o.reference} selected={orderRef === o.reference} onPress={() => setOrderRef(o.reference)} />)}
+              {policies.slice(0, 6).map((o) => <Chip key={o.id} label={o.reference} selected={reference === o.reference} onPress={() => setReference(o.reference)} />)}
             </View>
           </View>
         ) : null}

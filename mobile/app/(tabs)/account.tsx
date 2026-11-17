@@ -7,7 +7,6 @@ import { Input } from '../../src/components/Input';
 import { LogoMark } from '../../src/components/Logo';
 import { Screen, SectionHeader } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
-import { config } from '../../src/config';
 import { displayPhone, isValidEmail } from '../../src/lib/format';
 import { useAuth } from '../../src/store/AuthContext';
 import { colors, radii, spacing } from '../../src/theme';
@@ -74,13 +73,12 @@ export default function Account() {
           <LogoMark size={44} />
           <Text variant="cardTitle">The Good Neighbour</Text>
           <Text variant="body" style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', fontSize: 20, lineHeight: 26 }}>Here when it matters.</Text>
-          <Text variant="body">We help families organise food, supplies and delivery for life's important occasions, so there's one less thing to carry.</Text>
+          <Text variant="body">Funeral cover for you and the people who matter, paid monthly, with a real person here when it matters.</Text>
         </View>
       </Card>
 
       <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
         <Button label="Sign Out" variant="danger" onPress={() => Alert.alert('Sign out?', 'You can sign back in any time.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign Out', style: 'destructive', onPress: async () => { await signOut(); router.replace('/(onboarding)/welcome'); } }])} />
-        {config.usingMocks ? <Text variant="bodyS" style={{ textAlign: 'center' }}>Preview build: accounts, orders and catalogue are stored on this device only.</Text> : null}
       </View>
     </Screen>
   );

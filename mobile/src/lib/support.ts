@@ -6,7 +6,7 @@ export const SUPPORT_HOURS = 'Our team is here to help. Reply times depend on ho
 function notConfigured() {
   Alert.alert(
     'Support line not connected yet',
-    'This build does not have a support number configured. Please check back soon, or use Report A Problem and we will pick it up.',
+    'This build does not have a support number configured. Please check back soon.',
   );
 }
 
@@ -31,27 +31,27 @@ export async function callSupport() {
 
 export const FAQS: { q: string; a: string }[] = [
   {
-    q: 'How do I order for family in another town?',
-    a: 'At checkout, enter your family member as the recipient and choose the province and address where everything should go. You can place the order from anywhere in South Africa.',
+    q: 'When does my cover start?',
+    a: 'Your application is reviewed first. Cover starts once it is approved and your first monthly payment has been received. Some cover has a waiting period, which your plan shows.',
   },
   {
-    q: 'Can I change a package?',
-    a: 'Yes. Open any package and adjust it: change quantities, add a cow or extra hampers, remove optional items. The price updates as you go.',
-  },
-  {
-    q: 'Is slaughter and dressing included with livestock?',
-    a: 'No. Preparation is a separate service that you can add where it is offered in your delivery area. Our team confirms availability with you.',
-  },
-  {
-    q: 'When will my order arrive?',
-    a: 'You choose the delivery date and a preferred window. Once your order is received, our team confirms what is possible with you. A date is a preference until it is confirmed.',
+    q: 'Can I add my family?',
+    a: 'Yes. You can add a spouse, children, parents or extended family for a small monthly fee each. The fee and age limits are shown on your plan, and the total updates as you add people.',
   },
   {
     q: 'How do I pay?',
-    a: 'You will be able to pay by card or instant EFT. If online payment is not yet switched on for your order, it stays as received and we will let you know how to pay.',
+    a: 'Monthly, by debit order from your bank account. Your bank asks you to approve the debit order before anything is collected. If debit orders are not switched on for your plan yet, nothing is collected.',
   },
   {
-    q: 'I need something that is not listed.',
-    a: 'Tell us. Use Ask Us on a custom item, or contact support on WhatsApp, and we will see what we can arrange.',
+    q: 'What is a waiting period?',
+    a: 'A set number of days after cover starts before a claim can be paid for a natural cause. Your plan shows its waiting period, and people added later have their own.',
+  },
+  {
+    q: 'How do I make a claim?',
+    a: 'Open My Cover, choose Make A Claim, and tell us who has passed away. If you need a person right now, call or WhatsApp us from this screen.',
+  },
+  {
+    q: 'Is my information safe?',
+    a: 'Your ID number is encrypted when stored, and we only show the last four digits in the app. We never ask for your card or banking passwords in the app.',
   },
 ];

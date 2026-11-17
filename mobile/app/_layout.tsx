@@ -10,10 +10,8 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/store/AuthContext';
-import { BasketProvider } from '../src/store/BasketContext';
-import { CatalogProvider } from '../src/store/CatalogContext';
-import { OrdersProvider } from '../src/store/OrdersContext';
-import { RecentsProvider } from '../src/store/RecentsContext';
+import { CoverProvider } from '../src/store/CoverContext';
+import { PlansProvider } from '../src/store/PlansContext';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -39,11 +37,12 @@ function Routes() {
       </Stack.Protected>
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="product/[id]" />
-        <Stack.Screen name="package/[id]" />
-        <Stack.Screen name="basket" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="checkout" />
-        <Stack.Screen name="order/[id]" />
+        <Stack.Screen name="plan/[id]" />
+        <Stack.Screen name="apply/[planId]" />
+        <Stack.Screen name="policy/[id]" />
+        <Stack.Screen name="add-member" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="claim/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="claim/[id]" />
         <Stack.Screen name="support/request" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       </Stack.Protected>
     </Stack>
@@ -55,16 +54,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <CatalogProvider>
-            <BasketProvider>
-              <OrdersProvider>
-                <RecentsProvider>
-                  <StatusBar style="dark" />
-                  <Routes />
-                </RecentsProvider>
-              </OrdersProvider>
-            </BasketProvider>
-          </CatalogProvider>
+          <PlansProvider>
+            <CoverProvider>
+              <StatusBar style="dark" />
+              <Routes />
+            </CoverProvider>
+          </PlansProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

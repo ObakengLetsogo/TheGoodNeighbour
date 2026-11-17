@@ -1,41 +1,32 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { BasketButton } from '../../src/components/BasketButton';
 import { Button } from '../../src/components/Button';
-import { CategoryTile } from '../../src/components/CategoryTile';
-import { Badge } from '../../src/components/Chip';
-import { Icon } from '../../src/components/Icon';
+import { Icon, type IconName } from '../../src/components/Icon';
 import { LogoMark } from '../../src/components/Logo';
-import { PackageCard } from '../../src/components/PackageCard';
-import { ProductCard } from '../../src/components/ProductCard';
+import { PlanCard } from '../../src/components/PlanCard';
 import { Screen, SectionHeader } from '../../src/components/Screen';
 import { ErrorState, LoadingState } from '../../src/components/States';
 import { EditorialHeading, Text } from '../../src/components/Text';
-import { formatZAR, greeting } from '../../src/lib/format';
-import { useBasket } from '../../src/store/BasketContext';
-import { useCatalog } from '../../src/store/CatalogContext';
-import { useOrders } from '../../src/store/OrdersContext';
-import { useRecents } from '../../src/store/RecentsContext';
-import { accents, colors, radii, spacing } from '../../src/theme';
-import { ORDER_STATUS_LABEL } from '../../src/types';
-import { config } from '../../src/config';
+import { formatDate, formatZAR, greeting } from '../../src/lib/format';
+import { POLICY_STATUS_LABEL } from '../../src/lib/status';
+import { useCover } from '../../src/store/CoverContext';
+import { usePlans } from '../../src/store/PlansContext';
+import { accents, colors, radii, spacing, type AccentName } from '../../src/theme';
+
+const STEPS: { icon: IconName; accent: AccentName; title: string; text: string }[] = [
+  { icon: 'shield-check-outline', accent: 'olive', title: 'Choose a plan', text: 'Pick the cover that suits you.' },
+  { icon: 'account-multiple-plus-outline', accent: 'ember', title: 'Add your family', text: 'Spouse, children, parents and more, for a small monthly fee each.' },
+  { icon: 'calendar-month-outline', accent: 'gold', title: 'Pay monthly', text: 'By debit order, on a date that suits you.' },
+  { icon: 'hand-heart-outline', accent: 'berry', title: "We're here when it matters", text: 'Claim any time, with a real person to help.' },
+];
 
 export default function Home() {
   const { width } = useWindowDimensions();
-  const { status, catalog, reload, error } = useCatalog();
-  const { orders } = useOrders();
-  const { ids: recentIds } = useRecents();
-  const { basket } = useBasket();
-
+  const { status, plans, reload, error } = usePlans();
+  const { current } = useCover();
   const gutter = spacing.lg;
   const cardW = Math.min(310, width - gutter * 2 - 28);
-  const tileW = (width - gutter * 2 - spacing.md) / 2;
-  const active = orders.filter((o) => o.status !== 'delivered');
-  const recent = recentIds.map((id) => catalog.products.find((p) => p.id === id)).filter(Boolean) as typeof catalog.products;
-  const inBasket = new Set(basket.lines.map((l) => l.productId));
-  const recommended = catalog.products
-    .filter((p) => p.categoryId === 'supplies' && !inBasket.has(p.id) && p.availability !== 'out_of_stock')
-    .slice(0, 3);
+  const from = plans.length ? Math.min(...plans.map((p) => p.premiumCents)) : null;
 
   return (
     <Screen>
@@ -44,97 +35,82 @@ export default function Home() {
           <LogoMark size={34} />
           <Text variant="displayM" style={{ fontSize: 24, lineHeight: 28 }}>TGN</Text>
         </View>
-        <BasketButton />
       </View>
 
       <EditorialHeading lead={`${greeting()}, `} accent="Neighbour" trail="." variant="displayM" style={{ marginTop: spacing.sm }} />
 
-      <View style={styles.hero}>
-        <View style={[styles.blob, { backgroundColor: colors.olive }]} />
-        <Text variant="displayM" style={{ fontSize: 26, lineHeight: 30 }}>Whatever brings everyone together, we've got you.</Text>
-        <Text variant="body" color={colors.inkSoft}>Find everything you need in one place, with delivery arranged around you.</Text>
-        <Button label="Explore Supplies" icon="arrow-right" onPress={() => router.push('/(tabs)/explore')} style={{ marginTop: spacing.xs }} />
-      </View>
-
-      {active.length > 0 ? (
-        <>
-          <SectionHeader title="Active Orders" actionLabel="See All" onAction={() => router.push('/(tabs)/orders')} />
-          <View style={{ gap: spacing.md }}>
-            {active.slice(0, 2).map((o) => (
-              <Pressable key={o.id} onPress={() => router.push({ pathname: '/order/[id]', params: { id: o.id } })} style={styles.active} accessibilityRole="button" accessibilityLabel={`Order ${o.reference}, ${ORDER_STATUS_LABEL[o.status]}`}>
-                <View style={[styles.activeIcon, { backgroundColor: accents.ember.tint }]}><Icon name="truck-delivery-outline" size={22} color={colors.ember} /></View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="cardTitle">{o.reference}</Text>
-                  <Text variant="bodyS">{ORDER_STATUS_LABEL[o.status]}</Text>
-                </View>
-                <Text variant="price">{formatZAR(o.totals.totalCents ?? o.totals.subtotalCents)}</Text>
-              </Pressable>
-            ))}
+      {current ? (
+        <Pressable onPress={() => router.push({ pathname: '/policy/[id]', params: { id: current.id } })} accessibilityRole="button" accessibilityLabel={`Your ${current.planName} plan, ${POLICY_STATUS_LABEL[current.status]}`} style={styles.cover}>
+          <View style={styles.coverTop}>
+            <View style={{ flex: 1 }}>
+              <Text variant="eyebrow">YOUR PLAN</Text>
+              <Text variant="displayM" style={{ fontSize: 24, lineHeight: 28 }}>{current.planName}</Text>
+            </View>
+            <View style={styles.pill}><Text variant="label" color={colors.olive} style={{ fontFamily: 'Urbanist_600SemiBold' }}>{POLICY_STATUS_LABEL[current.status]}</Text></View>
           </View>
-        </>
-      ) : null}
+          <View style={styles.stats}>
+            <Stat label="Monthly" value={formatZAR(current.monthlyTotalCents)} />
+            <Stat label="Family" value={String(current.members.length)} />
+            <Stat label="Next debit" value={current.nextDebitDate ? formatDate(current.nextDebitDate) : '–'} />
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text variant="label" color={colors.olive} style={{ fontFamily: 'Urbanist_600SemiBold' }}>View your cover</Text>
+            <Icon name="arrow-right" size={16} color={colors.olive} />
+          </View>
+        </Pressable>
+      ) : (
+        <View style={styles.hero}>
+          <View style={styles.blob} />
+          <Text variant="displayM" style={{ fontSize: 26, lineHeight: 30 }}>Whatever brings everyone together, we've got you.</Text>
+          <Text variant="body" color={colors.inkSoft}>
+            Funeral cover for you and the people who matter{from ? `, from ${formatZAR(from)} a month` : ''}. Add your family, pay monthly, and know someone is here when it matters.
+          </Text>
+          <Button label="View Plans" icon="arrow-right" onPress={() => router.push('/(tabs)/plans')} style={{ marginTop: spacing.xs }} />
+        </View>
+      )}
 
-      <SectionHeader title="Popular Packages" actionLabel="Explore" onAction={() => router.push('/(tabs)/explore')} />
-      {status === 'loading' ? <LoadingState rows={1} label="Loading packages" /> : null}
+      <SectionHeader title="Our Plans" actionLabel="See All" onAction={() => router.push('/(tabs)/plans')} />
+      {status === 'loading' ? <LoadingState rows={1} label="Loading plans" /> : null}
       {status === 'error' ? <ErrorState message={error} onRetry={reload} /> : null}
       {status === 'ready' ? (
         <FlatList
-          horizontal
-          data={catalog.packages}
-          keyExtractor={(p) => p.id}
-          showsHorizontalScrollIndicator={false}
+          horizontal data={plans} keyExtractor={(p) => p.id} showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: spacing.md, paddingRight: gutter, paddingBottom: spacing.sm }}
           style={{ marginHorizontal: -gutter, paddingLeft: gutter }}
-          snapToInterval={cardW + spacing.md}
-          decelerationRate="fast"
-          renderItem={({ item }) => <PackageCard pkg={item} width={cardW} />}
+          snapToInterval={cardW + spacing.md} decelerationRate="fast"
+          renderItem={({ item }) => <PlanCard plan={item} width={cardW} />}
         />
       ) : null}
 
-      <SectionHeader title="Shop By Category" />
-      <View style={styles.grid}>
-        {catalog.categories.map((c) => (
-          <CategoryTile key={c.id} category={c} width={tileW} onPress={() => router.push({ pathname: '/(tabs)/explore', params: { categoryId: c.id } })} />
-        ))}
+      <SectionHeader title="How It Works" />
+      <View style={{ gap: spacing.md }}>
+        {STEPS.map((s, i) => {
+          const a = accents[s.accent];
+          return (
+            <View key={s.title} style={styles.step}>
+              <View style={[styles.stepIcon, { backgroundColor: a.tint }]}><Icon name={s.icon} size={22} color={a.main} /></View>
+              <View style={{ flex: 1 }}>
+                <Text variant="cardTitle">{i + 1}. {s.title}</Text>
+                <Text variant="bodyS">{s.text}</Text>
+              </View>
+            </View>
+          );
+        })}
       </View>
 
-      {recent.length > 0 ? (
-        <>
-          <SectionHeader title="Recently Viewed" />
-          <FlatList
-            horizontal
-            data={recent}
-            keyExtractor={(p) => p.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: spacing.sm, paddingRight: gutter }}
-            style={{ marginHorizontal: -gutter, paddingLeft: gutter }}
-            renderItem={({ item }) => {
-              const cat = catalog.categories.find((c) => c.id === item.categoryId);
-              const a = accents[cat?.accent ?? 'olive'];
-              return (
-                <Pressable onPress={() => router.push({ pathname: '/product/[id]', params: { id: item.id } })} style={styles.recent} accessibilityRole="button" accessibilityLabel={item.name}>
-                  <View style={[styles.recentIcon, { backgroundColor: a.tint }]}><Icon name={cat?.icon ?? 'package-variant'} size={20} color={a.main} /></View>
-                  <Text variant="label" color={colors.ink} numberOfLines={1} style={{ flexShrink: 1 }}>{item.name}</Text>
-                </Pressable>
-              );
-            }}
-          />
-        </>
-      ) : null}
-
-      {recommended.length > 0 ? (
-        <>
-          <SectionHeader title="Recommended Additions" />
-          <View style={{ gap: spacing.md }}>{recommended.map((p) => <ProductCard key={p.id} product={p} compact />)}</View>
-        </>
-      ) : null}
-
-      {config.usingMocks ? (
-        <View style={{ marginTop: spacing.xl, alignItems: 'center' }}>
-          <Badge label="Preview data: prices and stock are samples" />
-        </View>
-      ) : null}
+      <Text variant="bodyS" style={{ marginTop: spacing.xl, textAlign: 'center' }}>
+        Applications are reviewed before cover starts, and cover begins once your first payment is received.
+      </Text>
     </Screen>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text variant="eyebrow">{label.toUpperCase()}</Text>
+      <Text variant="price">{value}</Text>
+    </View>
   );
 }
 
@@ -142,10 +118,11 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 60 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   hero: { marginTop: spacing.xl, backgroundColor: colors.oliveLight, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.md, overflow: 'hidden' },
-  blob: { position: 'absolute', width: 180, height: 180, borderRadius: radii.pill, opacity: 0.08, right: -60, top: -70 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  active: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
-  activeIcon: { width: 44, height: 44, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
-  recent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radii.pill, padding: 6, paddingRight: spacing.lg, maxWidth: 220 },
-  recentIcon: { width: 34, height: 34, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  blob: { position: 'absolute', width: 180, height: 180, borderRadius: radii.pill, opacity: 0.08, right: -60, top: -70, backgroundColor: colors.olive },
+  cover: { marginTop: spacing.xl, backgroundColor: colors.oliveLight, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.lg },
+  coverTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pill: { backgroundColor: colors.card, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  stats: { flexDirection: 'row', gap: spacing.md },
+  step: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  stepIcon: { width: 48, height: 48, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { authService, type RegisterInput } from '../services';
+import { authService, type RegisterInput } from '../services/api';
 import { KEYS, readJSON, writeJSON } from '../services/storage';
 import type { User } from '../types';
 

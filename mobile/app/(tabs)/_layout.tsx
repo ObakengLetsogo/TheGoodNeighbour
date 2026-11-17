@@ -7,8 +7,8 @@ import { colors, components, fonts } from '../../src/theme';
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 const TABS: { name: string; title: string; icon: IconName; active: IconName }[] = [
   { name: 'index', title: 'Home', icon: 'home-outline', active: 'home' },
-  { name: 'explore', title: 'Explore', icon: 'compass-outline', active: 'compass' },
-  { name: 'orders', title: 'Orders', icon: 'clipboard-text-outline', active: 'clipboard-text' },
+  { name: 'plans', title: 'Plans', icon: 'compass-outline', active: 'compass' },
+  { name: 'cover', title: 'My Cover', icon: 'shield-check-outline', active: 'shield-check' },
   { name: 'support', title: 'Support', icon: 'chat-processing-outline', active: 'chat-processing' },
   { name: 'account', title: 'Account', icon: 'account-outline', active: 'account' },
 ];

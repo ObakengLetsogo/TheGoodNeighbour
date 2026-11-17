@@ -28,9 +28,5 @@ export async function removeKey(key: string): Promise<void> {
 
 export const KEYS = {
   session: 'tgn.session.v1',
-  accounts: 'tgn.mock.accounts.v1',
-  orders: 'tgn.mock.orders.v1',
-  basket: 'tgn.basket.v1',
-  recents: 'tgn.recents.v1',
   onboarded: 'tgn.onboarded.v1',
 };

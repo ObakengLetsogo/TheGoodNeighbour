@@ -25,6 +25,10 @@ export function formatDate(iso: string): string {
   return d.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+export function formatMonthlyPrice(cents: number): string {
+  return `${formatZAR(cents)} a month`;
+}
+
 export function formatDateLong(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });

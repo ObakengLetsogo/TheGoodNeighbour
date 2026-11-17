@@ -32,7 +32,7 @@ export default function Support() {
       <View style={{ gap: spacing.md, marginTop: spacing.xl }}>
         <Action icon="whatsapp" title="Chat On WhatsApp" sub="The quickest way to reach a real person" accent="olive" onPress={() => openWhatsApp('Hi TGN, I need a hand with something.')} />
         <Action icon="phone-outline" title="Call Us" sub="Prefer to talk it through?" accent="ember" onPress={callSupport} />
-        <Action icon="clipboard-text-search-outline" title="Ask About An Order" sub="Questions about something you've ordered" accent="gold" onPress={() => router.push({ pathname: '/support/request', params: { kind: 'order_enquiry' } })} />
+        <Action icon="clipboard-text-search-outline" title="Ask About My Plan" sub="Questions about cover, family or payments" accent="gold" onPress={() => router.push({ pathname: '/support/request', params: { kind: 'policy_enquiry' } })} />
         <Action icon="alert-circle-outline" title="Report A Problem" sub="Tell us what went wrong and we'll make it right" accent="berry" onPress={() => router.push({ pathname: '/support/request', params: { kind: 'problem' } })} />
       </View>
 
