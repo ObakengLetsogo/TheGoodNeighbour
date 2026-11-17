@@ -25,6 +25,8 @@ public class Claim {
     private String causeOfDeath; // natural | accidental
     private boolean withinWaitingPeriod;
     private boolean overAgeLimit;
+    /** Whether the deceased was old enough (16+) that a copy of their ID is required. */
+    private boolean deceasedIdRequired;
     /** The bundle the family is owed, frozen when the claim is made (JSON). */
     @Column(columnDefinition = "text") private String bundleJson;
     @Embedded private Delivery delivery;
@@ -35,10 +37,10 @@ public class Claim {
     protected Claim() {}
 
     public Claim(String policyId, String userId, String memberId, String deceasedName, String dateOfDeath, String causeOfDeath,
-                 String claimantName, String claimantPhone, boolean withinWaitingPeriod, boolean overAgeLimit, String bundleJson, Delivery delivery) {
+                 String claimantName, String claimantPhone, boolean withinWaitingPeriod, boolean overAgeLimit, boolean deceasedIdRequired, String bundleJson, Delivery delivery) {
         this.policyId = policyId; this.userId = userId; this.memberId = memberId; this.deceasedName = deceasedName;
         this.dateOfDeath = dateOfDeath; this.causeOfDeath = causeOfDeath; this.claimantName = claimantName; this.claimantPhone = claimantPhone;
-        this.withinWaitingPeriod = withinWaitingPeriod; this.overAgeLimit = overAgeLimit; this.bundleJson = bundleJson; this.delivery = delivery;
+        this.withinWaitingPeriod = withinWaitingPeriod; this.overAgeLimit = overAgeLimit; this.deceasedIdRequired = deceasedIdRequired; this.bundleJson = bundleJson; this.delivery = delivery;
         this.reference = "TGN-C-" + id.substring(0, 6).toUpperCase();
     }
 
@@ -57,6 +59,7 @@ public class Claim {
     public String getCauseOfDeath() { return causeOfDeath; }
     public boolean isWithinWaitingPeriod() { return withinWaitingPeriod; }
     public boolean isOverAgeLimit() { return overAgeLimit; }
+    public boolean isDeceasedIdRequired() { return deceasedIdRequired; }
     public String getBundleJson() { return bundleJson; }
     public Delivery getDelivery() { return delivery; }
     public String getStaffNote() { return staffNote; }

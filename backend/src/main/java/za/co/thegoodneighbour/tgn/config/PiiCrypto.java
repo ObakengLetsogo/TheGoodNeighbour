@@ -71,4 +71,33 @@ public class PiiCrypto implements AttributeConverter<String, String> {
             throw new IllegalStateException("Decryption failed", e);
         }
     }
+
+    /** Encrypts a file's bytes (AES-256-GCM, fresh IV). Output is iv + ciphertext. */
+    public byte[] encryptBytes(byte[] plain) {
+        try {
+            byte[] iv = new byte[12];
+            RANDOM.nextBytes(iv);
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(128, iv));
+            byte[] ct = c.doFinal(plain);
+            return ByteBuffer.allocate(iv.length + ct.length).put(iv).put(ct).array();
+        } catch (Exception e) {
+            throw new IllegalStateException("Encryption failed", e);
+        }
+    }
+
+    public byte[] decryptBytes(byte[] stored) {
+        try {
+            ByteBuffer buf = ByteBuffer.wrap(stored);
+            byte[] iv = new byte[12];
+            buf.get(iv);
+            byte[] ct = new byte[buf.remaining()];
+            buf.get(ct);
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            c.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(128, iv));
+            return c.doFinal(ct);
+        } catch (Exception e) {
+            throw new IllegalStateException("Decryption failed", e);
+        }
+    }
 }

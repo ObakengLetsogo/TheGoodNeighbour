@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 7MB
   application:
     name: tgn-backend
   datasource:
@@ -25,3 +29,5 @@ tgn:
   bootstrap-admin-password: ${TGN_BOOTSTRAP_ADMIN_PASSWORD:}
   # log = development (one-time codes are written to the server log). disabled = no SMS provider connected.
   sms-mode: ${TGN_SMS_MODE:log}
+  # Where uploaded claim documents are stored, encrypted. In production this must be a persistent volume.
+  storage-dir: ${TGN_STORAGE_DIR:${java.io.tmpdir}/tgn-uploads}

@@ -104,6 +104,14 @@ public final class Controllers {
         @PostMapping @ResponseStatus(HttpStatus.CREATED)
         public ClaimDto submit(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @Valid @RequestBody ClaimIn in) { return claims.submit(u, in); }
         @GetMapping public List<ClaimDto> list(@RequestAttribute(WebConfig.USER_ATTR) AppUser u) { return claims.list(u); }
+
+        @PostMapping(path = "/{id}/documents", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED)
+        public ClaimDocumentDto upload(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @RequestParam("type") String type,
+                                       @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException { return claims.addDocument(u, id, type, file); }
+        @GetMapping("/{id}/documents/{docId}/file")
+        public org.springframework.http.ResponseEntity<byte[]> file(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String docId) { return fileResponse(claims.download(u, id, docId)); }
+        @DeleteMapping("/{id}/documents/{docId}") @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void remove(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String docId) { claims.removeDocument(u, id, docId); }
     }
 
     @RestController @RequestMapping("/api/support-requests")
@@ -147,6 +155,8 @@ public final class Controllers {
         public AdminPolicyDto payment(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody RecordPayment r) { return policies.recordPayment(s, id, r); }
 
         @GetMapping("/claims") public List<ClaimDto> claims() { return claims.adminList(); }
+        @GetMapping("/claims/{id}/documents/{docId}/file")
+        public org.springframework.http.ResponseEntity<byte[]> claimFile(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @PathVariable String docId) { return fileResponse(claims.adminDownload(s, id, docId)); }
         @PostMapping("/claims/{id}/status")
         public ClaimDto claimStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return claims.setStatus(s, id, c); }
 
@@ -172,5 +182,15 @@ public final class Controllers {
         public List<AuditDto> audit() {
             return audit.findTop200ByOrderByAtDesc().stream().map(e -> new AuditDto(e.getAt().toString(), e.getActor(), e.getAction(), e.getEntityType(), e.getEntityId(), e.getDetail())).toList();
         }
+    }
+
+    /** Files are served inline with the type we detected, never sniffed, and are never cached. */
+    static org.springframework.http.ResponseEntity<byte[]> fileResponse(ClaimService.Download d) {
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Type", d.contentType())
+                .header("Content-Disposition", "inline; filename=\"" + d.fileName() + "\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Cache-Control", "no-store")
+                .body(d.bytes());
     }
 }

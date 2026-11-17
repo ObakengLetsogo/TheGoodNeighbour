@@ -31,6 +31,9 @@ services:
       TGN_CORS_ALLOWED_ORIGINS: ${TGN_CORS_ALLOWED_ORIGINS:-}
       TGN_SEED_SAMPLE_COVER: ${TGN_SEED_SAMPLE_COVER:-false}
       TGN_SMS_MODE: ${TGN_SMS_MODE:-disabled}
+      TGN_STORAGE_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
 
   caddy:
     image: caddy:2
@@ -44,5 +47,6 @@ services:
       - caddydata:/data
 
 volumes:
+  uploads:
   dbdata:
   caddydata:

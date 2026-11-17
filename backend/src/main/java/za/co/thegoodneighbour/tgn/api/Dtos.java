@@ -106,9 +106,11 @@ public final class Dtos {
                           @NotBlank @Pattern(regexp = "^(natural|accidental)$") String causeOfDeath,
                           @NotBlank @Size(min = 2, max = 100) String claimantName, @NotBlank @Pattern(regexp = PHONE) String claimantPhone,
                           @NotNull @Valid DeliveryIn delivery) {}
+    public record ClaimDocumentDto(String id, String type, String fileName, String contentType, long sizeBytes, String createdAt) {}
     public record ClaimDto(String id, String reference, String policyId, String policyReference, String deceasedName, String dateOfDeath,
                            String causeOfDeath, String claimantName, String claimantPhone, String status, boolean withinWaitingPeriod,
-                           boolean overAgeLimit, String staffNote, DeliveryIn delivery, BundleVersionDto bundle, String createdAt, String updatedAt) {}
+                           boolean overAgeLimit, String staffNote, DeliveryIn delivery, BundleVersionDto bundle, String createdAt, String updatedAt,
+                           List<ClaimDocumentDto> documents, List<String> missingDocuments) {}
 
     // ---------- Support ----------
     public record SupportRequestIn(@NotBlank @Pattern(regexp = "^(policy_enquiry|claim_enquiry|problem)$") String kind, String reference,

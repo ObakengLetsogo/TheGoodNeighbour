@@ -26,6 +26,11 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", message));
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<Map<String, String>> tooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("message", "That file is too big. The limit is 5 MB."));
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<Map<String, String>> unexpected(Exception e) {
         org.slf4j.LoggerFactory.getLogger(ApiExceptionHandler.class).error("Unhandled error", e);
