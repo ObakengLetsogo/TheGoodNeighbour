@@ -8,7 +8,7 @@ import { Text } from './Text';
  * Geometry was traced from the approved logo artwork; the orange passes over the olive at the top
  * and the olive passes back over the orange at the bottom left.
  */
-export const LOGO_ORANGE = '#E05A19';
+export const LOGO_ORANGE = '#D45B38';
 export const LOGO_OLIVE = '#4A5728';
 const ORANGE_PATH = 'M118.5 327.5L60.9 380.5Q35.8 403.8 35.8 369.5L35.8 236.2A112.8 112.8 0 0 1 261.2 236.2L261.2 236.2A77.5 77.5 0 0 1 108.9 256.3';
 const OLIVE_PATH = 'M319 392L370.9 441Q395.8 464.5 395.8 430.2L395.8 294.5A115 115 0 0 0 165.8 294.5L165.8 294.5A84.5 84.5 0 0 0 324.5 334.8';
