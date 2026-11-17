@@ -63,7 +63,7 @@ The Docker files are written but have not been built or run yet.
 
 ## How it works
 
-1. **Build.** The customer picks one grocery hamper (the full grocery list is shown), 0 to 3 sheep and 0 to 2 cows. The server prices it live.
+1. **Build.** The customer picks one grocery hamper (the full grocery list is shown), 0 to 3 sheep and 0 to 2 cows. The server prices it live, and a "See how it adds up" panel shows each person's line: base × relationship % × age %.
 2. **Apply.** ID number, debit date and family members. Every member needs a **relationship** to the main member
    (spouse, child, parent, parent-in-law, grandparent, sibling, other) and an **ID number** (optional for under 16s).
 3. **Review.** Staff approve or decline (a reason is required to decline).
@@ -79,8 +79,11 @@ until your underwriter signs it off**.
 | Rule | Default |
 |---|---|
 | One bundle per death | The bundle in force is delivered, whoever on the cover passes away |
-| Monthly price (main member) | Bundle cost to the company × **1.6%** |
-| Family member fee | Main member's price × relationship %: spouse 100, child 40, parent 150, parent-in-law 150, grandparent 180, sibling 110, other 130 |
+| Base price | The bundle's cost to the company × **1.6%** a month |
+| **Everyone's price** | **Base × relationship % × age %**, rounded once. This includes the main member |
+| Relationship % | Spouse 100, child 40, parent 100, parent-in-law 100, grandparent 100, sibling 100, other family 110 |
+| Age % (current age) | 0–35: 100 · 36–45: 120 · 46–55: 150 · 56–65: 200 · 66–75: 280 · 76 and over: 380 |
+| Example | Bundle with a R84.80 base: you at 40 pay R101.76, a spouse at 38 R101.76, a parent at 70 R237.44, a child at 9 R33.92. Total R474.88 |
 | Minimum bundle | Worth at least R2 500 |
 | Main member | Joins 18 to 65, cover ends at 85 |
 | Joining ages | Spouse 18–65, child 0–21, parents and in-laws and grandparents 18–75, sibling and other 18–65 |

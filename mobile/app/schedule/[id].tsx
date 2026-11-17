@@ -60,8 +60,8 @@ export default function Schedule() {
       <Text variant="section" style={styles.h}>Your Price</Text>
       <Card accent="olive" tabLabel="Monthly">
         <Rows rows={[
-          ['You', formatZAR(p.baseMonthlyCents)],
-          ...p.members.map((m) => [`${m.fullName} (${RELATIONSHIP_LABEL[m.relationship]})`, formatZAR(m.feeCents)] as [string, string]),
+          [`You (age ${p.holderAge})`, formatZAR(p.mainFeeCents)],
+          ...p.members.map((m) => [`${m.fullName} (${RELATIONSHIP_LABEL[m.relationship]}, age ${m.age})`, formatZAR(m.feeCents)] as [string, string]),
           ['Every month', formatZAR(p.monthlyTotalCents)],
           ['Debit date', `The ${ordinal(p.debitDay)} of each month`],
         ]} />

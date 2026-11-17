@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { Card } from '../../src/components/Card';
+import { HowPriceWorks } from '../../src/components/HowPriceWorks';
 import { Icon } from '../../src/components/Icon';
 import { Screen, ScreenHeader } from '../../src/components/Screen';
 import { ErrorState, LoadingState } from '../../src/components/States';
@@ -39,6 +40,9 @@ export default function KeyFacts() {
               ['Who', `Up to ${options.maxMembers} family members. You join between ${options.mainMinAge} and ${options.mainMaxAge}.`],
               ...options.relationships.map((r) => [RELATIONSHIP_LABEL[r.relationship], `Up to ${r.maxCount}. Join aged ${r.minAge} to ${r.maxAge}. Cover ends at ${r.coverEndAge}.`] as [string, string]),
             ]} />
+          </Card>
+          <Card accent="gold" tabLabel="Your price">
+            <HowPriceWorks options={options} />
           </Card>
           <Card accent="olive" tabLabel="Paying and changing">
             <Facts rows={[

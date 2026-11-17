@@ -74,7 +74,8 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         </Card>
         <Card tab="Billing" accent="gold">
           <dl className="dl">
-            <dt>Main member</dt><dd>{zar(p.baseMonthlyCents)}</dd>
+            <dt>Base price</dt><dd>{zar(p.baseMonthlyCents)}</dd>
+            <dt>Main member (age {p.holderAge})</dt><dd>{zar(p.mainFeeCents)} <span className="muted small">× {p.mainAgeBps / 100}% age</span></dd>
             <dt>Every month</dt><dd>{zar(p.monthlyTotalCents)}</dd>
             <dt>Debit day</dt><dd>The {ordinal(p.debitDay)}</dd>
             <dt>Debit order</dt><dd>{label(p.mandateStatus)}</dd>
@@ -129,9 +130,9 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
       <Card tab={`Family (${p.members.length})`} accent="ember">
         {p.members.length === 0 ? <Empty>No family members on this plan.</Empty> : (
           <table>
-            <thead><tr><th>Name</th><th>Relationship to member</th><th>ID number</th><th>Born</th><th className="num">Monthly fee</th><th>Covered from</th></tr></thead>
+            <thead><tr><th>Name</th><th>Relationship to member</th><th>ID number</th><th>Age</th><th>Factors</th><th className="num">Monthly fee</th><th>Covered from</th></tr></thead>
             <tbody>{p.members.map((m) => (
-              <tr key={m.id}><td>{m.fullName}</td><td>{label(m.relationship)}</td><td>{m.idNumber ?? '–'}</td><td>{dateShort(m.dateOfBirth)}</td><td className="num">{zar(m.feeCents)}</td><td>{dateShort(m.coverStartsOn)}</td></tr>
+              <tr key={m.id}><td>{m.fullName}</td><td>{label(m.relationship)}</td><td>{m.idNumber ?? '–'}</td><td>{m.age} <span className="muted small">({dateShort(m.dateOfBirth)})</span></td><td className="small muted">{m.relationshipBps / 100}% relationship × {m.ageBps / 100}% age</td><td className="num">{zar(m.feeCents)}</td><td>{dateShort(m.coverStartsOn)}</td></tr>
             ))}</tbody>
           </table>
         )}

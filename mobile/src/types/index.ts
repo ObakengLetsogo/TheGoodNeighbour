@@ -39,9 +39,16 @@ export interface BenefitItem {
   available: boolean;
 }
 
+export interface AgeBand {
+  fromAge: number;
+  toAge: number;
+  multiplierBps: number;
+}
+
 export interface CoverOptions {
   items: BenefitItem[];
   relationships: RelationshipRule[];
+  ageBands: AgeBand[];
   minBundleValueCents: Cents;
   mainMinAge: number;
   mainMaxAge: number;
@@ -70,13 +77,24 @@ export interface BundleLine {
   contents: string[];
 }
 
+/** One person's price: the reference base x their relationship % x their age %. role is "you" for the main member. */
+export interface PersonQuote {
+  role: 'you' | Relationship;
+  age?: number | null;
+  relationshipBps: number;
+  ageBps: number;
+  feeCents: Cents;
+}
+
 export interface Quote {
   valid: boolean;
   problems: string[];
   lines: BundleLine[];
   bundleValueCents: Cents;
+  /** The reference monthly price (bundle cost x base rate) before anyone's relationship or age is applied. */
   baseMonthlyCents: Cents;
-  members: { relationship: Relationship; feeCents: Cents }[];
+  main: PersonQuote;
+  members: PersonQuote[];
   totalMonthlyCents: Cents;
 }
 
@@ -97,6 +115,9 @@ export interface Member {
   feeCents: Cents;
   status: string;
   coverStartsOn?: string | null;
+  age: number;
+  relationshipBps: number;
+  ageBps: number;
 }
 
 export interface Payment {
@@ -126,6 +147,9 @@ export interface Policy {
   debitDay: number;
   monthlyTotalCents: Cents;
   baseMonthlyCents: Cents;
+  mainFeeCents: Cents;
+  mainAgeBps: number;
+  holderAge: number;
   mandateStatus: 'not_set_up' | 'pending_customer_approval' | 'active' | 'rejected';
   createdAt: string;
   startDate?: string | null;

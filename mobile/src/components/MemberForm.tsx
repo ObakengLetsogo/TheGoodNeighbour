@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { feeFor, memberProblem, ruleFor } from '../lib/cover';
+import { ageBpsFor, memberProblem, pct, personFee, ruleFor } from '../lib/cover';
 import { formatZAR } from '../lib/format';
 import { ageOn, dobFromSAId } from '../lib/saId';
-import { colors, spacing } from '../theme';
+import { colors, radii, spacing } from '../theme';
 import { RELATIONSHIP_LABEL, type CoverOptions, type MemberInput, type Relationship } from '../types';
 import { Button } from './Button';
 import { Chip } from './Chip';
@@ -55,7 +55,7 @@ export function MemberForm({ options, baseMonthlyCents, existing, onAdd, busy, s
         </View>
         {rule ? (
           <Text variant="bodyS">
-            +{formatZAR(feeFor(baseMonthlyCents, rule.multiplierBps))} a month · ages {rule.minAge} to {rule.maxAge} · up to {rule.maxCount}
+            Joins aged {rule.minAge} to {rule.maxAge} · up to {rule.maxCount} · {pct(rule.multiplierBps)} relationship factor
           </Text>
         ) : null}
       </View>
@@ -63,6 +63,14 @@ export function MemberForm({ options, baseMonthlyCents, existing, onAdd, busy, s
       <Input label="ID Number" value={idNumber} onChangeText={(t) => setIdNumber(t.replace(/\D/g, '').slice(0, 13))} keyboardType="number-pad" maxLength={13} error={errors.id}
         hint={idDob ? `Born ${idDob}, age ${ageOn(idDob)}` : 'Their 13-digit South African ID number. Children under 16 can skip it.'} />
       {!idDob ? <DateField key={formKey} label="Date Of Birth (if no ID number)" onChange={setManualDob} error={errors.dob} /> : errors.dob ? <Text variant="bodyS" color={colors.danger}>{errors.dob}</Text> : null}
+      {rule && age != null ? (
+        <View style={{ backgroundColor: colors.oliveLight, borderRadius: radii.md, padding: spacing.md, gap: 2 }} accessibilityLiveRegion="polite">
+          <Text variant="cardTitle">Adds {formatZAR(personFee(baseMonthlyCents, rule.multiplierBps, ageBpsFor(options.ageBands, age)))} a month</Text>
+          <Text variant="bodyS" color={colors.inkSoft}>
+            {formatZAR(baseMonthlyCents)} × {pct(rule.multiplierBps)} {RELATIONSHIP_LABEL[relationship].toLowerCase()} × {pct(ageBpsFor(options.ageBands, age))} for age {age}
+          </Text>
+        </View>
+      ) : null}
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         {onCancel ? <Button label="Cancel" variant="secondary" fullWidth={false} style={{ flex: 1 }} onPress={onCancel} /> : null}
         <Button label={submitLabel} icon="plus" onPress={submit} loading={busy} fullWidth={!onCancel} style={onCancel ? { flex: 1 } : undefined} />

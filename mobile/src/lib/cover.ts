@@ -1,11 +1,19 @@
-import type { CoverOptions, MemberInput, Relationship, RelationshipRule } from '../types';
+import type { AgeBand, CoverOptions, MemberInput, Relationship, RelationshipRule } from '../types';
 import { RELATIONSHIP_LABEL } from '../types';
 import { ageOn } from './saId';
 
 export const ruleFor = (o: CoverOptions, r: Relationship): RelationshipRule | undefined => o.relationships.find((x) => x.relationship === r);
 
-/** A member's monthly fee is the main member's price times their relationship's multiplier (the server uses the same rule). */
-export const feeFor = (baseMonthlyCents: number, multiplierBps: number) => Math.round((baseMonthlyCents * multiplierBps) / 10000);
+/** The price factor for someone of this age. Ages beyond the last band use the last band, as the server does. */
+export const ageBpsFor = (bands: AgeBand[], age: number): number =>
+  (bands.find((b) => age >= b.fromAge && age <= b.toAge) ?? (age < 0 ? bands[0] : bands[bands.length - 1]))?.multiplierBps ?? 10000;
+
+/** Anyone's monthly price: base x relationship % x age %, rounded once. The server is authoritative; this is only a preview. */
+export const personFee = (baseMonthlyCents: number, relationshipBps: number, ageBps: number) =>
+  Math.round((baseMonthlyCents * relationshipBps * ageBps) / 100_000_000);
+
+/** 12000 -> "120%" */
+export const pct = (bps: number) => `${Math.round(bps / 100)}%`;
 
 /** Friendly eligibility problem for adding someone, or null. The server checks again. */
 export function memberProblem(o: CoverOptions, r: Relationship, dobISO: string, existing: Pick<MemberInput, 'relationship'>[]): string | null {

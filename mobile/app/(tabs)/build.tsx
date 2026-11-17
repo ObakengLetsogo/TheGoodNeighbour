@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { BundleSummary, itemAccent, itemIcon } from '../../src/components/BundleSummary';
 import { Button } from '../../src/components/Button';
 import { Card } from '../../src/components/Card';
+import { HowPriceWorks } from '../../src/components/HowPriceWorks';
 import { Icon } from '../../src/components/Icon';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState, LoadingState } from '../../src/components/States';
@@ -55,6 +56,11 @@ export default function BuildTab() {
               <Button label="Start Building" icon="arrow-right" onPress={() => router.push('/builder')} style={{ marginTop: spacing.sm }} />
             </View>
           )}
+
+          <Text variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>How your price is worked out</Text>
+          <Card accent="gold" tabLabel="Price rules">
+            <HowPriceWorks options={options} />
+          </Card>
 
           <Text variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>How it works</Text>
           <View style={{ gap: spacing.md }}>

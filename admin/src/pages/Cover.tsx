@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import { Card, ErrorBox, Loading, useLoad } from '../components/ui';
 import { label, zar } from '../format';
-import type { BenefitItem, CoverConfig, RelationshipRule } from '../types';
+import type { AgeBand, BenefitItem, CoverConfig, RelationshipRule } from '../types';
 
 export function CoverPage() {
   const cfg = useLoad(api.cover);
@@ -32,6 +32,7 @@ function ConfigEditor({ initial }: { initial: CoverConfig }) {
   const num = (k: keyof CoverConfig, l: string, hint?: string) => (
     <label className="f">{l}<input type="number" value={c[k] as number} onChange={(e) => set(k, Number(e.target.value) as never)} />{hint ? <span className="muted small">{hint}</span> : null}</label>
   );
+  const band = (i: number, patch: Partial<AgeBand>) => set('ageBands', c.ageBands.map((b, j) => (j === i ? { ...b, ...patch } : b)));
   const rule = (i: number, patch: Partial<RelationshipRule>) => set('relationships', c.relationships.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const save = async () => {
     setBusy(true); setMsg(undefined);
@@ -44,10 +45,25 @@ function ConfigEditor({ initial }: { initial: CoverConfig }) {
         <div className="form-grid">
           <label className="f">Monthly rate (% of bundle cost)
             <input inputMode="decimal" value={c.baseRateBps / 100} onChange={(e) => set('baseRateBps', Math.round(Number(e.target.value) * 100))} />
-            <span className="muted small">The main member's monthly price is the bundle's cost × this rate.</span></label>
+            <span className="muted small">The base monthly price is the bundle's cost × this rate. Each person then pays base × relationship % × age %.</span></label>
           <label className="f">Minimum bundle value (rand)<input inputMode="decimal" value={rand(c.minBundleValueCents)} onChange={(e) => set('minBundleValueCents', cents(e.target.value))} /></label>
           {num('escalationCapBps', 'Yearly increase cap (basis points)', `${c.escalationCapBps / 100}% maximum`)}
         </div>
+      </Card>
+      <Card tab="Price by age" accent="gold">
+        <p className="muted small" style={{ marginTop: 0 }}>Everyone's price is scaled by the band their <strong>current age</strong> falls in. Each person pays: <strong>base price × relationship % × age %</strong>. Bands must start at 0, follow on with no gaps, and the last must reach at least 110.</p>
+        <table>
+          <thead><tr><th>From age</th><th>To age</th><th>Price factor (%)</th><th /></tr></thead>
+          <tbody>{c.ageBands.map((b, i) => (
+            <tr key={i}>
+              <td><input type="number" value={b.fromAge} onChange={(e) => band(i, { fromAge: Number(e.target.value) })} aria-label={`band ${i + 1} from age`} /></td>
+              <td><input type="number" value={b.toAge} onChange={(e) => band(i, { toAge: Number(e.target.value) })} aria-label={`band ${i + 1} to age`} /></td>
+              <td><input inputMode="decimal" value={b.multiplierBps / 100} onChange={(e) => band(i, { multiplierBps: Math.round(Number(e.target.value) * 100) })} aria-label={`band ${i + 1} factor percent`} /></td>
+              <td><button className="ghost" onClick={() => set('ageBands', c.ageBands.filter((_, j) => j !== i))} disabled={c.ageBands.length <= 1} aria-label={`Remove band ${i + 1}`}>Remove</button></td>
+            </tr>
+          ))}</tbody>
+        </table>
+        <button className="secondary" style={{ marginTop: 12 }} onClick={() => { const last = c.ageBands[c.ageBands.length - 1]; set('ageBands', [...c.ageBands, { fromAge: last ? last.toAge + 1 : 0, toAge: (last ? last.toAge : 0) + 10, multiplierBps: last?.multiplierBps ?? 10000 }]); }}>Add Age Band</button>
       </Card>
       <Card tab="Waiting periods &amp; billing" accent="ember">
         <div className="form-grid">
@@ -65,7 +81,7 @@ function ConfigEditor({ initial }: { initial: CoverConfig }) {
           {num('maxMembers', 'Max family members')}
         </div>
         <table>
-          <thead><tr><th>Relationship</th><th>Fee (% of main member's price)</th><th>Join from</th><th>Join up to</th><th>Cover ends at</th><th>Max</th></tr></thead>
+          <thead><tr><th>Relationship</th><th>Relationship factor (% of base price)</th><th>Join from</th><th>Join up to</th><th>Cover ends at</th><th>Max</th></tr></thead>
           <tbody>{c.relationships.map((r, i) => (
             <tr key={r.relationship}>
               <td><strong>{label(r.relationship)}</strong></td>

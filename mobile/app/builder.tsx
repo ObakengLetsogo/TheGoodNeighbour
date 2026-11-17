@@ -1,12 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { BundleBuilder, type Selection } from '../src/components/BundleBuilder';
 import { BundleSummary } from '../src/components/BundleSummary';
 import { Button } from '../src/components/Button';
 import { Card } from '../src/components/Card';
 import { Chip } from '../src/components/Chip';
+import { HowPriceWorks } from '../src/components/HowPriceWorks';
 import { Icon } from '../src/components/Icon';
+import { PriceBreakdown, type PersonLine } from '../src/components/PriceBreakdown';
 import { Input } from '../src/components/Input';
 import { MemberForm } from '../src/components/MemberForm';
 import { Screen, ScreenHeader } from '../src/components/Screen';
@@ -44,6 +46,8 @@ export default function Build() {
   const [members, setMembers] = useState<MemberInput[]>([]);
   const [adding, setAdding] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [showSum, setShowSum] = useState(false);
+  const [showHow, setShowHow] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [legal, setLegal] = useState<LegalSummary[]>([]);
   const [busy, setBusy] = useState(false);
@@ -58,7 +62,9 @@ export default function Build() {
     () => (editing ? editing.members.map((m) => ({ relationship: m.relationship, dateOfBirth: m.dateOfBirth })) : members.map((m) => ({ relationship: m.relationship, dateOfBirth: m.dateOfBirth }))),
     [editing, members],
   );
-  const { quote, loading: quoting, error: quoteError } = useQuote(items, quoteMembers);
+  // The main member's age comes from their ID number (or, when editing, from the cover). Until then they are priced as a typical adult.
+  const holderDobIso = useMemo(() => (editing ? editing.holder.dateOfBirth : dobFromSAId(idNumber) ?? undefined), [editing, idNumber]);
+  const { quote, loading: quoting, error: quoteError } = useQuote(items, quoteMembers, holderDobIso);
 
   if (status === 'loading') return <Screen><ScreenHeader /><LoadingState rows={3} /></Screen>;
   if (status === 'error' || !options) return <Screen><ScreenHeader /><ErrorState message={error} onRetry={reload} /></Screen>;
@@ -73,6 +79,8 @@ export default function Build() {
   const holderDob = dobFromSAId(idNumber);
   const holderAge = holderDob ? ageOn(holderDob) : null;
   const total = quote?.totalMonthlyCents ?? 0;
+  const memberNames = editing ? editing.members.map((m) => m.fullName) : members.map((m) => m.fullName);
+  const people: PersonLine[] = quote ? [{ ...quote.main, name: user?.fullName }, ...quote.members.map((m, i) => ({ ...m, name: memberNames[i] }))] : [];
   const canContinue = !!quote && quote.valid && !quoting;
   const isLast = step === STEPS.length - 1;
   const needsVerify = !editing && smsEnabled && !!user && !user.phoneVerified;
@@ -114,10 +122,22 @@ export default function Build() {
     <>
       {quote && !quote.valid && step !== 1 && step !== 2 ? <Text variant="bodyS" color={colors.danger} accessibilityLiveRegion="polite">{quote.problems[0]}</Text> : null}
       {quoteError ? <Text variant="bodyS" color={colors.danger}>{quoteError}</Text> : null}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Text variant="eyebrow">{editing ? 'NEW MONTHLY PRICE' : 'YOUR MONTHLY PRICE'}</Text>
+      {showSum && quote ? (
+        <ScrollView style={{ maxHeight: 250 }} contentContainerStyle={{ paddingBottom: spacing.sm }}>
+          <PriceBreakdown baseMonthlyCents={quote.baseMonthlyCents} people={people} totalMonthlyCents={total} />
+        </ScrollView>
+      ) : null}
+      <Pressable onPress={() => setShowSum(!showSum)} accessibilityRole="button" accessibilityState={{ expanded: showSum }} accessibilityLabel={`${editing ? 'New monthly price' : 'Your monthly price'} ${quote ? formatZAR(total) : ''}. ${showSum ? "Hide" : "See"} how it adds up`}
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View>
+          <Text variant="eyebrow">{editing ? 'NEW MONTHLY PRICE' : 'YOUR MONTHLY PRICE'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Text variant="label" color={colors.olive} style={{ fontFamily: 'Urbanist_600SemiBold' }}>{showSum ? 'Hide how it adds up' : 'See how it adds up'}</Text>
+            <Icon name={showSum ? 'chevron-down' : 'chevron-up'} size={16} color={colors.olive} />
+          </View>
+        </View>
         <Text variant="price" style={{ fontSize: 24, opacity: quoting ? 0.5 : 1 }} accessibilityLiveRegion="polite">{quote ? formatZAR(total) : '–'}</Text>
-      </View>
+      </Pressable>
       {!isLast ? (
         <Button label="Continue" icon="arrow-right" onPress={next} disabled={step === 0 ? !canContinue : step === 1 ? needsVerify : step === 2 ? adding || !canContinue : false} />
       ) : (
@@ -155,6 +175,13 @@ export default function Build() {
             </Card>
           ) : null}
           {quote && !quote.valid ? <Text variant="body" color={colors.danger} accessibilityLiveRegion="polite">{quote.problems[0]}</Text> : null}
+          {!editing ? <Notice text="This price is for a typical adult. It updates as soon as we know your age and your family's ages and relationships, because everyone's price depends on both." /> : null}
+          <Pressable onPress={() => setShowHow(!showHow)} accessibilityRole="button" accessibilityState={{ expanded: showHow }} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 }}>
+            <Icon name="calculator-variant-outline" size={22} color={colors.olive} />
+            <Text variant="cardTitle" color={colors.olive} style={{ flex: 1 }}>How is my price worked out?</Text>
+            <Icon name={showHow ? 'chevron-up' : 'chevron-down'} size={22} color={colors.muted} />
+          </Pressable>
+          {showHow ? <HowPriceWorks options={options} exampleBaseCents={quote?.baseMonthlyCents} /> : null}
         </View>
       ) : null}
 
@@ -172,7 +199,7 @@ export default function Build() {
             </Pressable>
           ) : null}
           <Input label="ID Number" value={idNumber} onChangeText={(t) => { setIdNumber(t.replace(/\D/g, '').slice(0, 13)); setIdError(undefined); }} keyboardType="number-pad" maxLength={13} error={idError}
-            hint={holderDob ? `Born ${holderDob}, age ${holderAge}` : 'Your 13-digit South African ID number.'} />
+            hint={holderDob ? `Born ${holderDob}, age ${holderAge}. Your own price at this age is ${formatZAR(quote?.main.feeCents ?? 0)} a month.` : 'Your 13-digit South African ID number. Your age sets your own price.'} />
           <View style={{ gap: spacing.sm }}>
             <Text variant="label" color={colors.inkSoft}>Which day of the month should the debit order go off?</Text>
             <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
@@ -193,7 +220,7 @@ export default function Build() {
             <View key={`${m.fullName}${i}`} style={styles.member}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="cardTitle">{m.fullName}</Text>
-                <Text variant="bodyS">{RELATIONSHIP_LABEL[m.relationship]} · +{formatZAR(quote?.members[i]?.feeCents ?? 0)} a month</Text>
+                <Text variant="bodyS">{RELATIONSHIP_LABEL[m.relationship]}{quote?.members[i]?.age != null ? ` · age ${quote.members[i].age}` : ''} · +{formatZAR(quote?.members[i]?.feeCents ?? 0)} a month</Text>
               </View>
               <Pressable onPress={() => setMembers(members.filter((_, j) => j !== i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${m.fullName}`}><Icon name="close" size={22} color={colors.muted} /></Pressable>
             </View>
@@ -215,14 +242,9 @@ export default function Build() {
           <Card accent="ember" tabLabel="What your family receives">
             {quote ? <BundleSummary lines={quote.lines} totalValueCents={quote.bundleValueCents} /> : null}
           </Card>
-          <Card accent="gold" tabLabel="Every month">
-            <View style={{ gap: spacing.sm }}>
-              <Line label="You" value={formatZAR(quote?.baseMonthlyCents ?? 0)} />
-              {(editing ? editing.members.map((m) => ({ name: m.fullName, rel: m.relationship })) : members.map((m) => ({ name: m.fullName, rel: m.relationship }))).map((m, i) => (
-                <Line key={i} label={`${m.name} (${RELATIONSHIP_LABEL[m.rel]})`} value={formatZAR(quote?.members[i]?.feeCents ?? 0)} />
-              ))}
-              <View style={{ height: 1, backgroundColor: colors.border, marginVertical: spacing.xs }} />
-              <Line bold label="In total" value={formatZAR(total)} />
+          <Card accent="gold" tabLabel="How your price adds up">
+            <View style={{ gap: spacing.md }}>
+              {quote ? <PriceBreakdown baseMonthlyCents={quote.baseMonthlyCents} people={people} totalMonthlyCents={total} /> : null}
               {editing ? <Text variant="bodyS">Was {formatZAR(editing.monthlyTotalCents)} a month. The new price starts from your next debit.</Text> : <Text variant="bodyS">Debit order on the {ordinal(debitDay)} of each month, once approved by you and your bank.</Text>}
             </View>
           </Card>

@@ -6,13 +6,13 @@ export type Relationship = 'spouse' | 'child' | 'parent' | 'parent_in_law' | 'gr
 export interface Staff { id: string; email: string; fullName: string; role: string }
 export interface Session { staff: Staff; token: string }
 export interface Customer { id: string; fullName: string; phone: string; email?: string | null; phoneVerified?: boolean }
-export interface Member { id: string; relationship: Relationship; fullName: string; idNumber?: string | null; dateOfBirth: string; feeCents: number; status: string; coverStartsOn?: string | null }
+export interface Member { id: string; relationship: Relationship; fullName: string; idNumber?: string | null; dateOfBirth: string; feeCents: number; status: string; coverStartsOn?: string | null; age: number; relationshipBps: number; ageBps: number }
 export interface Payment { id: string; amountCents: number; paidOn: string; status: string; source: string; reference: string }
 export interface BundleLine { itemId: string; kind: string; name: string; quantity: number; valueCents: number; monthlyCents: number; contents: string[] }
 export interface BundleVersion { version: number; effectiveFrom: string; upgradeWaitingEndsOn?: string | null; bundleValueCents: number; baseMonthlyCents: number; lines: BundleLine[] }
 export interface Policy {
   id: string; reference: string; status: PolicyStatus; holder: { name: string; idNumber?: string | null; dateOfBirth: string };
-  debitDay: number; monthlyTotalCents: number; baseMonthlyCents: number; mandateStatus: string; createdAt: string;
+  debitDay: number; monthlyTotalCents: number; baseMonthlyCents: number; mainFeeCents: number; mainAgeBps: number; holderAge: number; mandateStatus: string; createdAt: string;
   startDate?: string | null; waitingEndsOn?: string | null; nextDebitDate?: string | null;
   bundle: BundleVersion; bundleHistory: BundleVersion[]; members: Member[]; payments: Payment[];
   termsVersion?: number | null; privacyVersion?: number | null; consentAt?: string | null;
@@ -27,11 +27,12 @@ export interface Claim {
   withinWaitingPeriod: boolean; overAgeLimit: boolean; staffNote?: string | null; delivery: Delivery; bundle: BundleVersion;
   createdAt: string; updatedAt: string;
 }
+export interface AgeBand { fromAge: number; toAge: number; multiplierBps: number }
 export interface RelationshipRule { relationship: Relationship; multiplierBps: number; minAge: number; maxAge: number; coverEndAge: number; maxCount: number }
 export interface CoverConfig {
   baseRateBps: number; minBundleValueCents: number; naturalWaitingDays: number; accidentalWaitingDays: number; upgradeWaitingDays: number;
   mainMinAge: number; mainMaxAge: number; mainCoverEndAge: number; maxMembers: number; maxCommitmentMultiple: number;
-  lapseAfterMissedPayments: number; reinstateWithinDays: number; escalationCapBps: number; coolingOffDays: number; relationships: RelationshipRule[];
+  lapseAfterMissedPayments: number; reinstateWithinDays: number; escalationCapBps: number; coolingOffDays: number; relationships: RelationshipRule[]; ageBands: AgeBand[];
 }
 export interface BenefitItem {
   id: string; kind: 'grocery' | 'livestock'; name: string; description: string; unitLabel: string; valueCents: number; costCents: number;

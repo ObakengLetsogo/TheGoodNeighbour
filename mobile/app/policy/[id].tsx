@@ -13,6 +13,7 @@ import { Timeline } from '../../src/components/Timeline';
 import { formatDate, formatDateLong, formatZAR } from '../../src/lib/format';
 import { ordinal } from '../../src/lib/cover';
 import { BundleSummary } from '../../src/components/BundleSummary';
+import { PriceBreakdown, type PersonLine } from '../../src/components/PriceBreakdown';
 import { CLAIM_STATUS_LABEL, POLICY_STATUS_LABEL, POLICY_STATUS_MESSAGE, POLICY_STEPS, policyStep } from '../../src/lib/status';
 import { confirmAction } from '../../src/lib/confirm';
 import { callSupport, openWhatsApp } from '../../src/lib/support';
@@ -34,6 +35,10 @@ export default function PolicyDetails() {
   if (!policy) return <Screen><ScreenHeader /><EmptyState icon="shield-off-outline" title="We can't find that plan" message="It may not be on this account." actionLabel="Back Home" onAction={() => router.replace('/(tabs)')} /></Screen>;
 
   const mine = claims.filter((c) => c.policyId === policy.id);
+  const people: PersonLine[] = [
+    { role: 'you', name: policy.holder.name, age: policy.holderAge, relationshipBps: 10000, ageBps: policy.mainAgeBps, feeCents: policy.mainFeeCents },
+    ...policy.members.map((m) => ({ role: m.relationship, name: m.fullName, age: m.age, relationshipBps: m.relationshipBps, ageBps: m.ageBps, feeCents: m.feeCents })),
+  ];
   const open = ['pending_review', 'approved', 'active'].includes(policy.status);
   const canReinstate = !!policy.reinstateUntil && new Date(`${policy.reinstateUntil}T23:59:59`) >= new Date();
   const previous = policy.bundleHistory.length > 1 ? policy.bundleHistory[policy.bundleHistory.length - 2] : undefined;
@@ -145,14 +150,15 @@ export default function PolicyDetails() {
       </Card>
 
       <Text variant="section" style={styles.h}>Your Price</Text>
-      <Card accent="gold" tabLabel="Monthly">
-        <View style={{ gap: spacing.sm }}>
-          <Row label="You" value={formatZAR(policy.baseMonthlyCents)} />
-          {policy.members.map((m) => <Row key={m.id} label={`${m.fullName} (${RELATIONSHIP_LABEL[m.relationship]})`} value={formatZAR(m.feeCents)} />)}
-          <Row label="Every month" value={formatZAR(policy.monthlyTotalCents)} bold />
-          <Row label="Debit date" value={`The ${ordinal(policy.debitDay)}`} />
-          {policy.nextDebitDate ? <Row label="Next debit" value={formatDate(policy.nextDebitDate)} /> : null}
-          {policy.waitingEndsOn ? <Row label="Waiting period ends" value={formatDateLong(policy.waitingEndsOn)} /> : null}
+      <Card accent="gold" tabLabel="How it adds up">
+        <View style={{ gap: spacing.md }}>
+          <PriceBreakdown baseMonthlyCents={policy.baseMonthlyCents} totalMonthlyCents={policy.monthlyTotalCents} people={people} />
+          <View style={{ gap: spacing.sm }}>
+            <Row label="Debit date" value={`The ${ordinal(policy.debitDay)}`} />
+            {policy.nextDebitDate ? <Row label="Next debit" value={formatDate(policy.nextDebitDate)} /> : null}
+            {policy.waitingEndsOn ? <Row label="Waiting period ends" value={formatDateLong(policy.waitingEndsOn)} /> : null}
+          </View>
+          <Text variant="bodyS">Prices are reviewed once a year. A person moving into an older age band can change the price.</Text>
         </View>
       </Card>
 
@@ -170,7 +176,7 @@ export default function PolicyDetails() {
             <Icon name="account-outline" size={28} color={colors.ember} />
             <View style={{ flex: 1 }}>
               <Text variant="cardTitle">{m.fullName}</Text>
-              <Text variant="bodyS">{RELATIONSHIP_LABEL[m.relationship]} · +{formatZAR(m.feeCents)} a month</Text>
+              <Text variant="bodyS">{RELATIONSHIP_LABEL[m.relationship]} · age {m.age} · +{formatZAR(m.feeCents)} a month</Text>
               {m.coverStartsOn ? <Text variant="bodyS">Covered from {formatDate(m.coverStartsOn)}</Text> : null}
             </View>
             {open ? (
