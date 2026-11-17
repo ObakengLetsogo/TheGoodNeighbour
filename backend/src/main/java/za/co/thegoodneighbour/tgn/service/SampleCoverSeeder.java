@@ -43,7 +43,7 @@ public class SampleCoverSeeder implements ApplicationRunner {
         seedLegalPlaceholders();
         if (!props.seedSampleCover() || configs.count() > 0) return;
 
-        int rateBps = props.seedBaseRateBps() != null ? props.seedBaseRateBps() : 40;   // 0.4% of bundle cost a month, per person: a placeholder
+        int rateBps = props.seedBaseRateBps() != null ? props.seedBaseRateBps() : 55;   // 0.55% of bundle cost a month, per person: a placeholder
         configs.save(new CoverConfig(rateBps, r(2_500), 180, 0, 180, 18, 65, 85, 10, 25, 2, 90, 1000, 31, List.of(
                 new RelationshipRule("spouse", 10000, 18, 65, 85, 1),
                 new RelationshipRule("child", 4000, 0, 21, 24, 6),

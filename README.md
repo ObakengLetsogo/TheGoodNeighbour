@@ -79,11 +79,11 @@ until your underwriter signs it off**.
 | Rule | Default |
 |---|---|
 | One bundle per death | The bundle in force is delivered, whoever on the cover passes away |
-| Base price | The bundle's cost to the company × **0.4%** a month (a placeholder: set it with your underwriter) |
+| Base price | The bundle's cost to the company × **0.55%** a month (a placeholder: set it with your underwriter) |
 | **Everyone's price** | **Base × relationship % × age %**, rounded once. This includes the main member |
 | Relationship % | Spouse 100, child 40, parent 100, parent-in-law 100, grandparent 100, sibling 100, other family 110 |
 | Age % (current age) | 0–35: 100 · 36–45: 120 · 46–55: 150 · 56–65: 200 · 66–75: 280 · 76 and over: 380 |
-| Example | Bundle worth R8 200 (R5 000 hamper and a sheep), base R21.20: you at 40 pay R25.44, a spouse at 38 R25.44, a parent at 70 R59.36, a child at 9 R8.48. Total R118.72 |
+| Example | Bundle worth R8 200 (R5 000 hamper and a sheep), base R29.15: you at 40 pay R34.98, a spouse at 38 R34.98, a parent at 70 R81.62, a child at 9 R11.66. Total R163.24 |
 | Minimum bundle | Worth at least R2 500 |
 | Main member | Joins 18 to 65, cover ends at 85 |
 | Joining ages | Spouse 18–65, child 0–21, parents and in-laws and grandparents 18–75, sibling and other 18–65 |
