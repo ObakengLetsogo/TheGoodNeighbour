@@ -18,6 +18,7 @@ interface CoverState {
   keepCover: (policyId: string) => Promise<Policy>;
   requestReinstate: (policyId: string, note?: string) => Promise<Policy>;
   addMember: (policyId: string, m: MemberInput) => Promise<void>;
+  editMember: (policyId: string, memberId: string, patch: Partial<Pick<MemberInput, 'fullName' | 'idNumber' | 'dateOfBirth' | 'relationship'>>) => Promise<void>;
   removeMember: (policyId: string, memberId: string) => Promise<void>;
   submitClaim: (input: ClaimInput) => Promise<Claim>;
 }
@@ -83,6 +84,7 @@ export function CoverProvider({ children }: { children: ReactNode }) {
     return p;
   }, []);
   const addMember = useCallback(async (id: string, m: MemberInput) => replace(await policyService.addMember(id, m)), []);
+  const editMember = useCallback(async (id: string, memberId: string, patch: Partial<Pick<MemberInput, 'fullName' | 'idNumber' | 'dateOfBirth' | 'relationship'>>) => replace(await policyService.editMember(id, memberId, patch)), []);
   const removeMember = useCallback(async (id: string, memberId: string) => replace(await policyService.removeMember(id, memberId)), []);
   const submitClaim = useCallback(async (input: ClaimInput) => {
     const c = await claimService.submit(input);
@@ -92,8 +94,8 @@ export function CoverProvider({ children }: { children: ReactNode }) {
 
   const current = policies.find((p) => OPEN.includes(p.status));
   const value = useMemo(
-    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, removeMember, submitClaim }),
-    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, removeMember, submitClaim],
+    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, submitClaim }),
+    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, submitClaim],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

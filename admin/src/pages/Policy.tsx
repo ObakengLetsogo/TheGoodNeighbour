@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
 import { dateShort, displayPhone, label, ordinal, today, zar } from '../format';
-import type { AdminPolicy, BundleLine } from '../types';
+import type { AdminPolicy, BundleLine, Member } from '../types';
 
 export function PolicyPage() {
   const { id = '' } = useParams();
@@ -130,10 +130,8 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
       <Card tab={`Family (${p.members.length})`} accent="ember">
         {p.members.length === 0 ? <Empty>No family members on this plan.</Empty> : (
           <table>
-            <thead><tr><th>Name</th><th>Relationship to member</th><th>ID number</th><th>Age</th><th>Factors</th><th className="num">Monthly fee</th><th>Covered from</th></tr></thead>
-            <tbody>{p.members.map((m) => (
-              <tr key={m.id}><td>{m.fullName}</td><td>{label(m.relationship)}</td><td>{m.idNumber ?? '–'}</td><td>{m.age} <span className="muted small">({dateShort(m.dateOfBirth)})</span></td><td className="small muted">{m.relationshipBps / 100}% relationship × {m.ageBps / 100}% age</td><td className="num">{zar(m.feeCents)}</td><td>{dateShort(m.coverStartsOn)}</td></tr>
-            ))}</tbody>
+            <thead><tr><th>Name</th><th>Relationship to member</th><th>ID number</th><th>Age</th><th>Factors</th><th className="num">Monthly fee</th><th>Covered from</th><th /></tr></thead>
+            <tbody>{p.members.map((m) => <MemberRow key={m.id} policyId={p.id} m={m} onChange={onChange} />)}</tbody>
           </table>
         )}
       </Card>
@@ -180,5 +178,51 @@ export function BundleList({ lines }: { lines: BundleLine[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+const RELATIONSHIPS = ['spouse', 'child', 'parent', 'parent_in_law', 'grandparent', 'sibling', 'other'];
+
+/** One family member, with inline editing. Staff can change anything; every change is audited and the price recalculates. */
+function MemberRow({ policyId, m, onChange }: { policyId: string; m: Member; onChange: (p: AdminPolicy) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({ fullName: m.fullName, idNumber: m.idNumber ?? '', dateOfBirth: m.dateOfBirth, relationship: m.relationship as string });
+  const [msg, setMsg] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const patch: Record<string, string> = {};
+    if (f.fullName.trim() !== m.fullName) patch.fullName = f.fullName.trim();
+    if (f.idNumber && f.idNumber !== (m.idNumber ?? '')) patch.idNumber = f.idNumber;
+    if (f.dateOfBirth !== m.dateOfBirth) patch.dateOfBirth = f.dateOfBirth;
+    if (f.relationship !== m.relationship) patch.relationship = f.relationship;
+    if (!Object.keys(patch).length) return setEditing(false);
+    setBusy(true); setMsg(undefined);
+    try { onChange(await api.editMember(policyId, m.id, patch)); setEditing(false); } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <>
+      <tr>
+        <td>{m.fullName}</td><td>{label(m.relationship)}</td><td>{m.idNumber ?? '–'}</td>
+        <td>{m.age} <span className="muted small">({dateShort(m.dateOfBirth)})</span></td>
+        <td className="small muted">{m.relationshipBps / 100}% relationship × {m.ageBps / 100}% age</td>
+        <td className="num">{zar(m.feeCents)}</td><td>{dateShort(m.coverStartsOn)}</td>
+        <td><button className="ghost" onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Edit'}</button></td>
+      </tr>
+      {editing ? (
+        <tr><td colSpan={8} style={{ background: 'var(--bg)' }}>
+          <div className="form-grid">
+            <label className="f">Full name<input value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} /></label>
+            <label className="f">Relationship<select value={f.relationship} onChange={(e) => setF({ ...f, relationship: e.target.value })}>{RELATIONSHIPS.map((r) => <option key={r} value={r}>{label(r)}</option>)}</select></label>
+            <label className="f">ID number<input value={f.idNumber} onChange={(e) => setF({ ...f, idNumber: e.target.value.replace(/\D/g, '').slice(0, 13) })} /></label>
+            <label className="f">Date of birth<input type="date" value={f.dateOfBirth} onChange={(e) => setF({ ...f, dateOfBirth: e.target.value })} /></label>
+          </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save Changes'}</button>
+            <span className="muted small">Audited. The monthly price recalculates, and the date of birth must match the ID number.</span>
+            {msg ? <span className="err" role="alert">{msg}</span> : null}
+          </div>
+        </td></tr>
+      ) : null}
+    </>
   );
 }

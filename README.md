@@ -120,13 +120,18 @@ until your underwriter signs it off**.
 - **POPIA:** customers can delete their account in the app. With no cover or claims on file it is immediate; otherwise it
   becomes a request in the staff Support Inbox. Acceptance of the Terms and Privacy Notice is recorded with the version.
 
+- **Claim documents:** the death certificate is required before staff can approve a claim (and the deceased's ID for
+  anyone 16 or older). PDF, JPG or PNG only (checked by file contents, not name), 5 MB each, 10 per claim. Files are
+  **encrypted at rest** on disk (`TGN_STORAGE_DIR`, a persistent volume in `deploy/`); only the customer and staff can
+  read them, and each staff view is audited. Documents lock once a claim is decided.
+
 ## Not built yet
 
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).
   Lapsing is a manual staff action until collections exist.
 - An SMS provider (codes only log in development), push/SMS notifications (preferences are saved but nothing is sent yet).
 - Database migrations (Flyway/Liquibase), staff roles beyond a single admin role.
-- Document uploads for claims, and policy documents.
+- Policy documents (claims already take uploads).
 - Scheduling and tracking of livestock deliveries and herd movements (the herd is a count plus a promise limit).
 - Brand photography/illustration beyond the logo mark.
 

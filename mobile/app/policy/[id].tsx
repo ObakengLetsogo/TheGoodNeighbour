@@ -180,9 +180,14 @@ export default function PolicyDetails() {
               {m.coverStartsOn ? <Text variant="bodyS">Covered from {formatDate(m.coverStartsOn)}</Text> : null}
             </View>
             {open ? (
-              <Pressable onPress={() => confirmRemove(m.id, m.fullName)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${m.fullName}`}>
-                <Icon name="trash-can-outline" size={22} color={colors.muted} />
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                <Pressable onPress={() => router.push({ pathname: '/edit-member', params: { policyId: policy.id, memberId: m.id } })} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Edit ${m.fullName}`}>
+                  <Icon name="pencil-outline" size={22} color={colors.muted} />
+                </Pressable>
+                <Pressable onPress={() => confirmRemove(m.id, m.fullName)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${m.fullName}`}>
+                  <Icon name="trash-can-outline" size={22} color={colors.muted} />
+                </Pressable>
+              </View>
             ) : null}
           </View>
         ))}
@@ -198,6 +203,7 @@ export default function PolicyDetails() {
               {debitMsg ? <Text variant="bodyS" color={colors.inkSoft} accessibilityLiveRegion="polite">{debitMsg}</Text> : null}
               {policy.mandateStatus !== 'active' ? <Button label="Set Up Debit Order" icon="bank-outline" variant="secondary" size="small" fullWidth={false} onPress={setUpDebit} loading={busy} /> : null}
               <Text variant="bodyS">We never ask for your card or banking password. Your bank asks you to approve the debit order itself.</Text>
+              <Button label="Payments And Statements" icon="receipt-text-outline" variant="secondary" size="small" fullWidth={false} onPress={() => router.push({ pathname: '/payments/[id]', params: { id: policy.id } })} />
             </View>
           </Card>
           {policy.payments.length > 0 ? (

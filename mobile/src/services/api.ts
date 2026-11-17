@@ -1,6 +1,6 @@
 import { config } from '../config';
 import type {
-  ApplyInput, BundleLineInput, Claim, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
+  ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
   QuoteMemberInput, Session, SupportRequest, User,
 } from '../types';
 import { KEYS, readJSON, removeKey, writeJSON } from './storage';
@@ -67,6 +67,9 @@ export const policyService = {
     request<Policy>(`/api/policies/${policyId}/bundle`, { method: 'POST', body: json({ items }) }),
   addMember: (policyId: string, m: MemberInput) =>
     request<Policy>(`/api/policies/${policyId}/members`, { method: 'POST', body: json(m) }),
+  /** Only what is sent is changed. The server decides what may be changed once cover has started. */
+  editMember: (policyId: string, memberId: string, patch: Partial<Pick<MemberInput, 'fullName' | 'idNumber' | 'dateOfBirth' | 'relationship'>>) =>
+    request<Policy>(`/api/policies/${policyId}/members/${memberId}`, { method: 'PUT', body: json(patch) }),
   removeMember: (policyId: string, memberId: string) =>
     request<Policy>(`/api/policies/${policyId}/members/${memberId}`, { method: 'DELETE' }),
   /** Asks the backend to start debit order set-up. With no provider connected it says so; nothing is set up. */
@@ -76,6 +79,27 @@ export const policyService = {
 export const claimService = {
   list: () => request<Claim[]>('/api/claims'),
   submit: (input: ClaimInput) => request<Claim>('/api/claims', { method: 'POST', body: json(input) }),
+  /** Uploads one file. On web `file` is a Blob; on phones it is a { uri, name, type } descriptor. */
+  uploadDocument: async (claimId: string, type: ClaimDocumentType, file: { uri: string; name: string; type: string; blob?: Blob }) => {
+    const form = new FormData();
+    form.append('type', type);
+    if (file.blob) form.append('file', file.blob, file.name);
+    else form.append('file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+    let res: Response;
+    try {
+      // No Content-Type header: fetch adds the multipart boundary itself.
+      res = await fetch(`${config.apiBaseUrl}/api/claims/${claimId}/documents`, { method: 'POST', body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+    } catch {
+      throw new ApiError("We couldn't reach TGN. Please check your connection and try again.", 0);
+    }
+    if (!res.ok) {
+      let message = 'We could not upload that file. Please try again.';
+      try { const b = await res.json(); if (typeof b?.message === 'string') message = b.message; } catch { /* ignore */ }
+      throw new ApiError(res.status === 413 ? 'That file is too big. Please use one under 5 MB.' : message, res.status);
+    }
+    return (await res.json()) as ClaimDocument;
+  },
+  removeDocument: (claimId: string, docId: string) => request<void>(`/api/claims/${claimId}/documents/${docId}`, { method: 'DELETE' }),
 };
 
 export const supportService = {

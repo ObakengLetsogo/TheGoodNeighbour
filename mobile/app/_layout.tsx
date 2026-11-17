@@ -47,7 +47,9 @@ function Routes() {
         <Stack.Screen name="legal/[slug]" />
         <Stack.Screen name="legal/key-facts" />
         <Stack.Screen name="schedule/[id]" />
+        <Stack.Screen name="payments/[id]" />
         <Stack.Screen name="policy/[id]" />
+        <Stack.Screen name="edit-member" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="add-member" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="claim/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="claim/[id]" />
