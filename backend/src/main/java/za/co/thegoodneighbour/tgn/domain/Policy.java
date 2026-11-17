@@ -48,7 +48,7 @@ public class Policy {
     private String waitingEndsOn;
 
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @OrderBy("addedOn, id")
+    @OrderBy("position, id")
     private List<PolicyMember> members = new ArrayList<>();
 
     protected Policy() {}
@@ -64,7 +64,7 @@ public class Policy {
     public Integer getPrivacyVersion() { return privacyVersion; }
     public Instant getConsentAt() { return consentAt; }
 
-    public void addMember(PolicyMember m) { members.add(m); m.setPolicy(this); }
+    public void addMember(PolicyMember m) { m.setPosition(members.size()); members.add(m); m.setPolicy(this); }
     public List<PolicyMember> activeMembers() { return members.stream().filter(m -> "active".equals(m.getStatus())).toList(); }
 
     public void setStatus(String s) { this.status = s; this.reviewedAt = Instant.now(); }

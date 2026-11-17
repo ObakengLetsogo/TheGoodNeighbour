@@ -81,6 +81,8 @@ public final class Controllers {
         @GetMapping("/{id}") public PolicyDto get(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id) { return policies.get(u, id); }
         @PostMapping("/{id}/members") @ResponseStatus(HttpStatus.CREATED)
         public PolicyDto addMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody MemberIn m) { return policies.addMember(u, id, m); }
+        @PutMapping("/{id}/members/{memberId}")
+        public PolicyDto editMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String memberId, @Valid @RequestBody EditMemberIn e) { return policies.editMember(u, id, memberId, e); }
         @DeleteMapping("/{id}/members/{memberId}")
         public PolicyDto removeMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String memberId) { return policies.removeMember(u, id, memberId); }
         @PostMapping("/{id}/cancel-request")
@@ -139,6 +141,8 @@ public final class Controllers {
         @GetMapping("/policies/{id}") public AdminPolicyDto policy(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id) { return policies.adminGet(s, id); }
         @PostMapping("/policies/{id}/status")
         public AdminPolicyDto policyStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return policies.setStatus(s, id, c); }
+        @PutMapping("/policies/{id}/members/{memberId}")
+        public AdminPolicyDto adminEditMember(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @PathVariable String memberId, @Valid @RequestBody EditMemberIn e) { return policies.adminEditMember(s, id, memberId, e); }
         @PostMapping("/policies/{id}/payments") @ResponseStatus(HttpStatus.CREATED)
         public AdminPolicyDto payment(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody RecordPayment r) { return policies.recordPayment(s, id, r); }
 

@@ -20,6 +20,8 @@ public class PolicyMember {
     private long feeCents;
     /** "active" or "removed". Removed members are kept for the audit trail but are no longer billed. */
     private String status = "active";
+    /** The order people were added in, so lists never shuffle. */
+    private int position;
     private String addedOn;
     private String coverStartsOn;
 
@@ -32,7 +34,12 @@ public class PolicyMember {
     }
 
     void setPolicy(Policy p) { this.policy = p; }
+    void setPosition(int p) { this.position = p; }
     public void remove() { this.status = "removed"; }
+    public void setFullName(String n) { this.fullName = n; }
+    public void setIdNumber(String id) { this.idNumber = id; }
+    public void setDateOfBirth(String dob) { this.dateOfBirth = dob; }
+    public void setRelationship(String r, int multiplierBps) { this.relationship = r; this.multiplierBps = multiplierBps; }
     public void setCoverStartsOn(String d) { this.coverStartsOn = d; }
     public void setPricing(long fee, int ageBps) { this.feeCents = fee; this.ageBps = ageBps; }
     public int getAgeBps() { return ageBps; }

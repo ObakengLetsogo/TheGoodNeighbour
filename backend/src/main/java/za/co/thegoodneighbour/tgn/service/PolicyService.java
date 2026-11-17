@@ -120,6 +120,91 @@ public class PolicyService {
         return toDto(policies.save(policy), false);
     }
 
+    /**
+     * Customers can correct a name at any time. Identity details (ID number, date of birth, relationship) can be changed
+     * freely only before cover starts, or an ID added where there was none. After that, changing who a person is needs
+     * staff, so nobody can swap one person for another and skip the waiting period.
+     */
+    @Transactional
+    public PolicyDto editMember(AppUser user, String policyId, String memberId, EditMemberIn e) {
+        Policy policy = owned(user, policyId);
+        requireOpen(policy);
+        PolicyMember m = findActive(policy, memberId);
+        boolean started = policy.getStartDate() != null;
+        List<String> changed = applyEdit(policy, m, e, !started);
+        if (changed.isEmpty()) return toDto(policy, false);
+        recompute(policy);
+        audit.record("customer", "member.edited", "policy", policy.getId(), "fields: " + String.join(", ", changed));
+        return toDto(policies.save(policy), false);
+    }
+
+    @Transactional
+    public AdminPolicyDto adminEditMember(StaffUser staff, String policyId, String memberId, EditMemberIn e) {
+        Policy policy = policies.findById(policyId).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that policy."));
+        PolicyMember m = findActive(policy, memberId);
+        String before = m.getRelationship();
+        List<String> changed = applyEdit(policy, m, e, true);
+        if (!changed.isEmpty()) {
+            recompute(policy);
+            audit.record(staff.getEmail(), "member.edited", "policy", policy.getId(),
+                    "fields: " + String.join(", ", changed) + (changed.contains("relationship") ? " (relationship " + before + " -> " + m.getRelationship() + ")" : ""));
+            policies.save(policy);
+        }
+        return new AdminPolicyDto(toDto(policy, true), customer(policy));
+    }
+
+    private PolicyMember findActive(Policy policy, String memberId) {
+        return policy.activeMembers().stream().filter(x -> x.getId().equals(memberId)).findFirst()
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that family member on your cover."));
+    }
+
+    /** Applies the edit if the rules allow, returning the names of the fields that changed. `identityAllowed` lifts the after-start limit. */
+    private List<String> applyEdit(Policy policy, PolicyMember m, EditMemberIn e, boolean identityAllowed) {
+        CoverConfig cfg = cover.config();
+        LocalDate today = today();
+        List<String> changed = new ArrayList<>();
+        String newName = e.fullName() != null ? e.fullName().trim() : null;
+        String newRel = e.relationship() != null && !e.relationship().equals(m.getRelationship()) ? e.relationship() : null;
+        String newDob = e.dateOfBirth() != null && !e.dateOfBirth().equals(m.getDateOfBirth()) ? e.dateOfBirth() : null;
+        String newId = e.idNumber() != null && !e.idNumber().isBlank() && !e.idNumber().equals(m.getIdNumber()) ? e.idNumber() : null;
+
+        boolean addingMissingId = newId != null && m.getIdNumber() == null;
+        if ((newRel != null || newDob != null || (newId != null && !addingMissingId)) && !identityAllowed)
+            throw CoverService.unprocessable("To change " + (newRel != null ? "the relationship" : newDob != null ? "the date of birth" : "the ID number")
+                    + " now that your cover has started, please contact us and we'll help.");
+
+        String rel = newRel != null ? newRel : m.getRelationship();
+        String dobStr = newDob != null ? newDob : m.getDateOfBirth();
+        LocalDate dob;
+        try { dob = LocalDate.parse(dobStr); } catch (java.time.DateTimeException ex) { throw CoverService.unprocessable("That date doesn't look right."); }
+        String id = newId != null ? newId : m.getIdNumber();
+
+        if (newRel != null || newDob != null) {
+            long sameRel = policy.activeMembers().stream().filter(x -> x != m && x.getRelationship().equals(rel)).count();
+            long others = policy.activeMembers().stream().filter(x -> x != m).count();
+            CoverRules.memberProblem(cfg, rel, dob, sameRel, others, today).ifPresent(msg -> { throw CoverService.unprocessable(msg); });
+        }
+        if (id != null) {
+            LocalDate fromId = SaId.dateOfBirth(id, today).orElseThrow(() -> CoverService.unprocessable("That ID number doesn't look right."));
+            if (!fromId.equals(dob)) throw CoverService.unprocessable("The ID number doesn't match the date of birth.");
+            Set<String> used = new HashSet<>();
+            used.add(policy.getHolderIdNumber());
+            policy.activeMembers().forEach(x -> { if (x != m && x.getIdNumber() != null) used.add(x.getIdNumber()); });
+            if (used.contains(id)) throw CoverService.unprocessable("That ID number is already on this cover.");
+        } else if (CoverRules.age(dob, today) >= 16) {
+            throw CoverService.unprocessable("Please add an ID number: they are 16 or older.");
+        }
+
+        if (newName != null && !newName.equals(m.getFullName())) { m.setFullName(newName); changed.add("name"); }
+        if (newId != null) { m.setIdNumber(newId); changed.add("ID number"); }
+        if (newDob != null) { m.setDateOfBirth(newDob); changed.add("date of birth"); }
+        if (newRel != null) {
+            m.setRelationship(rel, cfg.rule(rel).orElseThrow(() -> CoverService.unprocessable("We can't add a " + CoverRules.label(rel) + " to a cover.")).multiplierBps());
+            changed.add("relationship");
+        }
+        return changed;
+    }
+
     @Transactional
     public PolicyDto removeMember(AppUser user, String policyId, String memberId) {
         Policy policy = owned(user, policyId);

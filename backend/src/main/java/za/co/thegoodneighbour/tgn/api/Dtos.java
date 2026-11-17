@@ -74,6 +74,10 @@ public final class Dtos {
                                @NotBlank @Pattern(regexp = ID13, message = "ID numbers have 13 digits.") String holderIdNumber,
                                @Min(1) @Max(31) int debitDay, List<@Valid MemberIn> members,
                                @NotNull Integer acceptedTermsVersion, @NotNull Integer acceptedPrivacyVersion) {}
+    /** Every field is optional: only what is sent is changed. */
+    public record EditMemberIn(@Size(min = 2, max = 100) String fullName,
+                               @Pattern(regexp = ID13, message = "ID numbers have 13 digits.") String idNumber,
+                               @Pattern(regexp = DATE, message = "Use the format yyyy-mm-dd for dates.") String dateOfBirth, String relationship) {}
     public record BundleChangeRequest(@NotEmpty List<@Valid BundleLineIn> items) {}
     public record MemberDto(String id, String relationship, String fullName, String idNumber, String dateOfBirth, long feeCents,
                             String status, String coverStartsOn, int age, int relationshipBps, int ageBps) {}

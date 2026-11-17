@@ -19,6 +19,7 @@ const NAV = [
   { to: '/cover', label: 'Cover & Pricing' },
   { to: '/herd', label: 'Herd & Capacity' },
   { to: '/legal', label: 'Terms & Privacy' },
+  { to: '/economics', label: 'Profit Model' },
   { to: '/audit', label: 'Audit Log' },
 ];
 
