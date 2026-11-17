@@ -31,6 +31,36 @@ cd admin && npm install && npm run dev            # VITE_API_BASE_URL defaults t
 On a physical phone, set `EXPO_PUBLIC_API_BASE_URL` to your computer's LAN address. Environment variables are
 listed in `mobile/.env.example`, `admin/.env.example` and `backend/src/main/resources/application.yml`.
 
+## Put it on a phone
+
+You need a free [Expo](https://expo.dev) account. iPhone installs also need an Apple Developer account (R2 000 a year);
+Android needs nothing for test builds.
+
+1. **Host the API** over https (see below), so the phone can reach it. A phone can't use `localhost`.
+2. Install the tool and sign in: `npm i -g eas-cli && eas login`, then in `mobile/` run `eas init`.
+3. Tell the build where the API is: `eas env:create --name EXPO_PUBLIC_API_BASE_URL --value https://api.example.com --environment preview --visibility plaintext`
+   (repeat for `production`). Builds **refuse to run** without an https address, so a test app can't point at localhost by mistake.
+4. Build a test app:
+   - Android: `eas build --profile preview --platform android` gives an APK you open on the phone from the link.
+   - iPhone: `eas build --profile preview --platform ios`, then `eas submit --platform ios` to put it on TestFlight.
+5. Faster for a quick look: run the API on your computer and the app in **Expo Go** with `EXPO_PUBLIC_API_BASE_URL=http://YOUR-LAN-IP:8080 npx expo start`.
+
+Before the first store submission, confirm the app identifier `za.co.thegoodneighbour.tgn` in `mobile/app.config.ts`. It is permanent once published.
+
+## Host the API (one small server)
+
+On any Linux server with Docker, and a domain name pointing at it:
+
+```bash
+cd deploy && cp .env.example .env     # fill it in; generate TGN_PII_KEY with: openssl rand -base64 32
+docker compose up -d --build          # PostgreSQL + the API + automatic HTTPS
+```
+
+For a **demo** server set `TGN_SEED_SAMPLE_COVER=true` and `TGN_SMS_MODE=log` (SMS codes then appear in
+`docker compose logs backend`). Back up the database and keep `TGN_PII_KEY` safe: ID numbers can't be read without it.
+Host the admin dashboard (`cd admin && VITE_API_BASE_URL=https://api.example.com npm run build`, upload `dist/`) on any static host.
+The Docker files are written but have not been built or run yet.
+
 ## How it works
 
 1. **Build.** The customer picks one grocery hamper (the full grocery list is shown), 0 to 3 sheep and 0 to 2 cows. The server prices it live.
