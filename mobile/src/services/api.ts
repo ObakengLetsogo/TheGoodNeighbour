@@ -1,6 +1,7 @@
 import { config } from '../config';
 import type {
-  ApplyInput, Claim, ClaimInput, DebitOrderState, MemberInput, Plan, Policy, Session, SupportRequest, User,
+  ApplyInput, BundleLineInput, Claim, ClaimInput, CoverOptions, DebitOrderState, MemberInput, Policy, Quote, QuoteMemberInput, Session,
+  SupportRequest, User,
 } from '../types';
 import { KEYS, readJSON, removeKey, writeJSON } from './storage';
 
@@ -45,14 +46,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const json = (body: unknown) => JSON.stringify(body);
 
-export const planService = {
-  list: () => request<Plan[]>('/api/plans'),
+export const coverService = {
+  options: () => request<CoverOptions>('/api/cover'),
+  /** Live price. The server is authoritative; the app never calculates premiums itself. */
+  quote: (items: BundleLineInput[], members: QuoteMemberInput[]) =>
+    request<Quote>('/api/cover/quote', { method: 'POST', body: json({ items, members }) }),
 };
 
 export const policyService = {
   list: () => request<Policy[]>('/api/policies'),
   get: (id: string) => request<Policy>(`/api/policies/${id}`),
   apply: (input: ApplyInput) => request<Policy>('/api/policies', { method: 'POST', body: json(input) }),
+  changeBundle: (policyId: string, items: BundleLineInput[]) =>
+    request<Policy>(`/api/policies/${policyId}/bundle`, { method: 'POST', body: json({ items }) }),
   addMember: (policyId: string, m: MemberInput) =>
     request<Policy>(`/api/policies/${policyId}/members`, { method: 'POST', body: json(m) }),
   removeMember: (policyId: string, memberId: string) =>

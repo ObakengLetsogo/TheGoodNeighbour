@@ -34,9 +34,9 @@ export const CLAIM_STATUS_LABEL: Record<ClaimStatus, string> = {
   under_review: 'Under Review',
   approved: 'Approved',
   declined: 'Not Approved',
-  paid: 'Paid',
+  delivered: 'Provisions Delivered',
 };
-export const CLAIM_STEPS = ['Claim Received', 'Under Review', 'Approved', 'Paid'];
+export const CLAIM_STEPS = ['Claim Received', 'Under Review', 'Approved', 'Provisions Delivered'];
 export function claimStep(s: ClaimStatus): number {
-  return { submitted: 0, under_review: 1, approved: 2, paid: 3, declined: 1 }[s];
+  return { submitted: 0, under_review: 1, approved: 2, delivered: 3, declined: 1 }[s];
 }

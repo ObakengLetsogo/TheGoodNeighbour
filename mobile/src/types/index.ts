@@ -2,53 +2,99 @@
  * Typed API contracts. These mirror the backend (Dtos.java). Money is integer cents (ZAR); dates are
  * ISO yyyy-mm-dd strings; timestamps are ISO instants.
  */
-import type { AccentName } from '../theme';
-
 export type Cents = number;
 
-export type MemberType = 'spouse' | 'child' | 'parent' | 'extended';
-export const MEMBER_TYPES: MemberType[] = ['spouse', 'child', 'parent', 'extended'];
-export const MEMBER_LABEL: Record<MemberType, string> = {
+export type Relationship = 'spouse' | 'child' | 'parent' | 'parent_in_law' | 'grandparent' | 'sibling' | 'other';
+export const RELATIONSHIP_LABEL: Record<Relationship, string> = {
   spouse: 'Spouse',
   child: 'Child',
   parent: 'Parent',
-  extended: 'Extended Family',
+  parent_in_law: 'Parent-In-Law',
+  grandparent: 'Grandparent',
+  sibling: 'Sibling',
+  other: 'Other Family',
 };
 
-export interface MemberRule {
-  type: MemberType;
-  feeCents: Cents;
-  coverCents: Cents;
-  maxCount: number;
+export interface RelationshipRule {
+  relationship: Relationship;
+  multiplierBps: number;
   minAge: number;
   maxAge: number;
+  coverEndAge: number;
+  maxCount: number;
 }
 
-export interface Plan {
+/** Something that can go in a bundle. monthlyCents is what one unit adds to the main member's monthly price. */
+export interface BenefitItem {
   id: string;
+  kind: 'grocery' | 'livestock';
   name: string;
   description: string;
-  coverCents: Cents;
-  premiumCents: Cents;
-  waitingPeriodDays: number;
-  minAge: number;
-  maxAge: number;
-  accent: AccentName;
-  active: boolean;
-  memberRules: MemberRule[];
+  unitLabel: string;
+  valueCents: Cents;
+  monthlyCents: Cents;
+  maxQty: number;
+  groupId?: string | null;
+  contents: string[];
+  available: boolean;
+}
+
+export interface CoverOptions {
+  items: BenefitItem[];
+  relationships: RelationshipRule[];
+  minBundleValueCents: Cents;
+  mainMinAge: number;
+  mainMaxAge: number;
+  maxMembers: number;
+  naturalWaitingDays: number;
+  accidentalWaitingDays: number;
+  upgradeWaitingDays: number;
+  lapseAfterMissedPayments: number;
+  reinstateWithinDays: number;
+  escalationCapPercent: number;
+  debitDays: number[];
+}
+
+export interface BundleLineInput {
+  itemId: string;
+  quantity: number;
+}
+
+export interface BundleLine {
+  itemId: string;
+  kind: 'grocery' | 'livestock';
+  name: string;
+  quantity: number;
+  valueCents: Cents;
+  monthlyCents: Cents;
+  contents: string[];
+}
+
+export interface Quote {
+  valid: boolean;
+  problems: string[];
+  lines: BundleLine[];
+  bundleValueCents: Cents;
+  baseMonthlyCents: Cents;
+  members: { relationship: Relationship; feeCents: Cents }[];
+  totalMonthlyCents: Cents;
+}
+
+export interface QuoteMemberInput {
+  relationship: Relationship;
+  dateOfBirth?: string;
 }
 
 export type PolicyStatus = 'pending_review' | 'approved' | 'active' | 'lapsed' | 'declined' | 'cancelled';
 
 export interface Member {
   id: string;
-  type: MemberType;
+  relationship: Relationship;
   fullName: string;
   /** Masked: only the last four digits. */
   idNumber?: string | null;
   dateOfBirth: string;
   feeCents: Cents;
-  coverCents: Cents;
   status: string;
   coverStartsOn?: string | null;
 }
@@ -62,34 +108,44 @@ export interface Payment {
   reference: string;
 }
 
+/** What the family is owed. An upgrade only counts after its waiting period, so earlier versions are kept. */
+export interface BundleVersion {
+  version: number;
+  effectiveFrom: string;
+  upgradeWaitingEndsOn?: string | null;
+  bundleValueCents: Cents;
+  baseMonthlyCents: Cents;
+  lines: BundleLine[];
+}
+
 export interface Policy {
   id: string;
   reference: string;
-  planId: string;
-  planName: string;
-  coverCents: Cents;
   status: PolicyStatus;
   holder: { name: string; idNumber?: string | null; dateOfBirth: string };
   debitDay: number;
   monthlyTotalCents: Cents;
+  baseMonthlyCents: Cents;
   mandateStatus: 'not_set_up' | 'pending_customer_approval' | 'active' | 'rejected';
   createdAt: string;
   startDate?: string | null;
   waitingEndsOn?: string | null;
   nextDebitDate?: string | null;
+  bundle: BundleVersion;
+  bundleHistory: BundleVersion[];
   members: Member[];
   payments: Payment[];
 }
 
 export interface MemberInput {
-  type: MemberType;
+  relationship: Relationship;
   fullName: string;
   idNumber?: string;
   dateOfBirth: string;
 }
 
 export interface ApplyInput {
-  planId: string;
+  items: BundleLineInput[];
   holderIdNumber: string;
   debitDay: number;
   members: MemberInput[];
@@ -100,7 +156,19 @@ export interface DebitOrderState {
   message: string;
 }
 
-export type ClaimStatus = 'submitted' | 'under_review' | 'approved' | 'declined' | 'paid';
+export type ClaimStatus = 'submitted' | 'under_review' | 'approved' | 'declined' | 'delivered';
+export type CauseOfDeath = 'natural' | 'accidental';
+
+export interface Delivery {
+  recipientName: string;
+  recipientPhone: string;
+  addressLine: string;
+  suburb: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  instructions?: string | null;
+}
 
 export interface Claim {
   id: string;
@@ -109,11 +177,15 @@ export interface Claim {
   policyReference: string;
   deceasedName: string;
   dateOfDeath: string;
+  causeOfDeath: CauseOfDeath;
   claimantName: string;
   claimantPhone: string;
   status: ClaimStatus;
   withinWaitingPeriod: boolean;
+  overAgeLimit: boolean;
   staffNote?: string | null;
+  delivery: Delivery;
+  bundle: BundleVersion;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,8 +194,10 @@ export interface ClaimInput {
   policyId: string;
   memberId?: string;
   dateOfDeath: string;
+  causeOfDeath: CauseOfDeath;
   claimantName: string;
   claimantPhone: string;
+  delivery: Delivery;
 }
 
 export interface User {
@@ -144,3 +218,5 @@ export interface SupportRequest {
   message: string;
   contactPhone: string;
 }
+
+export const PROVINCES = ['Gauteng', 'Limpopo', 'Mpumalanga', 'North West', 'Free State', 'KwaZulu-Natal', 'Eastern Cape', 'Northern Cape', 'Western Cape'];

@@ -11,7 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/store/AuthContext';
 import { CoverProvider } from '../src/store/CoverContext';
-import { PlansProvider } from '../src/store/PlansContext';
+import { OptionsProvider } from '../src/store/OptionsContext';
 import { colors } from '../src/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -37,8 +37,7 @@ function Routes() {
       </Stack.Protected>
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="plan/[id]" />
-        <Stack.Screen name="apply/[planId]" />
+        <Stack.Screen name="builder" />
         <Stack.Screen name="policy/[id]" />
         <Stack.Screen name="add-member" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="claim/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
@@ -54,12 +53,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <PlansProvider>
+          <OptionsProvider>
             <CoverProvider>
               <StatusBar style="dark" />
               <Routes />
             </CoverProvider>
-          </PlansProvider>
+          </OptionsProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

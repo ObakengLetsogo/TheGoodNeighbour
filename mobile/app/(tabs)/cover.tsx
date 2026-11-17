@@ -19,20 +19,20 @@ export default function Cover() {
       {status === 'loading' ? <View style={{ marginTop: spacing.xl }}><LoadingState rows={2} label="Loading your cover" /></View> : null}
       {status === 'error' ? <ErrorState message={error} onRetry={refresh} /> : null}
       {status === 'ready' && policies.length === 0 ? (
-        <EmptyState icon="shield-outline" title="No plan yet" message="When you apply for a plan, you'll follow it here: your family, your payments and any claims." actionLabel="View Plans" onAction={() => router.push('/(tabs)/plans')} />
+        <EmptyState icon="shield-outline" accent="ember" title="No cover yet" message="Build your cover and you'll follow it here: your bundle, your family, your payments and any claims." actionLabel="Build Your Cover" onAction={() => router.push('/builder')} />
       ) : null}
       {status === 'ready' && policies.length > 0 ? (
-        <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
+        <View style={{ gap: spacing.xl, marginTop: spacing.xl }}>
           {policies.map((p) => (
-            <Card key={p.id} accent="olive" tabLabel={p.reference} onPress={() => router.push({ pathname: '/policy/[id]', params: { id: p.id } })} accessibilityLabel={`${p.planName} plan, ${POLICY_STATUS_LABEL[p.status]}`}>
+            <Card key={p.id} accent="ember" tabLabel={p.reference} onPress={() => router.push({ pathname: '/policy/[id]', params: { id: p.id } })} accessibilityLabel={`Cover ${p.reference}, ${POLICY_STATUS_LABEL[p.status]}`}>
               <View style={styles.row}>
                 <View style={{ flex: 1, gap: 4, alignItems: 'flex-start' }}>
-                  <Text variant="cardTitle">{p.planName}</Text>
-                  <Text variant="bodyS">{pluralise(p.members.length + 1, 'person', 'people')} covered · {formatZAR(p.coverCents)} cover</Text>
-                  <Badge label={POLICY_STATUS_LABEL[p.status]} color={colors.olive} bg={colors.oliveLight} />
+                  <Text variant="cardTitle">{formatZAR(p.bundle.bundleValueCents)} bundle</Text>
+                  <Text variant="bodyS">{pluralise(p.members.length + 1, 'person', 'people')} covered</Text>
+                  <Badge label={POLICY_STATUS_LABEL[p.status]} color={colors.ink} bg="#F8EAC2" />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text variant="price">{formatZAR(p.monthlyTotalCents)}</Text>
+                  <Text variant="price" style={{ fontSize: 20 }}>{formatZAR(p.monthlyTotalCents)}</Text>
                   <Text variant="bodyS">a month</Text>
                 </View>
               </View>

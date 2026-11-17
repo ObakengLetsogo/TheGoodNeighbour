@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { claimService, policyService } from '../services/api';
-import type { ApplyInput, Claim, ClaimInput, MemberInput, Policy } from '../types';
+import type { ApplyInput, BundleLineInput, Claim, ClaimInput, MemberInput, Policy } from '../types';
 import { useAuth } from './AuthContext';
 
 /** The signed-in customer's policies and claims. */
@@ -13,6 +13,7 @@ interface CoverState {
   current?: Policy;
   refresh: () => Promise<void>;
   apply: (input: ApplyInput) => Promise<Policy>;
+  changeBundle: (policyId: string, items: BundleLineInput[]) => Promise<Policy>;
   addMember: (policyId: string, m: MemberInput) => Promise<void>;
   removeMember: (policyId: string, memberId: string) => Promise<void>;
   submitClaim: (input: ClaimInput) => Promise<Claim>;
@@ -58,6 +59,11 @@ export function CoverProvider({ children }: { children: ReactNode }) {
     replace(p);
     return p;
   }, []);
+  const changeBundle = useCallback(async (id: string, items: BundleLineInput[]) => {
+    const p = await policyService.changeBundle(id, items);
+    replace(p);
+    return p;
+  }, []);
   const addMember = useCallback(async (id: string, m: MemberInput) => replace(await policyService.addMember(id, m)), []);
   const removeMember = useCallback(async (id: string, memberId: string) => replace(await policyService.removeMember(id, memberId)), []);
   const submitClaim = useCallback(async (input: ClaimInput) => {
@@ -68,8 +74,8 @@ export function CoverProvider({ children }: { children: ReactNode }) {
 
   const current = policies.find((p) => OPEN.includes(p.status));
   const value = useMemo(
-    () => ({ status, error, policies, claims, current, refresh, apply, addMember, removeMember, submitClaim }),
-    [status, error, policies, claims, current, refresh, apply, addMember, removeMember, submitClaim],
+    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, addMember, removeMember, submitClaim }),
+    [status, error, policies, claims, current, refresh, apply, changeBundle, addMember, removeMember, submitClaim],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

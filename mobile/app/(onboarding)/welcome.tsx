@@ -20,8 +20,10 @@ export default function Welcome() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.xxl, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}>
-      <View style={[styles.blob, { backgroundColor: colors.ember, top: -90, right: -90, opacity: 0.1 }]} />
-      <View style={[styles.blob, { backgroundColor: colors.olive, bottom: 120, left: -120, opacity: 0.08, width: 300, height: 300 }]} />
+      <View style={[styles.blob, { backgroundColor: colors.ember, top: -90, right: -90, opacity: 0.2, width: 300, height: 300 }]} />
+      <View style={[styles.blob, { backgroundColor: colors.berry, top: 190, left: -70, opacity: 0.14, width: 150, height: 150 }]} />
+      <View style={[styles.blob, { backgroundColor: colors.gold, top: 120, right: 20, opacity: 0.3, width: 70, height: 70 }]} />
+      <View style={[styles.blob, { backgroundColor: colors.olive, bottom: 120, left: -120, opacity: 0.1, width: 300, height: 300 }]} />
 
       <Animated.View style={[styles.hero, { opacity: fade, transform: [{ translateY: rise }] }]}>
         <Logo size={132} showName />

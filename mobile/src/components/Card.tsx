@@ -27,13 +27,12 @@ export function Card({
   const body = (
     <View style={[styles.wrap, style]}>
       {noTab ? null : (
-        <View style={[styles.tab, { backgroundColor: a.tint }]}>
-          <View style={[styles.dot, { backgroundColor: a.main }]} />
+        <View style={[styles.tab, { backgroundColor: a.main, borderColor: a.main }]}>
           {tabLabel ? (
-            <Text variant="eyebrow" color={colors.inkSoft} style={styles.tabText} numberOfLines={1}>
+            <Text variant="eyebrow" color={accent === 'gold' ? colors.ink : colors.white} style={styles.tabText} numberOfLines={1}>
               {tabLabel}
             </Text>
-          ) : null}
+          ) : <View style={styles.dot} />}
         </View>
       )}
       <View
@@ -80,7 +79,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   tabText: { fontSize: 11, lineHeight: 14 },
-  dot: { width: 7, height: 7, borderRadius: radii.pill },
+  dot: { width: 22, height: 6, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.7)' },
   body: {
     backgroundColor: colors.card,
     borderWidth: components.card.borderWidth,

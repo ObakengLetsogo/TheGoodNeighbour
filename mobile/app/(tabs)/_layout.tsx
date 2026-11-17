@@ -7,7 +7,7 @@ import { colors, components, fonts } from '../../src/theme';
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 const TABS: { name: string; title: string; icon: IconName; active: IconName }[] = [
   { name: 'index', title: 'Home', icon: 'home-outline', active: 'home' },
-  { name: 'plans', title: 'Plans', icon: 'compass-outline', active: 'compass' },
+  { name: 'build', title: 'Build', icon: 'tune-variant', active: 'tune-variant' },
   { name: 'cover', title: 'My Cover', icon: 'shield-check-outline', active: 'shield-check' },
   { name: 'support', title: 'Support', icon: 'chat-processing-outline', active: 'chat-processing' },
   { name: 'account', title: 'Account', icon: 'account-outline', active: 'account' },
@@ -19,7 +19,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.olive,
+        tabBarActiveTintColor: colors.ember,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11, marginTop: -2 },
         tabBarStyle: {

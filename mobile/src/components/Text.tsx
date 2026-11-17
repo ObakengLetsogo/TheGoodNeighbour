@@ -18,7 +18,7 @@ export function Text({ variant = 'body', color, style, ...rest }: Props) {
  * e.g. <EditorialHeading lead="Good morning, " accent="Neighbour" trail="." />
  */
 export function EditorialHeading({
-  lead, accent, trail = '', variant = 'display', accentColor = colors.olive, style, numberOfLines,
+  lead, accent, trail = '', variant = 'display', accentColor = colors.ember, style, numberOfLines,
 }: {
   lead: string; accent: string; trail?: string; variant?: 'display' | 'displayM'; accentColor?: string;
   style?: TextStyle; numberOfLines?: number;

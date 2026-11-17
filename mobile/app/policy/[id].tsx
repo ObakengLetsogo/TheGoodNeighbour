@@ -11,16 +11,17 @@ import { EmptyState, LoadingState } from '../../src/components/States';
 import { Text } from '../../src/components/Text';
 import { Timeline } from '../../src/components/Timeline';
 import { formatDate, formatDateLong, formatZAR } from '../../src/lib/format';
-import { ordinal } from '../../src/lib/plans';
+import { ordinal } from '../../src/lib/cover';
+import { BundleSummary } from '../../src/components/BundleSummary';
 import { CLAIM_STATUS_LABEL, POLICY_STATUS_LABEL, POLICY_STATUS_MESSAGE, POLICY_STEPS, policyStep } from '../../src/lib/status';
 import { callSupport, openWhatsApp } from '../../src/lib/support';
 import { policyService } from '../../src/services/api';
 import { useCover } from '../../src/store/CoverContext';
 import { colors, radii, spacing } from '../../src/theme';
-import { MEMBER_LABEL } from '../../src/types';
+import { RELATIONSHIP_LABEL } from '../../src/types';
 
 export default function PolicyDetails() {
-  const { id, applied } = useLocalSearchParams<{ id: string; applied?: string }>();
+  const { id, applied, changed } = useLocalSearchParams<{ id: string; applied?: string; changed?: string }>();
   const { status, policies, claims, removeMember } = useCover();
   const policy = policies.find((p) => p.id === id);
   const [debitMsg, setDebitMsg] = useState<string>();
@@ -31,6 +32,8 @@ export default function PolicyDetails() {
 
   const mine = claims.filter((c) => c.policyId === policy.id);
   const open = ['pending_review', 'approved', 'active'].includes(policy.status);
+  const previous = policy.bundleHistory.length > 1 ? policy.bundleHistory[policy.bundleHistory.length - 2] : undefined;
+  const pendingUpgrade = !!policy.bundle.upgradeWaitingEndsOn && new Date(policy.bundle.upgradeWaitingEndsOn) > new Date();
   const step = policyStep(policy.status);
   const live = ['approved', 'pending_review'].includes(policy.status);
 
@@ -53,7 +56,7 @@ export default function PolicyDetails() {
 
   return (
     <Screen>
-      <ScreenHeader title={policy.planName} />
+      <ScreenHeader title="Your Cover" />
 
       {applied ? (
         <View style={styles.thanks} accessibilityRole="alert">
@@ -63,8 +66,15 @@ export default function PolicyDetails() {
         </View>
       ) : null}
 
+      {changed ? (
+        <View style={[styles.thanks, { backgroundColor: '#F8EAC2' }]} accessibilityRole="alert">
+          <Text variant="cardTitle">Your cover has been updated.</Text>
+          <Text variant="bodyS" color={colors.inkSoft}>The new price starts from your next debit.</Text>
+        </View>
+      ) : null}
+
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, flexWrap: 'wrap' }}>
-        <Badge label={POLICY_STATUS_LABEL[policy.status]} color={colors.olive} bg={colors.oliveLight} />
+        <Badge label={POLICY_STATUS_LABEL[policy.status]} color={colors.ink} bg="#F8EAC2" />
         <Badge label={policy.reference} />
       </View>
       <Text variant="body" style={{ marginTop: spacing.md }}>{POLICY_STATUS_MESSAGE[policy.status]}</Text>
@@ -78,10 +88,27 @@ export default function PolicyDetails() {
         </>
       ) : null}
 
-      <Text variant="section" style={styles.h}>Your Cover</Text>
-      <Card accent="olive" tabLabel="Monthly">
+      <Text variant="section" style={styles.h}>What Your Family Receives</Text>
+      <Card accent="ember" tabLabel="Your bundle">
+        <View style={{ gap: spacing.md }}>
+          <BundleSummary lines={policy.bundle.lines} totalValueCents={policy.bundle.bundleValueCents} />
+          {pendingUpgrade ? (
+            <View style={styles.notice}>
+              <Icon name="timer-sand" size={20} color={colors.warning} />
+              <Text variant="bodyS" color={colors.inkSoft} style={{ flex: 1 }}>
+                Your increase pays out from {formatDateLong(policy.bundle.upgradeWaitingEndsOn!)}. Until then, your earlier bundle ({formatZAR(previous?.bundleValueCents ?? 0)}) applies for natural causes. Accidents are covered in full straight away.
+              </Text>
+            </View>
+          ) : null}
+          {open ? <Button label="Change My Bundle" icon="tune-variant" variant="secondary" onPress={() => router.push({ pathname: '/builder', params: { policyId: policy.id } })} /> : null}
+        </View>
+      </Card>
+
+      <Text variant="section" style={styles.h}>Your Price</Text>
+      <Card accent="gold" tabLabel="Monthly">
         <View style={{ gap: spacing.sm }}>
-          <Row label="Cover for you" value={formatZAR(policy.coverCents)} />
+          <Row label="You" value={formatZAR(policy.baseMonthlyCents)} />
+          {policy.members.map((m) => <Row key={m.id} label={`${m.fullName} (${RELATIONSHIP_LABEL[m.relationship]})`} value={formatZAR(m.feeCents)} />)}
           <Row label="Every month" value={formatZAR(policy.monthlyTotalCents)} bold />
           <Row label="Debit date" value={`The ${ordinal(policy.debitDay)}`} />
           {policy.nextDebitDate ? <Row label="Next debit" value={formatDate(policy.nextDebitDate)} /> : null}
@@ -89,13 +116,13 @@ export default function PolicyDetails() {
         </View>
       </Card>
 
-      <Text variant="section" style={styles.h}>Family On Your Plan</Text>
+      <Text variant="section" style={styles.h}>Family On Your Cover</Text>
       <View style={{ gap: spacing.sm }}>
         <View style={styles.member}>
           <Icon name="account-circle-outline" size={28} color={colors.olive} />
           <View style={{ flex: 1 }}>
             <Text variant="cardTitle">{policy.holder.name}</Text>
-            <Text variant="bodyS">Main member · {formatZAR(policy.coverCents)} cover</Text>
+            <Text variant="bodyS">Main member</Text>
           </View>
         </View>
         {policy.members.map((m) => (
@@ -103,7 +130,7 @@ export default function PolicyDetails() {
             <Icon name="account-outline" size={28} color={colors.ember} />
             <View style={{ flex: 1 }}>
               <Text variant="cardTitle">{m.fullName}</Text>
-              <Text variant="bodyS">{MEMBER_LABEL[m.type]} · +{formatZAR(m.feeCents)} a month · {formatZAR(m.coverCents)} cover</Text>
+              <Text variant="bodyS">{RELATIONSHIP_LABEL[m.relationship]} · +{formatZAR(m.feeCents)} a month</Text>
               {m.coverStartsOn ? <Text variant="bodyS">Covered from {formatDate(m.coverStartsOn)}</Text> : null}
             </View>
             {open ? (
@@ -178,5 +205,6 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 const styles = StyleSheet.create({
   h: { marginTop: spacing.xl, marginBottom: spacing.md },
   thanks: { backgroundColor: colors.oliveLight, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.sm, marginTop: spacing.sm },
+  notice: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', backgroundColor: '#F7ECD8', borderRadius: radii.md, padding: spacing.md },
   member: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
 });

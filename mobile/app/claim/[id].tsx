@@ -7,6 +7,7 @@ import { Icon } from '../../src/components/Icon';
 import { Screen, ScreenHeader } from '../../src/components/Screen';
 import { EmptyState } from '../../src/components/States';
 import { Text } from '../../src/components/Text';
+import { BundleSummary } from '../../src/components/BundleSummary';
 import { Timeline } from '../../src/components/Timeline';
 import { displayPhone, formatDateLong } from '../../src/lib/format';
 import { CLAIM_STATUS_LABEL, CLAIM_STEPS, claimStep } from '../../src/lib/status';
@@ -46,7 +47,7 @@ export default function ClaimDetails() {
             <Text variant="bodyS">If you'd like to talk it through, please contact us.</Text>
           </View>
         ) : (
-          <Timeline steps={CLAIM_STEPS} current={claimStep(claim.status)} allDone={claim.status === 'paid'} />
+          <Timeline steps={CLAIM_STEPS} current={claimStep(claim.status)} allDone={claim.status === 'delivered'} />
         )}
       </Card>
 
@@ -54,9 +55,25 @@ export default function ClaimDetails() {
       <Card noTab>
         <View style={{ gap: spacing.xs }}>
           <Text variant="cardTitle">{claim.deceasedName}</Text>
-          <Text variant="body">Passed away on {formatDateLong(claim.dateOfDeath)}</Text>
+          <Text variant="body">Passed away on {formatDateLong(claim.dateOfDeath)} · {claim.causeOfDeath === 'accidental' ? 'accident' : 'natural causes'}</Text>
           <Text variant="bodyS">Claimed by {claim.claimantName}</Text>
-          {claim.withinWaitingPeriod ? <Text variant="bodyS" color={colors.warning}>This falls within the waiting period, so our team will review it carefully.</Text> : null}
+          {claim.withinWaitingPeriod ? <Text variant="bodyS" color={colors.warning}>{claim.causeOfDeath === 'accidental' ? 'This happened before your cover started, so our team will review it carefully.' : 'This falls within the waiting period, so our team will review it carefully.'}</Text> : null}
+        </View>
+      </Card>
+
+      <Text variant="section" style={styles.h}>What We're Delivering</Text>
+      <Card accent="ember" tabLabel="Your bundle">
+        <BundleSummary lines={claim.bundle.lines} showValues={false} />
+      </Card>
+
+      <Text variant="section" style={styles.h}>Delivery</Text>
+      <Card accent="berry" tabLabel="To">
+        <View style={{ gap: spacing.xs }}>
+          <Text variant="cardTitle">{claim.delivery.recipientName}</Text>
+          <Text variant="body">{displayPhone(claim.delivery.recipientPhone)}</Text>
+          <Text variant="body">{claim.delivery.addressLine}, {claim.delivery.suburb}</Text>
+          <Text variant="body">{claim.delivery.city}, {claim.delivery.province} {claim.delivery.postalCode}</Text>
+          <Text variant="bodyS" style={{ marginTop: spacing.xs }}>We'll call to confirm the date and arrangements.</Text>
         </View>
       </Card>
 
