@@ -88,7 +88,7 @@ until your underwriter signs it off**.
 | Main member | Joins 18 to 65, cover ends at 85 |
 | Joining ages | Spouse 18–65, child 0–21, parents and in-laws and grandparents 18–75, sibling and other 18–65 |
 | Cover ends | Children 24, parents/in-laws/grandparents 90, others 85 (over-age claims are flagged) |
-| Max family | 10 people; per relationship: 1 spouse, 6 children, 2 parents, 2 in-laws, 2 grandparents, 3 siblings, 3 other |
+| Max family | 10 family members besides the main member (11 people in all); per relationship: 1 spouse, 6 children, 2 parents, 2 in-laws, 2 grandparents, 3 siblings, 3 other |
 | ID number | Required from age 16; checked (Luhn and date of birth), unique on the cover |
 | Waiting period | 180 days natural causes; none for accidents; people added later get their own 180 days |
 | Upgrade | The increase only pays out after 180 days; the earlier bundle stays payable meanwhile (accidents: immediate) |
