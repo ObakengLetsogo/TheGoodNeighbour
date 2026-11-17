@@ -1,5 +1,7 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Badge } from '../../src/components/Chip';
 import { Card } from '../../src/components/Card';
@@ -12,14 +14,45 @@ import { Timeline } from '../../src/components/Timeline';
 import { displayPhone, formatDateLong } from '../../src/lib/format';
 import { CLAIM_STATUS_LABEL, CLAIM_STEPS, claimStep } from '../../src/lib/status';
 import { callSupport, openWhatsApp } from '../../src/lib/support';
+import { confirmAction } from '../../src/lib/confirm';
+import { claimService } from '../../src/services/api';
 import { useCover } from '../../src/store/CoverContext';
+import { DOCUMENT_LABEL, type ClaimDocumentType } from '../../src/types';
 import { colors, radii, spacing } from '../../src/theme';
 
 export default function ClaimDetails() {
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
-  const { claims } = useCover();
+  const { claims, refresh } = useCover();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const claim = claims.find((c) => c.id === id);
   const close = () => (submitted ? router.replace('/(tabs)/cover') : router.back());
+
+  const pick = async (type: ClaimDocumentType) => {
+    if (!claim) return;
+    setUploadError(null);
+    const res = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png'], copyToCacheDirectory: true, multiple: false });
+    if (res.canceled || !res.assets?.[0]) return;
+    const a = res.assets[0];
+    if (a.size && a.size > 5 * 1024 * 1024) { setUploadError('That file is too big. Please use one under 5 MB.'); return; }
+    setBusy(type);
+    try {
+      const file = { uri: a.uri, name: a.name, type: a.mimeType ?? 'application/octet-stream', blob: Platform.OS === 'web' ? (a.file as Blob | undefined) : undefined };
+      await claimService.uploadDocument(claim.id, type, file);
+      await refresh();
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : 'We could not upload that file.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const remove = async (docId: string, name: string) => {
+    if (!claim) return;
+    confirmAction('Remove This File?', name, 'Remove', async () => {
+      try { await claimService.removeDocument(claim.id, docId); await refresh(); } catch (e) { setUploadError(e instanceof Error ? e.message : 'We could not remove that file.'); }
+    });
+  };
+  const open = claim ? claim.status === 'submitted' || claim.status === 'under_review' : false;
 
   if (!claim) return <Screen><ScreenHeader onBack={close} /><EmptyState icon="file-search-outline" title="We can't find that claim" message="It may not be on this account." actionLabel="My Cover" onAction={() => router.replace('/(tabs)/cover')} /></Screen>;
 
@@ -58,6 +91,34 @@ export default function ClaimDetails() {
           <Text variant="body">Passed away on {formatDateLong(claim.dateOfDeath)} · {claim.causeOfDeath === 'accidental' ? 'accident' : 'natural causes'}</Text>
           <Text variant="bodyS">Claimed by {claim.claimantName}</Text>
           {claim.withinWaitingPeriod ? <Text variant="bodyS" color={colors.warning}>{claim.causeOfDeath === 'accidental' ? 'This happened before your cover started, so our team will review it carefully.' : 'This falls within the waiting period, so our team will review it carefully.'}</Text> : null}
+        </View>
+      </Card>
+
+      <Text variant="section" style={styles.h}>Documents</Text>
+      <Card accent="gold" tabLabel="Needed">
+        <View style={{ gap: spacing.md }}>
+          {(['death_certificate', ...(claim.missingDocuments.includes('deceased_id') || claim.documents.some((d) => d.type === 'deceased_id') ? ['deceased_id'] : []), 'other'] as ClaimDocumentType[]).map((type) => {
+            const docs = claim.documents.filter((d) => d.type === type);
+            const needed = claim.missingDocuments.includes(type);
+            return (
+              <View key={type} style={{ gap: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Icon name={needed ? 'alert-circle-outline' : type === 'other' ? 'paperclip' : 'check-circle-outline'} size={20} color={needed ? colors.warning : colors.success} />
+                  <Text variant="cardTitle" style={{ flex: 1 }}>{DOCUMENT_LABEL[type]}</Text>
+                  {open && (type === 'other' || needed) ? <Button label="Add" icon="upload" size="small" variant="secondary" fullWidth={false} loading={busy === type} onPress={() => pick(type)} /> : null}
+                </View>
+                {docs.map((d) => (
+                  <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: 28 }}>
+                    <Text variant="bodyS" style={{ flex: 1 }} numberOfLines={1}>{d.fileName} · {Math.max(1, Math.round(d.sizeBytes / 1024))} KB</Text>
+                    {open ? <Button label="Remove" size="small" variant="ghost" fullWidth={false} onPress={() => remove(d.id, d.fileName)} /> : null}
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+          <Text variant="bodyS">PDF, JPG or PNG, up to 5 MB each. A clear photo is fine. We keep your files private and encrypted.</Text>
+          {claim.missingDocuments.includes('death_certificate') ? <Text variant="bodyS" color={colors.warning}>We can't approve the claim until we have the death certificate.</Text> : null}
+          {uploadError ? <Text variant="bodyS" color={colors.danger} accessibilityRole="alert">{uploadError}</Text> : null}
         </View>
       </Card>
 

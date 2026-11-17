@@ -21,10 +21,13 @@ export interface Policy {
 }
 export interface AdminPolicy { policy: Policy; customer: Customer | null }
 export interface Delivery { recipientName: string; recipientPhone: string; addressLine: string; suburb: string; city: string; province: string; postalCode: string; instructions?: string | null }
+export type ClaimDocumentType = 'death_certificate' | 'deceased_id' | 'other';
+export interface ClaimDocument { id: string; type: ClaimDocumentType; fileName: string; contentType: string; sizeBytes: number; uploadedAt: string }
 export interface Claim {
   id: string; reference: string; policyId: string; policyReference: string; deceasedName: string; dateOfDeath: string;
   causeOfDeath: 'natural' | 'accidental'; claimantName: string; claimantPhone: string; status: ClaimStatus;
   withinWaitingPeriod: boolean; overAgeLimit: boolean; staffNote?: string | null; delivery: Delivery; bundle: BundleVersion;
+  documents: ClaimDocument[]; missingDocuments: ClaimDocumentType[];
   createdAt: string; updatedAt: string;
 }
 export interface AgeBand { fromAge: number; toAge: number; multiplierBps: number }

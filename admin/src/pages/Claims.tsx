@@ -5,6 +5,8 @@ import { dateShort, displayPhone } from '../format';
 import { BundleList } from './Policy';
 import type { Claim } from '../types';
 
+const DOC_LABEL = { death_certificate: 'Death certificate', deceased_id: "Deceased's ID", other: 'Other' } as const;
+
 const NEXT: Record<string, { status: string; label: string; needsNote?: boolean; tone?: 'danger' }[]> = {
   submitted: [{ status: 'under_review', label: 'Start Review' }, { status: 'declined', label: 'Decline…', needsNote: true, tone: 'danger' }],
   under_review: [{ status: 'approved', label: 'Approve' }, { status: 'declined', label: 'Decline…', needsNote: true, tone: 'danger' }],
@@ -64,6 +66,18 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
                 {c.delivery.instructions ? <><dt>Instructions</dt><dd>{c.delivery.instructions}</dd></> : null}
               </dl>
             </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <h3>Documents</h3>
+            {c.documents.length === 0 ? <p className="muted">Nothing uploaded yet.</p> : (
+              <ul style={{ margin: '6px 0', paddingLeft: 18 }}>
+                {c.documents.map((d) => (
+                  <li key={d.id}>{DOC_LABEL[d.type]}: {d.fileName} ({Math.max(1, Math.round(d.sizeBytes / 1024))} KB){' '}
+                    <button className="ghost" onClick={() => api.openClaimDocument(c.id, d.id).catch((e) => setMsg(e.message))}>View</button></li>
+                ))}
+              </ul>
+            )}
+            {c.missingDocuments.length > 0 ? <p className="err">Still needed: {c.missingDocuments.map((t) => DOC_LABEL[t]).join(', ')}</p> : null}
           </div>
           <dl className="dl" style={{ marginBottom: 12 }}>
             <dt>Claimant</dt><dd>{c.claimantName} · {displayPhone(c.claimantPhone)}</dd>

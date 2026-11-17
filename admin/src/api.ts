@@ -47,10 +47,21 @@ export const api = {
   policies: (status?: string) => request<AdminPolicy[]>(`/policies${status ? `?status=${encodeURIComponent(status)}` : ''}`),
   policy: (id: string) => request<AdminPolicy>(`/policies/${id}`),
   setPolicyStatus: (id: string, status: string, note?: string) => request<AdminPolicy>(`/policies/${id}/status`, post({ status, note })),
+  editMember: (id: string, memberId: string, patch: { fullName?: string; idNumber?: string; dateOfBirth?: string; relationship?: string }) =>
+    request<AdminPolicy>(`/policies/${id}/members/${memberId}`, { method: 'PUT', body: JSON.stringify(patch) }),
   recordPayment: (id: string, amountCents: number, paidOn: string, reference: string) =>
     request<AdminPolicy>(`/policies/${id}/payments`, post({ amountCents, paidOn, reference })),
   claims: () => request<Claim[]>('/claims'),
   setClaimStatus: (id: string, status: string, note?: string) => request<Claim>(`/claims/${id}/status`, post({ status, note })),
+  /** Fetches a claim document with the staff token and opens it in a new tab (the server audits each view). */
+  openClaimDocument: async (claimId: string, docId: string) => {
+    const token = tokenStore.get();
+    const res = await fetch(`${BASE}/api/admin/claims/${claimId}/documents/${docId}/file`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new ApiError('Could not open that document.', res.status);
+    const url = URL.createObjectURL(await res.blob());
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  },
   cover: () => request<CoverConfig>('/cover'),
   updateCover: (c: CoverConfig) => request<CoverConfig>('/cover', { method: 'PUT', body: JSON.stringify(c) }),
   benefits: () => request<BenefitItem[]>('/benefits'),

@@ -206,6 +206,22 @@ export interface Delivery {
   instructions?: string | null;
 }
 
+export type ClaimDocumentType = 'death_certificate' | 'deceased_id' | 'other';
+export const DOCUMENT_LABEL: Record<ClaimDocumentType, string> = {
+  death_certificate: 'Death Certificate',
+  deceased_id: "Deceased's ID",
+  other: 'Other Document',
+};
+
+export interface ClaimDocument {
+  id: string;
+  type: ClaimDocumentType;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+}
+
 export interface Claim {
   id: string;
   reference: string;
@@ -222,6 +238,9 @@ export interface Claim {
   staffNote?: string | null;
   delivery: Delivery;
   bundle: BundleVersion;
+  documents: ClaimDocument[];
+  /** Document types still needed before the claim can be approved. */
+  missingDocuments: ClaimDocumentType[];
   createdAt: string;
   updatedAt: string;
 }
