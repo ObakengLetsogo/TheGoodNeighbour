@@ -90,7 +90,9 @@ until your underwriter signs it off**.
 | Waiting period | 180 days natural causes; none for accidents; people added later get their own 180 days |
 | Upgrade | The increase only pays out after 180 days; the earlier bundle stays payable meanwhile (accidents: immediate) |
 | Downgrade | Applies immediately |
-| Missed payments | Lapses after 2 missed (staff action until collections exist); reinstate within 90 days without a new waiting period |
+| Missed payments | Lapses after 2 missed (staff action until collections exist); reinstate within 90 days by a recorded payment, keeping the waiting periods. After that, apply again |
+| Cancelling | Before cover starts: withdraw instantly. After: a request that staff confirm (date, money owed or due back). The customer can change their mind first |
+| Cooling-off | Cancellations in the first 31 days are flagged to staff as possibly refundable. **Confirm the figure and the refund rule with your underwriter** |
 | Yearly increase | Reviewed yearly, capped at 10%, with notice |
 | Livestock | From your own farm. A herd guard stops selling more animal promises than **herd size × 25**, so a bundle that can't be honoured is never offered |
 | Preparation | Slaughter and dressing is separate and not included |

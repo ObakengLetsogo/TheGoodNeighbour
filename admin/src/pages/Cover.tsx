@@ -56,6 +56,7 @@ function ConfigEditor({ initial }: { initial: CoverConfig }) {
           {num('upgradeWaitingDays', 'After an upgrade (days)')}
           {num('lapseAfterMissedPayments', 'Lapse after missed payments')}
           {num('reinstateWithinDays', 'Reinstate within (days)')}
+          {num('coolingOffDays', 'Cooling-off period (days)', 'Cancellations inside this are flagged to staff. Confirm the figure with your underwriter.')}
         </div>
       </Card>
       <Card tab="Who can be covered" accent="berry">

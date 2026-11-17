@@ -138,6 +138,13 @@ export interface Policy {
   termsVersion?: number | null;
   privacyVersion?: number | null;
   consentAt?: string | null;
+  lapsedAt?: string | null;
+  /** The last day a lapsed cover can be reinstated without applying again. */
+  reinstateUntil?: string | null;
+  cancelledAt?: string | null;
+  cancelRequestedAt?: string | null;
+  reinstateRequestedAt?: string | null;
+  withinCoolingOff: boolean;
 }
 
 export interface MemberInput {

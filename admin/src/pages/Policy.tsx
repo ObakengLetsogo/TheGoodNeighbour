@@ -48,6 +48,18 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         </div>
       </div>
       {msg ? <p className={msg.ok ? 'ok-msg' : 'err'} role="status">{msg.text}</p> : null}
+      {p.cancelRequestedAt && p.status !== 'cancelled' ? (
+        <div className="notice bad" role="alert">
+          <strong>The customer asked to cancel on {dateShort(p.cancelRequestedAt)}.</strong> Confirm the date with them and settle anything owed either way, then use Cancel Policy below.
+          {p.withinCoolingOff ? <> <strong>This is inside the {''}cooling-off period</strong> (cover started {dateShort(p.startDate)}): premiums paid may be refundable. Check the terms and your underwriter.</> : null}
+        </div>
+      ) : p.withinCoolingOff && p.status === 'active' ? <p className="muted small">Cover started {dateShort(p.startDate)}, so it is still inside the cooling-off period.</p> : null}
+      {p.status === 'lapsed' ? (
+        <div className="notice warn">
+          Lapsed on {dateShort(p.lapsedAt)}. It can be reinstated until <strong>{dateShort(p.reinstateUntil)}</strong> by recording a payment covering the monthly total; waiting periods carry on.
+          {p.reinstateRequestedAt ? <> <strong>The customer asked to reinstate on {dateShort(p.reinstateRequestedAt)}.</strong></> : null}
+        </div>
+      ) : null}
 
       <div className="grid two">
         <Card tab="Customer">

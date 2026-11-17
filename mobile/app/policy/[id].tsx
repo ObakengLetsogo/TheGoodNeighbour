@@ -23,16 +23,19 @@ import { RELATIONSHIP_LABEL } from '../../src/types';
 
 export default function PolicyDetails() {
   const { id, applied, changed } = useLocalSearchParams<{ id: string; applied?: string; changed?: string }>();
-  const { status, policies, claims, removeMember } = useCover();
+  const { status, policies, claims, removeMember, keepCover, requestReinstate } = useCover();
   const policy = policies.find((p) => p.id === id);
   const [debitMsg, setDebitMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [cycleBusy, setCycleBusy] = useState(false);
+  const [cycleError, setCycleError] = useState<string>();
 
   if (status === 'loading' && !policy) return <Screen><ScreenHeader /><LoadingState rows={2} /></Screen>;
   if (!policy) return <Screen><ScreenHeader /><EmptyState icon="shield-off-outline" title="We can't find that plan" message="It may not be on this account." actionLabel="Back Home" onAction={() => router.replace('/(tabs)')} /></Screen>;
 
   const mine = claims.filter((c) => c.policyId === policy.id);
   const open = ['pending_review', 'approved', 'active'].includes(policy.status);
+  const canReinstate = !!policy.reinstateUntil && new Date(`${policy.reinstateUntil}T23:59:59`) >= new Date();
   const previous = policy.bundleHistory.length > 1 ? policy.bundleHistory[policy.bundleHistory.length - 2] : undefined;
   const pendingUpgrade = !!policy.bundle.upgradeWaitingEndsOn && new Date(policy.bundle.upgradeWaitingEndsOn) > new Date();
   const step = policyStep(policy.status);
@@ -78,6 +81,43 @@ export default function PolicyDetails() {
         <Badge label={policy.reference} />
       </View>
       <Text variant="body" style={{ marginTop: spacing.md }}>{POLICY_STATUS_MESSAGE[policy.status]}</Text>
+
+      {policy.cancelRequestedAt && policy.status !== 'cancelled' ? (
+        <View style={[styles.lifecycle, { backgroundColor: '#F7E1E1' }]} accessibilityRole="alert">
+          <Text variant="cardTitle">You've asked to cancel</Text>
+          <Text variant="bodyS" color={colors.inkSoft}>We received your request on {formatDate(policy.cancelRequestedAt)}. Our team will contact you to confirm the date. Until then your cover stays as it is.</Text>
+          <Button label="Keep My Cover" size="small" fullWidth={false} onPress={async () => { setCycleBusy(true); setCycleError(undefined); try { await keepCover(policy.id); } catch (e) { setCycleError(e instanceof Error ? e.message : 'Please try again.'); } finally { setCycleBusy(false); } }} loading={cycleBusy} />
+        </View>
+      ) : null}
+
+      {policy.status === 'lapsed' ? (
+        <View style={[styles.lifecycle, { backgroundColor: '#F8EAC2' }]}>
+          {canReinstate ? (
+            <>
+              <Text variant="cardTitle">You can still reinstate</Text>
+              <Text variant="bodyS" color={colors.inkSoft}>
+                Your cover lapsed on {formatDate(policy.lapsedAt!)}. Until {formatDate(policy.reinstateUntil!)} you can reinstate it by paying what's owed, and your waiting periods carry on from where they were.
+              </Text>
+              {policy.reinstateRequestedAt ? (
+                <Text variant="label" color={colors.olive} accessibilityLiveRegion="polite">Requested on {formatDate(policy.reinstateRequestedAt)}. Our team will contact you.</Text>
+              ) : (
+                <Button label="Ask To Reinstate" size="small" fullWidth={false} loading={cycleBusy} onPress={async () => { setCycleBusy(true); setCycleError(undefined); try { await requestReinstate(policy.id); } catch (e) { setCycleError(e instanceof Error ? e.message : 'Please try again.'); } finally { setCycleBusy(false); } }} />
+              )}
+            </>
+          ) : (
+            <>
+              <Text variant="cardTitle">The time to reinstate has passed</Text>
+              <Text variant="bodyS" color={colors.inkSoft}>You can build a new cover. New waiting periods will apply.</Text>
+              <Button label="Build A New Cover" size="small" fullWidth={false} onPress={() => router.push('/builder')} />
+            </>
+          )}
+        </View>
+      ) : null}
+
+      {policy.status === 'cancelled' ? (
+        <View style={{ marginTop: spacing.lg }}><Button label="Build A New Cover" onPress={() => router.push('/builder')} /></View>
+      ) : null}
+      {cycleError ? <Text variant="bodyS" color={colors.danger} style={{ marginTop: spacing.sm }} accessibilityLiveRegion="polite">{cycleError}</Text> : null}
 
       {live || policy.status === 'active' ? (
         <>
@@ -193,6 +233,13 @@ export default function PolicyDetails() {
           <Button label="Call Us" icon="phone-outline" variant="secondary" size="small" fullWidth={false} style={{ flex: 1 }} onPress={callSupport} />
         </View>
       </View>
+
+      {(open || policy.status === 'lapsed') && !policy.cancelRequestedAt ? (
+        <View style={{ marginTop: spacing.xxl, gap: spacing.sm, alignItems: 'center' }}>
+          <Text variant="bodyS">Need to stop your cover?</Text>
+          <Button label={policy.startDate ? 'Cancel My Cover' : 'Withdraw My Application'} variant="ghost" fullWidth={false} onPress={() => router.push({ pathname: '/cancel-cover', params: { policyId: policy.id } })} />
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -209,6 +256,7 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 const styles = StyleSheet.create({
   h: { marginTop: spacing.xl, marginBottom: spacing.md },
   thanks: { backgroundColor: colors.oliveLight, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.sm, marginTop: spacing.sm },
+  lifecycle: { borderRadius: radii.lg, padding: spacing.lg, gap: spacing.sm, marginTop: spacing.lg, alignItems: 'flex-start' },
   notice: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', backgroundColor: '#F7ECD8', borderRadius: radii.md, padding: spacing.md },
   member: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
 });

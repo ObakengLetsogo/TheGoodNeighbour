@@ -18,6 +18,8 @@ export function DashboardPage() {
           <Stat tab="Active" n={d.data.active} l="Active policies" to="/policies?status=active" />
           <Stat tab="Lapsed" accent="berry" n={d.data.lapsed} l="Need attention" to="/policies?status=lapsed" />
           <Stat tab="Claims" accent="berry" n={d.data.openClaims} l="Open claims" to="/claims" />
+          <Stat tab="Cancelling" accent="ember" n={d.data.cancellationRequests} l="Cancellation requests" to="/support" />
+          <Stat tab="Reinstating" accent="gold" n={d.data.reinstatementRequests} l="Reinstatement requests" to="/support" />
           <Card tab="Recurring" accent="olive" tint><div className="stat"><div className="n">{zar(d.data.monthlyRecurringCents)}</div><div className="l">Monthly premiums on active policies</div></div></Card>
         </div>
       )}

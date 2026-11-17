@@ -14,7 +14,7 @@ export const POLICY_STATUS_MESSAGE: Record<PolicyStatus, string> = {
   pending_review: "We've received your application. It's being reviewed, and you're not covered yet. We'll let you know as soon as there's news.",
   approved: "Your application is approved. Cover starts once your first monthly payment has been received.",
   active: 'Your cover is active.',
-  lapsed: 'Your cover has lapsed because a payment was missed. Please contact us so we can help you get covered again.',
+  lapsed: 'Your cover has lapsed because a payment was missed. You may be able to reinstate it, see below.',
   declined: "We weren't able to approve this application. Please contact us if you'd like to talk it through.",
   cancelled: 'This plan has been cancelled.',
 };

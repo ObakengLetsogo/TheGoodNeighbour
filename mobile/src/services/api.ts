@@ -57,6 +57,12 @@ export const policyService = {
   list: () => request<Policy[]>('/api/policies'),
   get: (id: string) => request<Policy>(`/api/policies/${id}`),
   apply: (input: ApplyInput) => request<Policy>('/api/policies', { method: 'POST', body: json(input) }),
+  /** Before cover starts this cancels at once; afterwards it asks staff to cancel. */
+  requestCancel: (policyId: string, reason?: string, note?: string) =>
+    request<Policy>(`/api/policies/${policyId}/cancel-request`, { method: 'POST', body: json({ reason, note }) }),
+  keepCover: (policyId: string) => request<Policy>(`/api/policies/${policyId}/cancel-request`, { method: 'DELETE' }),
+  requestReinstate: (policyId: string, note?: string) =>
+    request<Policy>(`/api/policies/${policyId}/reinstate-request`, { method: 'POST', body: json({ note }) }),
   changeBundle: (policyId: string, items: BundleLineInput[]) =>
     request<Policy>(`/api/policies/${policyId}/bundle`, { method: 'POST', body: json({ items }) }),
   addMember: (policyId: string, m: MemberInput) =>

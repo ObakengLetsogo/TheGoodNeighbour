@@ -41,11 +41,13 @@ function Rows({ r, open, onToggle, onChange }: { r: SupportItem; open: boolean; 
     try { onChange(await api.setSupportStatus(r.id, status, note || undefined)); } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
   };
   const deletion = r.kind === 'deletion_request';
+  const cancel = r.kind === 'cancellation_request';
+  const reinstate = r.kind === 'reinstatement_request';
   return (
     <>
       <tr className="click" onClick={onToggle} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onToggle()} aria-expanded={open}>
         <td>{dateTime(r.createdAt)}</td>
-        <td>{deletion ? <span className="badge bad">Deletion request</span> : <span className="badge">{label(r.kind)}</span>}</td>
+        <td><span className={`badge ${deletion || cancel ? 'bad' : reinstate ? 'ok' : ''}`}>{label(r.kind)}</span></td>
         <td>{r.customer?.fullName ?? 'Deleted customer'}<div className="muted small">{displayPhone(r.contactPhone)}</div></td>
         <td className="small" style={{ maxWidth: 360 }}>{r.message.length > 90 ? `${r.message.slice(0, 90)}…` : r.message}</td>
         <td><StatusBadge status={r.status} /></td>
@@ -57,6 +59,8 @@ function Rows({ r, open, onToggle, onChange }: { r: SupportItem; open: boolean; 
             <dt>Contact</dt><dd>{displayPhone(r.contactPhone)}{r.customer?.email ? ` · ${r.customer.email}` : ''}</dd>
             {r.reference ? <><dt>Reference</dt><dd>{r.reference}</dd></> : null}
           </dl>
+          {cancel ? <p className="small" style={{ fontWeight: 600 }}>Open the policy ({r.reference}) to confirm the cancellation. Check whether it is inside the cooling-off period.</p> : null}
+          {reinstate ? <p className="small" style={{ fontWeight: 600 }}>Lapsed cover. Record a payment on the policy ({r.reference}) to reinstate it, if it is inside the reinstatement period.</p> : null}
           {deletion ? <p className="small" style={{ color: 'var(--danger)', fontWeight: 600 }}>POPIA deletion request. Check what records must be kept (cover and claims), delete or anonymise the rest, and tell the customer the outcome. Record it in the note.</p> : null}
           <label className="f">Note<textarea value={note} onChange={(e) => setNote(e.target.value)} /></label>
           <div className="row" style={{ marginTop: 10 }}>

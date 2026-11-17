@@ -38,6 +38,7 @@ function Routes() {
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="builder" />
+        <Stack.Screen name="cancel-cover" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="verify-phone" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings/password" />
         <Stack.Screen name="settings/phone" />

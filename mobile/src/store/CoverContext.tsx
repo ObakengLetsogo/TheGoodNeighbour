@@ -14,6 +14,9 @@ interface CoverState {
   refresh: () => Promise<void>;
   apply: (input: ApplyInput) => Promise<Policy>;
   changeBundle: (policyId: string, items: BundleLineInput[]) => Promise<Policy>;
+  cancelCover: (policyId: string, reason?: string, note?: string) => Promise<Policy>;
+  keepCover: (policyId: string) => Promise<Policy>;
+  requestReinstate: (policyId: string, note?: string) => Promise<Policy>;
   addMember: (policyId: string, m: MemberInput) => Promise<void>;
   removeMember: (policyId: string, memberId: string) => Promise<void>;
   submitClaim: (input: ClaimInput) => Promise<Claim>;
@@ -64,6 +67,21 @@ export function CoverProvider({ children }: { children: ReactNode }) {
     replace(p);
     return p;
   }, []);
+  const cancelCover = useCallback(async (id: string, reason?: string, note?: string) => {
+    const p = await policyService.requestCancel(id, reason, note);
+    replace(p);
+    return p;
+  }, []);
+  const keepCover = useCallback(async (id: string) => {
+    const p = await policyService.keepCover(id);
+    replace(p);
+    return p;
+  }, []);
+  const requestReinstate = useCallback(async (id: string, note?: string) => {
+    const p = await policyService.requestReinstate(id, note);
+    replace(p);
+    return p;
+  }, []);
   const addMember = useCallback(async (id: string, m: MemberInput) => replace(await policyService.addMember(id, m)), []);
   const removeMember = useCallback(async (id: string, memberId: string) => replace(await policyService.removeMember(id, memberId)), []);
   const submitClaim = useCallback(async (input: ClaimInput) => {
@@ -74,8 +92,8 @@ export function CoverProvider({ children }: { children: ReactNode }) {
 
   const current = policies.find((p) => OPEN.includes(p.status));
   const value = useMemo(
-    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, addMember, removeMember, submitClaim }),
-    [status, error, policies, claims, current, refresh, apply, changeBundle, addMember, removeMember, submitClaim],
+    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, removeMember, submitClaim }),
+    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, removeMember, submitClaim],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

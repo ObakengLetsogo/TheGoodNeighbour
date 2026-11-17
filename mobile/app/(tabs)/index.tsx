@@ -22,7 +22,8 @@ const STEPS: { icon: IconName; accent: AccentName; title: string; text: string }
 
 export default function Home() {
   const { options } = useOptions();
-  const { current } = useCover();
+  const { current, policies } = useCover();
+  const lapsed = policies.find((p) => p.status === 'lapsed' && p.reinstateUntil && new Date(`${p.reinstateUntil}T23:59:59`) >= new Date());
   const { user, smsEnabled } = useAuth();
   const groceryFrom = options ? Math.min(...options.items.filter((i) => i.kind === 'grocery').map((i) => i.valueCents)) : null;
 
@@ -43,6 +44,17 @@ export default function Home() {
           <View style={{ flex: 1 }}>
             <Text variant="cardTitle">Verify your mobile number</Text>
             <Text variant="bodyS" color={colors.inkSoft}>It takes a minute and protects your account.</Text>
+          </View>
+          <Icon name="chevron-right" size={22} color={colors.ink} />
+        </Pressable>
+      ) : null}
+
+      {lapsed ? (
+        <Pressable onPress={() => router.push({ pathname: '/policy/[id]', params: { id: lapsed.id } })} accessibilityRole="button" accessibilityLabel="Your cover has lapsed. See how to reinstate it" style={[styles.verify, { backgroundColor: accents.berry.tint }]}>
+          <Icon name="alert-circle-outline" size={24} color={colors.berry} />
+          <View style={{ flex: 1 }}>
+            <Text variant="cardTitle">Your cover has lapsed</Text>
+            <Text variant="bodyS" color={colors.inkSoft}>You can reinstate it until {formatDate(lapsed.reinstateUntil!)}.</Text>
           </View>
           <Icon name="chevron-right" size={22} color={colors.ink} />
         </Pressable>
