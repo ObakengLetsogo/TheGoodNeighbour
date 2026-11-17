@@ -1,7 +1,7 @@
 import { config } from '../config';
 import type {
-  ApplyInput, BundleLineInput, Claim, ClaimInput, CoverOptions, DebitOrderState, MemberInput, Policy, Quote, QuoteMemberInput, Session,
-  SupportRequest, User,
+  ApplyInput, BundleLineInput, Claim, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
+  QuoteMemberInput, Session, SupportRequest, User,
 } from '../types';
 import { KEYS, readJSON, removeKey, writeJSON } from './storage';
 
@@ -76,6 +76,11 @@ export const supportService = {
   submit: (r: SupportRequest) => request<void>('/api/support-requests', { method: 'POST', body: json(r) }),
 };
 
+export const legalService = {
+  list: () => request<LegalSummary[]>('/api/legal'),
+  get: (slug: string) => request<LegalDoc>(`/api/legal/${slug}`),
+};
+
 export class AuthError extends Error {}
 
 export interface RegisterInput {
@@ -105,6 +110,10 @@ export const authService = {
       throw e instanceof ApiError ? new AuthError(e.message) : e;
     }
   },
+  /** Starts a password reset: sends a code by SMS. Always answers the same, whether or not the number has an account. */
+  requestPasswordReset: (phone: string) => request<{ message: string }>('/api/auth/password-reset/request', { method: 'POST', body: json({ phone }) }),
+  confirmPasswordReset: (phone: string, code: string, newPassword: string) =>
+    request<{ message: string }>('/api/auth/password-reset/confirm', { method: 'POST', body: json({ phone, code, newPassword }) }),
   async signOut() {
     setAuthToken(null);
     await removeKey(KEYS.session);
@@ -115,6 +124,26 @@ export const authService = {
     if (s) await writeJSON(KEYS.session, { ...s, user: updated });
     return updated;
   },
+};
+
+export const accountService = {
+  me: async (): Promise<Me> => {
+    const me = await request<Me>('/api/me');
+    const s = await readJSON<Session | null>(KEYS.session, null);
+    if (s) await writeJSON(KEYS.session, { ...s, user: me.user });
+    return me;
+  },
+  /** Changing the password signs every other device out and hands this one a fresh session. */
+  changePassword: async (currentPassword: string, newPassword: string): Promise<Session> =>
+    save(await request<Session>('/api/me/password', { method: 'POST', body: json({ currentPassword, newPassword }) })),
+  startVerification: () => request<{ message: string }>('/api/me/phone-verification/start', { method: 'POST' }),
+  confirmVerification: (code: string) => request<Me>('/api/me/phone-verification/confirm', { method: 'POST', body: json({ code }) }),
+  startPhoneChange: (phone: string) => request<{ message: string }>('/api/me/phone/start', { method: 'POST', body: json({ phone }) }),
+  confirmPhoneChange: (newPhone: string, code: string) => request<Me>('/api/me/phone/confirm', { method: 'POST', body: json({ newPhone, code }) }),
+  setNotifications: (claims: boolean, payments: boolean, news: boolean) =>
+    request<User>('/api/me/notifications', { method: 'PUT', body: json({ claims, payments, news }) }),
+  signOutEverywhere: () => request<{ message: string }>('/api/me/sign-out-all', { method: 'POST' }),
+  deleteAccount: (password: string) => request<{ state: 'deleted' | 'requested'; message: string }>('/api/me/delete', { method: 'POST', body: json({ password }) }),
 };
 
 async function save(s: Session) {

@@ -269,6 +269,7 @@ public class PolicyService {
                 new HolderDto(p.getHolderName(), full ? p.getHolderIdNumber() : SaId.mask(p.getHolderIdNumber()), p.getHolderDob()),
                 p.getDebitDay(), p.getMonthlyTotalCents(), p.getBaseMonthlyCents(), p.getMandateStatus(),
                 DateTimeFormatter.ISO_INSTANT.format(p.getCreatedAt().atOffset(ZoneOffset.UTC)), p.getStartDate(), p.getWaitingEndsOn(),
-                nextDebitDate(p), history.isEmpty() ? null : history.get(history.size() - 1), history, members, pays);
+                nextDebitDate(p), history.isEmpty() ? null : history.get(history.size() - 1), history, members, pays,
+                p.getTermsVersion(), p.getPrivacyVersion(), p.getConsentAt() == null ? null : DateTimeFormatter.ISO_INSTANT.format(p.getConsentAt().atOffset(ZoneOffset.UTC)));
     }
 }

@@ -49,6 +49,9 @@ export default function SignIn() {
       </View>
       <View style={{ gap: spacing.md }}>
         <Button label="Sign In" onPress={submit} loading={busy} />
+        <Pressable onPress={() => router.push('/(onboarding)/forgot-password')} accessibilityRole="link" style={{ alignItems: 'center', padding: spacing.sm }}>
+          <Text variant="body" color={colors.olive} style={{ fontFamily: 'Urbanist_600SemiBold' }}>Forgot Password?</Text>
+        </Pressable>
         <Pressable onPress={() => router.replace('/(onboarding)/register')} accessibilityRole="link" style={{ alignItems: 'center', padding: spacing.md }}>
           <Text variant="body">New to TGN? <Text variant="cardTitle" color={colors.olive}>Create An Account</Text></Text>
         </Pressable>

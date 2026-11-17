@@ -75,13 +75,22 @@ until your underwriter signs it off**.
   opening a policy is written to the audit log. Production refuses to start without `TGN_PII_KEY`.
 - Passwords are BCrypt-hashed. Bearer tokens are random and stored hashed. Customer and staff tokens are not
   interchangeable, and each customer can only read their own plans and claims.
-- Staff actions on policies, payments, claims and plans are written to an append-only audit log.
+- Staff actions on policies, payments, claims, plans, legal text and support are written to an append-only audit log.
+- **SMS codes** (6 digits, 10 minutes, 3 sent an hour, 5 attempts each, stored hashed) are used to verify a customer's
+  number, reset a forgotten password and change the number. They go through an `SmsGateway`. In development
+  (`TGN_SMS_MODE=log`, the default) the code is written to the **server log**; in production it is `disabled` until an SMS
+  provider is connected, and the apps say so. No provider is connected yet.
+- Five wrong passwords lock an account for 15 minutes. Changing or resetting a password signs every other device out.
+  Password reset requests answer identically whether or not the number has an account.
+- **POPIA:** customers can delete their account in the app. With no cover or claims on file it is immediate; otherwise it
+  becomes a request in the staff Support Inbox. Acceptance of the Terms and Privacy Notice is recorded with the version.
 
 ## Not built yet
 
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).
   Lapsing is a manual staff action until collections exist.
-- Database migrations (Flyway/Liquibase), staff roles beyond a single admin role, SMS/OTP login, push notifications.
+- An SMS provider (codes only log in development), push/SMS notifications (preferences are saved but nothing is sent yet).
+- Database migrations (Flyway/Liquibase), staff roles beyond a single admin role.
 - Document uploads for claims, and policy documents.
 - Scheduling and tracking of livestock deliveries and herd movements (the herd is a count plus a promise limit).
 - Brand photography/illustration beyond the logo mark.
@@ -94,6 +103,9 @@ disclosure flow (cooling-off, waiting periods, claims and lapse rules), and POPI
 built so those rules are configurable and so an application is never shown as cover; it does not make you compliant.
 
 ## History
+
+**The Terms of Use and Privacy Notice are placeholder drafts**, labelled as drafts to customers. Replace them in the admin
+dashboard (Terms & Privacy) with lawyer-approved text, then untick Draft. Key Facts is generated from the live rules.
 
 Commits before "Pivot backend…" describe an earlier one-off provisions shop (food and livestock delivery). That
 code was removed when the product became funeral plans; it remains in git history.

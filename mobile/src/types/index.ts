@@ -135,6 +135,9 @@ export interface Policy {
   bundleHistory: BundleVersion[];
   members: Member[];
   payments: Payment[];
+  termsVersion?: number | null;
+  privacyVersion?: number | null;
+  consentAt?: string | null;
 }
 
 export interface MemberInput {
@@ -149,6 +152,8 @@ export interface ApplyInput {
   holderIdNumber: string;
   debitDay: number;
   members: MemberInput[];
+  acceptedTermsVersion: number;
+  acceptedPrivacyVersion: number;
 }
 
 export interface DebitOrderState {
@@ -205,6 +210,28 @@ export interface User {
   fullName: string;
   phone: string; // E.164
   email?: string | null;
+  phoneVerified: boolean;
+  notifyClaims: boolean;
+  notifyPayments: boolean;
+  notifyNews: boolean;
+}
+
+export interface Me {
+  user: User;
+  /** Whether SMS codes can be delivered. When false, phone verification and SMS password reset are unavailable. */
+  smsEnabled: boolean;
+}
+
+export interface LegalSummary {
+  slug: string;
+  title: string;
+  version: number;
+  draft: boolean;
+}
+
+export interface LegalDoc extends LegalSummary {
+  body: string;
+  updatedAt: string;
 }
 
 export interface Session {

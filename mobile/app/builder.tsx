@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { BundleBuilder, type Selection } from '../src/components/BundleBuilder';
 import { BundleSummary } from '../src/components/BundleSummary';
@@ -12,15 +12,16 @@ import { MemberForm } from '../src/components/MemberForm';
 import { Screen, ScreenHeader } from '../src/components/Screen';
 import { EmptyState, ErrorState, LoadingState } from '../src/components/States';
 import { Text } from '../src/components/Text';
-import { months, ordinal } from '../src/lib/cover';
+import { months, monthsAdj, ordinal } from '../src/lib/cover';
 import { formatZAR } from '../src/lib/format';
 import { ageOn, dobFromSAId } from '../src/lib/saId';
 import { useQuote } from '../src/lib/useQuote';
+import { legalService } from '../src/services/api';
 import { useAuth } from '../src/store/AuthContext';
 import { useCover } from '../src/store/CoverContext';
 import { useOptions } from '../src/store/OptionsContext';
 import { colors, radii, spacing } from '../src/theme';
-import { RELATIONSHIP_LABEL, type MemberInput } from '../src/types';
+import { RELATIONSHIP_LABEL, type LegalSummary, type MemberInput } from '../src/types';
 
 const NEW_STEPS = ['Your Cover', 'About You', 'Your Family', 'Review'];
 const EDIT_STEPS = ['Your Cover', 'Review'];
@@ -29,7 +30,7 @@ const EDIT_STEPS = ['Your Cover', 'Review'];
 export default function Build() {
   const { policyId } = useLocalSearchParams<{ policyId?: string }>();
   const { status, options, error, reload } = useOptions();
-  const { user } = useAuth();
+  const { user, smsEnabled } = useAuth();
   const { apply, changeBundle, policies, current } = useCover();
   const editing = policies.find((p) => p.id === policyId);
   const STEPS = editing ? EDIT_STEPS : NEW_STEPS;
@@ -43,8 +44,14 @@ export default function Build() {
   const [members, setMembers] = useState<MemberInput[]>([]);
   const [adding, setAdding] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [legal, setLegal] = useState<LegalSummary[]>([]);
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
+
+  useEffect(() => {
+    if (!policyId) legalService.list().then(setLegal).catch(() => {});
+  }, [policyId]);
 
   const items = useMemo(() => Object.entries(selection).filter(([, q]) => q > 0).map(([itemId, quantity]) => ({ itemId, quantity })), [selection]);
   const quoteMembers = useMemo(
@@ -68,6 +75,9 @@ export default function Build() {
   const total = quote?.totalMonthlyCents ?? 0;
   const canContinue = !!quote && quote.valid && !quoting;
   const isLast = step === STEPS.length - 1;
+  const needsVerify = !editing && smsEnabled && !!user && !user.phoneVerified;
+  const terms = legal.find((d) => d.slug === 'terms');
+  const privacy = legal.find((d) => d.slug === 'privacy');
 
   const next = () => {
     if (!editing && step === 1) {
@@ -86,7 +96,8 @@ export default function Build() {
         await changeBundle(editing.id, items);
         router.replace({ pathname: '/policy/[id]', params: { id: editing.id, changed: '1' } });
       } else {
-        const p = await apply({ items, holderIdNumber: idNumber, debitDay, members });
+        if (!terms || !privacy) throw new Error("We couldn't load our terms. Please check your connection and try again.");
+        const p = await apply({ items, holderIdNumber: idNumber, debitDay, members, acceptedTermsVersion: terms.version, acceptedPrivacyVersion: privacy.version });
         router.replace({ pathname: '/policy/[id]', params: { id: p.id, applied: '1' } });
       }
     } catch (e) {
@@ -108,11 +119,11 @@ export default function Build() {
         <Text variant="price" style={{ fontSize: 24, opacity: quoting ? 0.5 : 1 }} accessibilityLiveRegion="polite">{quote ? formatZAR(total) : '–'}</Text>
       </View>
       {!isLast ? (
-        <Button label="Continue" icon="arrow-right" onPress={next} disabled={step === 0 ? !canContinue : step === 2 ? adding || !canContinue : false} />
+        <Button label="Continue" icon="arrow-right" onPress={next} disabled={step === 0 ? !canContinue : step === 1 ? needsVerify : step === 2 ? adding || !canContinue : false} />
       ) : (
         <>
           {submitError ? <Text variant="bodyS" color={colors.danger} accessibilityLiveRegion="polite">{submitError}</Text> : null}
-          <Button label={editing ? 'Update My Cover' : 'Submit Application'} onPress={submit} loading={busy} disabled={!agreed || !canContinue} />
+          <Button label={editing ? 'Update My Cover' : 'Submit Application'} onPress={submit} loading={busy} disabled={!agreed || !canContinue || (!editing && !acceptedLegal)} />
         </>
       )}
     </>
@@ -153,6 +164,13 @@ export default function Build() {
             <Text variant="displayM">Now, a little about you.</Text>
             <Text variant="body" color={colors.muted}>{user?.fullName}, we need your ID number to check you're eligible.</Text>
           </View>
+          {needsVerify ? (
+            <Pressable onPress={() => router.push('/verify-phone')} accessibilityRole="button" style={[styles.notice, { backgroundColor: '#F8EAC2' }]}>
+              <Icon name="cellphone-message" size={22} color={colors.ink} />
+              <View style={{ flex: 1 }}><Text variant="cardTitle">Verify your mobile number first</Text><Text variant="bodyS" color={colors.inkSoft}>We'll text you a code. Tap here to do it now, then come back.</Text></View>
+              <Icon name="chevron-right" size={22} color={colors.ink} />
+            </Pressable>
+          ) : null}
           <Input label="ID Number" value={idNumber} onChangeText={(t) => { setIdNumber(t.replace(/\D/g, '').slice(0, 13)); setIdError(undefined); }} keyboardType="number-pad" maxLength={13} error={idError}
             hint={holderDob ? `Born ${holderDob}, age ${holderAge}` : 'Your 13-digit South African ID number.'} />
           <View style={{ gap: spacing.sm }}>
@@ -209,19 +227,31 @@ export default function Build() {
             </View>
           </Card>
           {editing && upgrade ? (
-            <Notice text={`You're increasing your cover. The extra only pays out after a new ${months(options.upgradeWaitingDays)} waiting period. Until then, your current bundle stays payable.`} />
+            <Notice text={`You're increasing your cover. The extra only pays out after a new ${monthsAdj(options.upgradeWaitingDays)} waiting period. Until then, your current bundle stays payable.`} />
           ) : editing && started ? (
             <Notice text="You're reducing your cover. This applies straight away." />
           ) : editing ? (
             <Notice text="Your cover hasn't started yet, so this simply updates your application." />
           ) : (
-            <Notice text={`This is an application, not cover. We review it first. Cover starts once it's approved and your first payment is received. Natural causes have a ${months(options.naturalWaitingDays)} waiting period${options.accidentalWaitingDays === 0 ? '; accidents have none' : ''}.`} />
+            <Notice text={`This is an application, not cover. We review it first. Cover starts once it's approved and your first payment is received. Natural causes have a ${monthsAdj(options.naturalWaitingDays)} waiting period${options.accidentalWaitingDays === 0 ? '; accidents have none' : ''}.`} />
           )}
           <Text variant="bodyS">Your price is reviewed once a year and won't go up by more than {options.escalationCapPercent}%. We'll give you notice first.</Text>
           <Pressable onPress={() => setAgreed(!agreed)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} style={styles.agree}>
             <Icon name={agreed ? 'checkbox-marked' : 'checkbox-blank-outline'} size={26} color={agreed ? colors.olive : colors.muted} />
             <Text variant="body" style={{ flex: 1 }}>{editing ? 'I understand how this change affects my price and my cover.' : 'The details above are correct, and I understand this is an application that must be approved before cover starts.'}</Text>
           </Pressable>
+          {!editing ? (
+            <Pressable onPress={() => setAcceptedLegal(!acceptedLegal)} accessibilityRole="checkbox" accessibilityState={{ checked: acceptedLegal }} style={styles.agree}>
+              <Icon name={acceptedLegal ? 'checkbox-marked' : 'checkbox-blank-outline'} size={26} color={acceptedLegal ? colors.olive : colors.muted} />
+              <Text variant="body" style={{ flex: 1 }}>
+                I have read and accept the{' '}
+                <Text variant="body" color={colors.olive} style={{ fontFamily: 'Urbanist_700Bold' }} accessibilityRole="link" onPress={() => router.push({ pathname: '/legal/[slug]', params: { slug: 'terms' } })}>Terms Of Use</Text>
+                {terms ? ` (v${terms.version})` : ''} and the{' '}
+                <Text variant="body" color={colors.olive} style={{ fontFamily: 'Urbanist_700Bold' }} accessibilityRole="link" onPress={() => router.push({ pathname: '/legal/[slug]', params: { slug: 'privacy' } })}>Privacy Notice</Text>
+                {privacy ? ` (v${privacy.version})` : ''}.
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </Screen>

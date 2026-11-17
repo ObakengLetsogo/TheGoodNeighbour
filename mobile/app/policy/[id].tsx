@@ -14,6 +14,7 @@ import { formatDate, formatDateLong, formatZAR } from '../../src/lib/format';
 import { ordinal } from '../../src/lib/cover';
 import { BundleSummary } from '../../src/components/BundleSummary';
 import { CLAIM_STATUS_LABEL, POLICY_STATUS_LABEL, POLICY_STATUS_MESSAGE, POLICY_STEPS, policyStep } from '../../src/lib/status';
+import { confirmAction } from '../../src/lib/confirm';
 import { callSupport, openWhatsApp } from '../../src/lib/support';
 import { policyService } from '../../src/services/api';
 import { useCover } from '../../src/store/CoverContext';
@@ -49,10 +50,9 @@ export default function PolicyDetails() {
   };
 
   const confirmRemove = (memberId: string, name: string) =>
-    Alert.alert(`Remove ${name}?`, 'They will no longer be covered and your monthly total will go down.', [
-      { text: 'Keep', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeMember(policy.id, memberId).catch((e) => Alert.alert("Couldn't remove", e.message)) },
-    ]);
+    confirmAction(`Remove ${name}?`, 'They will no longer be covered and your monthly total will go down.', 'Remove', () => {
+      removeMember(policy.id, memberId).catch((e) => Alert.alert("Couldn't remove", e.message));
+    });
 
   return (
     <Screen>
@@ -171,6 +171,10 @@ export default function PolicyDetails() {
           )}
         </>
       ) : null}
+
+      <View style={{ marginTop: spacing.xl }}>
+        <Button label="View Policy Schedule" icon="file-document-outline" variant="secondary" onPress={() => router.push({ pathname: '/schedule/[id]', params: { id: policy.id } })} />
+      </View>
 
       <Text variant="section" style={styles.h}>Claims</Text>
       {mine.map((c) => (

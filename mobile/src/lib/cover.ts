@@ -23,3 +23,6 @@ export function memberProblem(o: CoverOptions, r: Relationship, dobISO: string, 
 export const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
 
 export const months = (days: number) => (days >= 28 && days % 30 === 0 ? `${days / 30} month${days === 30 ? '' : 's'}` : `${days} day${days === 1 ? '' : 's'}`);
+
+/** "6-month" / "30-day", for "a 6-month waiting period". */
+export const monthsAdj = (days: number) => (days >= 28 && days % 30 === 0 ? `${days / 30}-month` : `${days}-day`);

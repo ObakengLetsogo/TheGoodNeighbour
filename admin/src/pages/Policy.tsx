@@ -69,6 +69,7 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
             <dt>Next debit</dt><dd>{dateShort(p.nextDebitDate)}</dd>
             <dt>Cover started</dt><dd>{dateShort(p.startDate)}</dd>
             <dt>Waiting ends</dt><dd>{dateShort(p.waitingEndsOn)}</dd>
+            <dt>Accepted terms</dt><dd>{p.consentAt ? `v${p.termsVersion} / privacy v${p.privacyVersion} on ${dateShort(p.consentAt)}` : '–'}</dd>
           </dl>
         </Card>
       </div>

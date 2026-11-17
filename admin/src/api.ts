@@ -1,4 +1,4 @@
-import type { AdminPolicy, AuditEvent, BenefitItem, Claim, CoverConfig, Dashboard, Herd, Session, Staff } from './types';
+import type { AdminPolicy, AuditEvent, BenefitItem, Claim, CoverConfig, CustomerRow, Dashboard, Herd, LegalDoc, LegalSummary, Session, Staff, SupportItem } from './types';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
 const TOKEN_KEY = 'tgn.admin.token';
@@ -59,5 +59,12 @@ export const api = {
     body: JSON.stringify({ name: i.name, description: i.description, valueCents: i.valueCents, costCents: i.costCents, maxQty: i.maxQty, active: i.active, onFarm: i.kind === 'livestock' ? i.onFarm ?? 0 : null, contents: i.contents }),
   }),
   herd: () => request<Herd[]>('/herd'),
+  support: () => request<SupportItem[]>('/support'),
+  setSupportStatus: (id: string, status: string, note?: string) => request<SupportItem>(`/support/${id}/status`, post({ status, note })),
+  customers: () => request<CustomerRow[]>('/customers'),
+  legalList: () => request<LegalSummary[]>('/legal'),
+  legal: (slug: string) => request<LegalDoc>(`/legal/${slug}`),
+  updateLegal: (slug: string, title: string, body: string, draft: boolean) =>
+    request<LegalDoc>(`/legal/${slug}`, { method: 'PUT', body: JSON.stringify({ title, body, draft }) }),
   audit: () => request<AuditEvent[]>('/audit'),
 };

@@ -38,6 +38,14 @@ function Routes() {
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="builder" />
+        <Stack.Screen name="verify-phone" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="settings/password" />
+        <Stack.Screen name="settings/phone" />
+        <Stack.Screen name="settings/notifications" />
+        <Stack.Screen name="settings/delete" />
+        <Stack.Screen name="legal/[slug]" />
+        <Stack.Screen name="legal/key-facts" />
+        <Stack.Screen name="schedule/[id]" />
         <Stack.Screen name="policy/[id]" />
         <Stack.Screen name="add-member" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="claim/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />

@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { MemberForm } from '../src/components/MemberForm';
 import { Screen, ScreenHeader } from '../src/components/Screen';
 import { Text } from '../src/components/Text';
-import { months } from '../src/lib/cover';
+import { months, monthsAdj } from '../src/lib/cover';
 import { useCover } from '../src/store/CoverContext';
 import { useOptions } from '../src/store/OptionsContext';
 import { colors, spacing } from '../src/theme';
@@ -24,7 +24,7 @@ export default function AddMember() {
       <ScreenHeader title="Add Family Member" onBack={() => router.back()} />
       <View style={{ gap: spacing.lg, marginTop: spacing.md }}>
         <Text variant="body" color={colors.muted}>
-          They'll be added to your cover and your monthly total goes up by their fee. {policy.status === 'active' ? `A ${months(options.naturalWaitingDays)} waiting period applies to them from today for natural causes.` : 'Their waiting period starts when your cover starts.'}
+          They'll be added to your cover and your monthly total goes up by their fee. {policy.status === 'active' ? `A ${monthsAdj(options.naturalWaitingDays)} waiting period applies to them from today for natural causes.` : 'Their waiting period starts when your cover starts.'}
         </Text>
         <MemberForm
           options={options}

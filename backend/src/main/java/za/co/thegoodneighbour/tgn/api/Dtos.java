@@ -82,7 +82,7 @@ public final class Dtos {
     public record PolicyDto(String id, String reference, String status, HolderDto holder, int debitDay, long monthlyTotalCents,
                             long baseMonthlyCents, String mandateStatus, String createdAt, String startDate, String waitingEndsOn,
                             String nextDebitDate, BundleVersionDto bundle, List<BundleVersionDto> bundleHistory,
-                            List<MemberDto> members, List<PaymentDto> payments) {}
+                            List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt) {}
     public record DebitOrderState(String state, String message) {}
 
     // ---------- Claims ----------

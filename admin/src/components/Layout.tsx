@@ -14,8 +14,11 @@ const NAV = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/policies', label: 'Policies' },
   { to: '/claims', label: 'Claims' },
+  { to: '/customers', label: 'Customers' },
+  { to: '/support', label: 'Support Inbox' },
   { to: '/cover', label: 'Cover & Pricing' },
   { to: '/herd', label: 'Herd & Capacity' },
+  { to: '/legal', label: 'Terms & Privacy' },
   { to: '/audit', label: 'Audit Log' },
 ];
 

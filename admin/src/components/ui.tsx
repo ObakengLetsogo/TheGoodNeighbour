@@ -15,12 +15,12 @@ export function Card({ tab, accent = 'olive', children, style, tint }: { tab?: s
 
 const TONE: Record<string, string> = {
   active: 'ok', approved: 'ok', delivered: 'ok', under_review: 'ok',
-  pending_review: 'warn', submitted: 'warn', lapsed: 'warn',
+  pending_review: 'warn', submitted: 'warn', lapsed: 'warn', open: 'warn', in_progress: 'ok', resolved: 'money',
   declined: 'bad', cancelled: 'bad',
 };
 export const STATUS_LABEL: Record<string, string> = {
   pending_review: 'Pending Review', approved: 'Approved', active: 'Active', lapsed: 'Lapsed', declined: 'Declined', cancelled: 'Cancelled',
-  submitted: 'Submitted', under_review: 'Under Review', delivered: 'Provisions Delivered',
+  submitted: 'Submitted', under_review: 'Under Review', delivered: 'Provisions Delivered', open: 'Open', in_progress: 'In Progress', resolved: 'Resolved',
 };
 export function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${TONE[status] ?? ''}`}>{STATUS_LABEL[status] ?? label(status)}</span>;

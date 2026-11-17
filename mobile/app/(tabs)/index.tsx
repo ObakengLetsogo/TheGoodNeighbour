@@ -8,6 +8,7 @@ import { Screen, SectionHeader } from '../../src/components/Screen';
 import { EditorialHeading, Text } from '../../src/components/Text';
 import { formatDate, formatZAR, greeting } from '../../src/lib/format';
 import { POLICY_STATUS_LABEL } from '../../src/lib/status';
+import { useAuth } from '../../src/store/AuthContext';
 import { useCover } from '../../src/store/CoverContext';
 import { useOptions } from '../../src/store/OptionsContext';
 import { accents, colors, radii, spacing, type AccentName } from '../../src/theme';
@@ -22,6 +23,7 @@ const STEPS: { icon: IconName; accent: AccentName; title: string; text: string }
 export default function Home() {
   const { options } = useOptions();
   const { current } = useCover();
+  const { user, smsEnabled } = useAuth();
   const groceryFrom = options ? Math.min(...options.items.filter((i) => i.kind === 'grocery').map((i) => i.valueCents)) : null;
 
   return (
@@ -34,6 +36,17 @@ export default function Home() {
       </View>
 
       <EditorialHeading lead={`${greeting()}, `} accent="Neighbour" trail="." variant="displayM" style={{ marginTop: spacing.sm }} />
+
+      {smsEnabled && user && !user.phoneVerified ? (
+        <Pressable onPress={() => router.push('/verify-phone')} accessibilityRole="button" accessibilityLabel="Verify your mobile number" style={styles.verify}>
+          <Icon name="cellphone-message" size={24} color={colors.ink} />
+          <View style={{ flex: 1 }}>
+            <Text variant="cardTitle">Verify your mobile number</Text>
+            <Text variant="bodyS" color={colors.inkSoft}>It takes a minute and protects your account.</Text>
+          </View>
+          <Icon name="chevron-right" size={22} color={colors.ink} />
+        </Pressable>
+      ) : null}
 
       {current ? (
         <Pressable onPress={() => router.push({ pathname: '/policy/[id]', params: { id: current.id } })} accessibilityRole="button" accessibilityLabel={`Your cover, ${POLICY_STATUS_LABEL[current.status]}`} style={[styles.panel, { backgroundColor: accents.gold.tint }]}>
@@ -124,6 +137,7 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   panel: { marginTop: spacing.xl, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.lg, overflow: 'hidden' },
   blob: { position: 'absolute', width: 170, height: 170, borderRadius: radii.pill, opacity: 0.25 },
+  verify: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: accents.gold.tint, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pill: { backgroundColor: colors.card, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
