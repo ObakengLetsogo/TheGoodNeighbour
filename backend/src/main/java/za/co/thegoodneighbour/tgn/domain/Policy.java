@@ -37,6 +37,10 @@ public class Policy {
     private Integer termsVersion;
     private Integer privacyVersion;
     private Instant consentAt;
+    private String lapsedAt;
+    private String cancelledAt;
+    private Instant cancelRequestedAt;
+    private Instant reinstateRequestedAt;
     private String startDate;
     private String waitingEndsOn;
 
@@ -63,8 +67,20 @@ public class Policy {
     public void setStatus(String s) { this.status = s; this.reviewedAt = Instant.now(); }
     public void activate(LocalDate today, LocalDate waitingEnds) {
         this.status = "active";
+        this.lapsedAt = null;
+        this.reinstateRequestedAt = null;
         if (startDate == null) { startDate = today.toString(); waitingEndsOn = waitingEnds.toString(); }
     }
+    public void markLapsed(LocalDate d) { this.lapsedAt = d.toString(); }
+    public void markCancelled(LocalDate d) { this.cancelledAt = d.toString(); this.cancelRequestedAt = null; this.reinstateRequestedAt = null; }
+    public void requestCancel() { if (cancelRequestedAt == null) cancelRequestedAt = Instant.now(); }
+    public void withdrawCancelRequest() { this.cancelRequestedAt = null; }
+    public void requestReinstate() { this.reinstateRequestedAt = Instant.now(); }
+    public String getLapsedAt() { return lapsedAt; }
+    public String getCancelledAt() { return cancelledAt; }
+    public Instant getCancelRequestedAt() { return cancelRequestedAt; }
+    public Instant getReinstateRequestedAt() { return reinstateRequestedAt; }
+
     public void setMonthlyTotalCents(long v) { this.monthlyTotalCents = v; }
     public void setBundle(String versionsJson, long baseMonthlyCents) { this.bundleVersionsJson = versionsJson; this.baseMonthlyCents = baseMonthlyCents; }
 

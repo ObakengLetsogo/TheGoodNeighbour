@@ -30,12 +30,13 @@ public class PolicyService {
     private final DebitOrderGateway debitOrders;
     private final LegalService legal;
     private final OtpService otp;
+    private final SupportRequestRepository support;
     private final Clock clock;
 
     public PolicyService(PolicyRepository policies, PaymentRecordRepository payments, AppUserRepository users, CoverService cover,
-                         AuditService audit, DebitOrderGateway debitOrders, LegalService legal, OtpService otp, Clock clock) {
+                         AuditService audit, DebitOrderGateway debitOrders, LegalService legal, OtpService otp, SupportRequestRepository support, Clock clock) {
         this.policies = policies; this.payments = payments; this.users = users; this.cover = cover; this.audit = audit;
-        this.debitOrders = debitOrders; this.legal = legal; this.otp = otp; this.clock = clock;
+        this.debitOrders = debitOrders; this.legal = legal; this.otp = otp; this.support = support; this.clock = clock;
     }
 
     private LocalDate today() { return LocalDate.now(clock); }
@@ -129,6 +130,60 @@ public class PolicyService {
         return toDto(policies.save(policy), false);
     }
 
+    /**
+     * Before cover has started a customer can simply withdraw: it is cancelled at once. Once cover has started, cancelling
+     * is a request that staff confirm (they settle the date and any money owed either way).
+     */
+    @Transactional
+    public PolicyDto requestCancel(AppUser user, String policyId, CancelRequestIn r) {
+        Policy p = owned(user, policyId);
+        if (!Set.of("pending_review", "approved", "active", "lapsed").contains(p.getStatus()))
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "This cover can't be cancelled.");
+        if (p.getStartDate() == null) {
+            p.setStatus("cancelled");
+            p.markCancelled(today());
+            audit.record("customer", "policy.withdrawn", "policy", p.getId(), "Withdrawn by the customer before cover started");
+            return toDto(policies.save(p), false);
+        }
+        if (p.getCancelRequestedAt() == null) {
+            p.requestCancel();
+            support.save(new SupportRequest(user.getId(), "cancellation_request", p.getReference(),
+                    "Customer asked to cancel cover " + p.getReference() + "." + (r != null && r.reason() != null ? " Reason: " + r.reason() + "." : "")
+                            + (r != null && r.note() != null && !r.note().isBlank() ? " " + r.note().trim() : ""), user.getPhone()));
+        }
+        return toDto(policies.save(p), false);
+    }
+
+    @Transactional
+    public PolicyDto keepCover(AppUser user, String policyId) {
+        Policy p = owned(user, policyId);
+        p.withdrawCancelRequest();
+        resolveRequests(p, "cancellation_request", "Customer chose to keep their cover.");
+        return toDto(policies.save(p), false);
+    }
+
+    /** A lapsed cover can be reinstated within the configured window, keeping its waiting periods. */
+    @Transactional
+    public PolicyDto requestReinstate(AppUser user, String policyId, ReinstateRequestIn r) {
+        Policy p = owned(user, policyId);
+        if (!"lapsed".equals(p.getStatus())) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "Only a lapsed cover can be reinstated.");
+        CoverConfig cfg = cover.config();
+        if (p.getLapsedAt() != null && !CoverRules.canReinstate(LocalDate.parse(p.getLapsedAt()), cfg.getReinstateWithinDays(), today()))
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The period to reinstate has passed. You'll need to apply again.");
+        if (p.getReinstateRequestedAt() == null) {
+            p.requestReinstate();
+            support.save(new SupportRequest(user.getId(), "reinstatement_request", p.getReference(),
+                    "Customer asked to reinstate lapsed cover " + p.getReference() + "." + (r != null && r.note() != null && !r.note().isBlank() ? " " + r.note().trim() : ""), user.getPhone()));
+        }
+        return toDto(policies.save(p), false);
+    }
+
+    private void resolveRequests(Policy p, String kind, String note) {
+        support.findAllByOrderByCreatedAtDesc().stream()
+                .filter(x -> kind.equals(x.getKind()) && p.getReference().equals(x.getOrderRef()) && !"resolved".equals(x.getStatus()))
+                .forEach(x -> { x.setStatus("resolved", note); support.save(x); });
+    }
+
     @Transactional(readOnly = true)
     public List<PolicyDto> list(AppUser user) { return policies.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().map(p -> toDto(p, false)).toList(); }
 
@@ -169,6 +224,8 @@ public class PolicyService {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "Please give a reason for declining.");
         String from = p.getStatus();
         p.setStatus(c.status());
+        if ("lapsed".equals(c.status())) p.markLapsed(today());
+        if ("cancelled".equals(c.status())) { p.markCancelled(today()); resolveRequests(p, "cancellation_request", "Cancelled by staff."); }
         audit.record(staff.getEmail(), "policy.status", "policy", id, from + " -> " + c.status() + (c.note() == null ? "" : ": " + c.note()));
         return new AdminPolicyDto(toDto(policies.save(p), true), customer(p));
     }
@@ -184,6 +241,9 @@ public class PolicyService {
             case "pending_review" -> throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "Approve the application before recording a payment.");
             case "declined", "cancelled" -> throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "This policy is " + p.getStatus() + ".");
             case "approved", "lapsed" -> {
+                if ("lapsed".equals(p.getStatus()) && p.getLapsedAt() != null
+                        && !CoverRules.canReinstate(LocalDate.parse(p.getLapsedAt()), cfg.getReinstateWithinDays(), today))
+                    throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The reinstatement period ended on " + CoverRules.reinstateUntil(LocalDate.parse(p.getLapsedAt()), cfg.getReinstateWithinDays()) + ". The customer needs to apply again.");
                 if (r.amountCents() < p.getMonthlyTotalCents())
                     throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The first premium is " + CoverRules.rand(p.getMonthlyTotalCents()) + ". A smaller amount can't start cover.");
             }
@@ -195,6 +255,7 @@ public class PolicyService {
             p.getMembers().stream().filter(m -> "active".equals(m.getStatus()) && m.getCoverStartsOn() == null)
                     .forEach(m -> m.setCoverStartsOn(p.getWaitingEndsOn()));
         }
+        if ("active".equals(p.getStatus())) resolveRequests(p, "reinstatement_request", "Reinstated by a recorded payment.");
         audit.record(staff.getEmail(), "payment.recorded", "policy", id, CoverRules.rand(r.amountCents()) + " ref " + r.reference() + " (manual)");
         return new AdminPolicyDto(toDto(policies.save(p), true), customer(p));
     }
@@ -203,7 +264,9 @@ public class PolicyService {
     public Dashboard dashboard(long openClaims) {
         List<Policy> all = policies.findAll();
         return new Dashboard(count(all, "pending_review"), count(all, "approved"), count(all, "active"), count(all, "lapsed"), openClaims,
-                all.stream().filter(p -> "active".equals(p.getStatus())).mapToLong(Policy::getMonthlyTotalCents).sum());
+                all.stream().filter(p -> "active".equals(p.getStatus())).mapToLong(Policy::getMonthlyTotalCents).sum(),
+                all.stream().filter(p -> p.getCancelRequestedAt() != null && !"cancelled".equals(p.getStatus())).count(),
+                all.stream().filter(p -> p.getReinstateRequestedAt() != null && "lapsed".equals(p.getStatus())).count());
     }
 
     // ---------------- helpers ----------------
@@ -250,6 +313,8 @@ public class PolicyService {
 
     private UserDto customer(Policy p) { return users.findById(p.getUserId()).map(AuthService::toDto).orElse(null); }
 
+    private static String iso(java.time.Instant t) { return t == null ? null : DateTimeFormatter.ISO_INSTANT.format(t.atOffset(ZoneOffset.UTC)); }
+
     String nextDebitDate(Policy p) {
         if (!Set.of("approved", "active").contains(p.getStatus())) return null;
         LocalDate t = today();
@@ -270,6 +335,10 @@ public class PolicyService {
                 p.getDebitDay(), p.getMonthlyTotalCents(), p.getBaseMonthlyCents(), p.getMandateStatus(),
                 DateTimeFormatter.ISO_INSTANT.format(p.getCreatedAt().atOffset(ZoneOffset.UTC)), p.getStartDate(), p.getWaitingEndsOn(),
                 nextDebitDate(p), history.isEmpty() ? null : history.get(history.size() - 1), history, members, pays,
-                p.getTermsVersion(), p.getPrivacyVersion(), p.getConsentAt() == null ? null : DateTimeFormatter.ISO_INSTANT.format(p.getConsentAt().atOffset(ZoneOffset.UTC)));
+                p.getTermsVersion(), p.getPrivacyVersion(), p.getConsentAt() == null ? null : DateTimeFormatter.ISO_INSTANT.format(p.getConsentAt().atOffset(ZoneOffset.UTC)),
+                p.getLapsedAt(), p.getLapsedAt() == null ? null : CoverRules.reinstateUntil(LocalDate.parse(p.getLapsedAt()), cover.config().getReinstateWithinDays()).toString(),
+                p.getCancelledAt(), iso(p.getCancelRequestedAt()), iso(p.getReinstateRequestedAt()),
+                p.getStartDate() != null && Set.of("active", "lapsed").contains(p.getStatus())
+                        && CoverRules.withinCoolingOff(LocalDate.parse(p.getStartDate()), cover.config().getCoolingOffDays(), today()));
     }
 }

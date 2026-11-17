@@ -11,7 +11,7 @@ import za.co.thegoodneighbour.tgn.service.CoverRules;
 
 class CoverRulesTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 17);
-    private final CoverConfig cfg = new CoverConfig(160, 250_000, 180, 0, 180, 18, 65, 85, 3, 25, 2, 90, 1000, List.of(
+    private final CoverConfig cfg = new CoverConfig(160, 250_000, 180, 0, 180, 18, 65, 85, 3, 25, 2, 90, 1000, 31, List.of(
             new RelationshipRule("spouse", 10000, 18, 65, 85, 1), new RelationshipRule("child", 4000, 0, 21, 24, 2)));
 
     @Test void premiumIsBundleCostTimesRateAndRoundsHalfUp() {
@@ -46,5 +46,15 @@ class CoverRulesTest {
     @Test void formatsRandWithNonBreakingSpaces() {
         assertEquals("R2 500", CoverRules.rand(250_000));
         assertEquals("R84.80", CoverRules.rand(8_480));
+    }
+
+    @Test void reinstatementWindowAndCoolingOffAreCountedInDays() {
+        LocalDate lapsed = LocalDate.of(2026, 9, 1);
+        assertEquals(LocalDate.of(2026, 11, 30), CoverRules.reinstateUntil(lapsed, 90));
+        assertTrue(CoverRules.canReinstate(lapsed, 90, LocalDate.of(2026, 11, 30)));   // the last day still counts
+        assertFalse(CoverRules.canReinstate(lapsed, 90, LocalDate.of(2026, 12, 1)));
+        assertTrue(CoverRules.withinCoolingOff(LocalDate.of(2026, 11, 1), 31, LocalDate.of(2026, 12, 2)));
+        assertFalse(CoverRules.withinCoolingOff(LocalDate.of(2026, 11, 1), 31, LocalDate.of(2026, 12, 3)));
+        assertFalse(CoverRules.withinCoolingOff(null, 31, LocalDate.of(2026, 11, 1)));  // not started: nothing to cool off from
     }
 }

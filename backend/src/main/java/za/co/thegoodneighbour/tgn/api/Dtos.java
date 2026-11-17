@@ -82,7 +82,11 @@ public final class Dtos {
     public record PolicyDto(String id, String reference, String status, HolderDto holder, int debitDay, long monthlyTotalCents,
                             long baseMonthlyCents, String mandateStatus, String createdAt, String startDate, String waitingEndsOn,
                             String nextDebitDate, BundleVersionDto bundle, List<BundleVersionDto> bundleHistory,
-                            List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt) {}
+                            List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt,
+                            String lapsedAt, String reinstateUntil, String cancelledAt, String cancelRequestedAt, String reinstateRequestedAt,
+                            boolean withinCoolingOff) {}
+    public record CancelRequestIn(@Size(max = 100) String reason, @Size(max = 1000) String note) {}
+    public record ReinstateRequestIn(@Size(max = 1000) String note) {}
     public record DebitOrderState(String state, String message) {}
 
     // ---------- Claims ----------
@@ -112,7 +116,8 @@ public final class Dtos {
     public record StatusChange(@NotBlank String status, @Size(max = 1000) String note) {}
     public record RecordPayment(@Positive long amountCents, @NotBlank @Pattern(regexp = DATE) String paidOn,
                                 @NotBlank @Size(max = 100) String reference) {}
-    public record Dashboard(long pendingReview, long approvedAwaitingPayment, long active, long lapsed, long openClaims, long monthlyRecurringCents) {}
+    public record Dashboard(long pendingReview, long approvedAwaitingPayment, long active, long lapsed, long openClaims, long monthlyRecurringCents,
+                            long cancellationRequests, long reinstatementRequests) {}
     public record AuditDto(String at, String actor, String action, String entityType, String entityId, String detail) {}
 
     public record CoverConfigDto(@Min(1) @Max(5000) int baseRateBps, @PositiveOrZero long minBundleValueCents, @Min(0) @Max(1095) int naturalWaitingDays,
@@ -120,7 +125,8 @@ public final class Dtos {
                                  @Min(0) @Max(120) int mainMinAge, @Min(0) @Max(120) int mainMaxAge, @Min(0) @Max(120) int mainCoverEndAge,
                                  @Min(1) @Max(50) int maxMembers, @Min(1) @Max(1000) int maxCommitmentMultiple,
                                  @Min(1) @Max(12) int lapseAfterMissedPayments, @Min(0) @Max(730) int reinstateWithinDays,
-                                 @Min(0) @Max(10000) int escalationCapBps, @NotNull @Valid List<RelationshipRuleDto> relationships) {}
+                                 @Min(0) @Max(10000) int escalationCapBps, @Min(0) @Max(365) int coolingOffDays,
+                                 @NotNull @Valid List<RelationshipRuleDto> relationships) {}
     public record BenefitItemAdminDto(String id, String kind, String name, String description, String unitLabel, long valueCents, long costCents,
                                       int maxQty, String groupId, boolean active, Integer onFarm, List<String> contents) {}
     public record BenefitItemUpdate(@NotBlank @Size(max = 100) String name, @Size(max = 1000) String description, @Positive long valueCents,

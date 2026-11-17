@@ -44,7 +44,7 @@ public class CoverAdminService {
         String before = "rate=" + c.getBaseRateBps() + "bps natural=" + c.getNaturalWaitingDays() + "d min=" + c.getMinBundleValueCents();
         c.apply(u.baseRateBps(), u.minBundleValueCents(), u.naturalWaitingDays(), u.accidentalWaitingDays(), u.upgradeWaitingDays(), u.mainMinAge(),
                 u.mainMaxAge(), u.mainCoverEndAge(), u.maxMembers(), u.maxCommitmentMultiple(), u.lapseAfterMissedPayments(), u.reinstateWithinDays(),
-                u.escalationCapBps(), rules);
+                u.escalationCapBps(), u.coolingOffDays(), rules);
         audit.record(staff.getEmail(), "cover.config.updated", "cover_config", CoverConfig.ID,
                 before + " -> rate=" + u.baseRateBps() + "bps natural=" + u.naturalWaitingDays() + "d min=" + u.minBundleValueCents());
         return toDto(configs.save(c));
@@ -81,7 +81,7 @@ public class CoverAdminService {
     static CoverConfigDto toDto(CoverConfig c) {
         return new CoverConfigDto(c.getBaseRateBps(), c.getMinBundleValueCents(), c.getNaturalWaitingDays(), c.getAccidentalWaitingDays(),
                 c.getUpgradeWaitingDays(), c.getMainMinAge(), c.getMainMaxAge(), c.getMainCoverEndAge(), c.getMaxMembers(), c.getMaxCommitmentMultiple(),
-                c.getLapseAfterMissedPayments(), c.getReinstateWithinDays(), c.getEscalationCapBps(),
+                c.getLapseAfterMissedPayments(), c.getReinstateWithinDays(), c.getEscalationCapBps(), c.getCoolingOffDays(),
                 c.getRules().stream().map(r -> new RelationshipRuleDto(r.relationship(), r.multiplierBps(), r.minAge(), r.maxAge(), r.coverEndAge(), r.maxCount())).toList());
     }
 

@@ -81,6 +81,12 @@ public final class Controllers {
         public PolicyDto addMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody MemberIn m) { return policies.addMember(u, id, m); }
         @DeleteMapping("/{id}/members/{memberId}")
         public PolicyDto removeMember(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String memberId) { return policies.removeMember(u, id, memberId); }
+        @PostMapping("/{id}/cancel-request")
+        public PolicyDto cancel(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody(required = false) CancelRequestIn r) { return policies.requestCancel(u, id, r); }
+        @DeleteMapping("/{id}/cancel-request")
+        public PolicyDto keep(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id) { return policies.keepCover(u, id); }
+        @PostMapping("/{id}/reinstate-request")
+        public PolicyDto reinstate(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody(required = false) ReinstateRequestIn r) { return policies.requestReinstate(u, id, r); }
         @PostMapping("/{id}/bundle")
         public PolicyDto changeBundle(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody BundleChangeRequest r) { return policies.changeBundle(u, id, r); }
         @PostMapping("/{id}/debit-order")

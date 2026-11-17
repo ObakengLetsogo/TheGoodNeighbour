@@ -35,6 +35,8 @@ public class CoverConfig {
     private int lapseAfterMissedPayments;
     private int reinstateWithinDays;
     private int escalationCapBps;
+    /** Days after cover starts in which a cancellation is flagged to staff as possibly refundable. Confirm with the underwriter. */
+    private int coolingOffDays;
 
     @ElementCollection(fetch = FetchType.EAGER) @CollectionTable(name = "cover_relationship_rules", joinColumns = @JoinColumn(name = "config_id"))
     private List<RelationshipRule> rules = new ArrayList<>();
@@ -43,19 +45,19 @@ public class CoverConfig {
 
     public CoverConfig(int baseRateBps, long minBundleValueCents, int naturalWaitingDays, int accidentalWaitingDays, int upgradeWaitingDays,
                        int mainMinAge, int mainMaxAge, int mainCoverEndAge, int maxMembers, int maxCommitmentMultiple,
-                       int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapBps, List<RelationshipRule> rules) {
+                       int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapBps, int coolingOffDays, List<RelationshipRule> rules) {
         apply(baseRateBps, minBundleValueCents, naturalWaitingDays, accidentalWaitingDays, upgradeWaitingDays, mainMinAge, mainMaxAge,
-                mainCoverEndAge, maxMembers, maxCommitmentMultiple, lapseAfterMissedPayments, reinstateWithinDays, escalationCapBps, rules);
+                mainCoverEndAge, maxMembers, maxCommitmentMultiple, lapseAfterMissedPayments, reinstateWithinDays, escalationCapBps, coolingOffDays, rules);
     }
 
     public final void apply(int baseRateBps, long minBundleValueCents, int naturalWaitingDays, int accidentalWaitingDays, int upgradeWaitingDays,
                             int mainMinAge, int mainMaxAge, int mainCoverEndAge, int maxMembers, int maxCommitmentMultiple,
-                            int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapBps, List<RelationshipRule> rules) {
+                            int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapBps, int coolingOffDays, List<RelationshipRule> rules) {
         this.baseRateBps = baseRateBps; this.minBundleValueCents = minBundleValueCents; this.naturalWaitingDays = naturalWaitingDays;
         this.accidentalWaitingDays = accidentalWaitingDays; this.upgradeWaitingDays = upgradeWaitingDays; this.mainMinAge = mainMinAge;
         this.mainMaxAge = mainMaxAge; this.mainCoverEndAge = mainCoverEndAge; this.maxMembers = maxMembers;
         this.maxCommitmentMultiple = maxCommitmentMultiple; this.lapseAfterMissedPayments = lapseAfterMissedPayments;
-        this.reinstateWithinDays = reinstateWithinDays; this.escalationCapBps = escalationCapBps;
+        this.reinstateWithinDays = reinstateWithinDays; this.escalationCapBps = escalationCapBps; this.coolingOffDays = coolingOffDays;
         this.rules.clear();
         this.rules.addAll(rules);
     }
@@ -78,5 +80,6 @@ public class CoverConfig {
     public int getLapseAfterMissedPayments() { return lapseAfterMissedPayments; }
     public int getReinstateWithinDays() { return reinstateWithinDays; }
     public int getEscalationCapBps() { return escalationCapBps; }
+    public int getCoolingOffDays() { return coolingOffDays; }
     public List<RelationshipRule> getRules() { return rules; }
 }

@@ -54,6 +54,16 @@ public final class CoverRules {
         return ageAtDeath > end;
     }
 
+    /** The last day a lapsed cover can be reinstated without applying again. */
+    public static LocalDate reinstateUntil(LocalDate lapsedOn, int reinstateWithinDays) { return lapsedOn.plusDays(reinstateWithinDays); }
+
+    public static boolean canReinstate(LocalDate lapsedOn, int reinstateWithinDays, LocalDate today) { return !today.isAfter(reinstateUntil(lapsedOn, reinstateWithinDays)); }
+
+    /** True while a cancellation is inside the cooling-off period that follows the start of cover. */
+    public static boolean withinCoolingOff(LocalDate coverStarted, int coolingOffDays, LocalDate today) {
+        return coverStarted != null && !today.isAfter(coverStarted.plusDays(coolingOffDays));
+    }
+
     static ApiException reject(String message) { return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, message); }
 
     /** "R2 500" with a non-breaking space for thousands. */
