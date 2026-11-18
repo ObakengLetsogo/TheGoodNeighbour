@@ -34,7 +34,7 @@ public class CoverService {
     }
 
     public CoverConfig config() {
-        return configs.findById(CoverConfig.ID).orElseThrow(() -> new IllegalStateException("Cover configuration is missing."));
+        return configs.findById(CoverConfig.ID).orElseThrow(() -> new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Cover isn't available yet. Please check back soon."));
     }
 
     // ---------------- public options ----------------

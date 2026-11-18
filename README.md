@@ -11,7 +11,7 @@ passes away the bundle is delivered to the family. Three independent projects li
 mobile/    React Native (Expo) · TypeScript · Expo Router   iOS + Android customer app (one codebase)
 admin/     React · Vite · TypeScript                        web dashboard for staff
 landing/   React · Vite · TypeScript                        public website with a live price builder and waiting list
-backend/   Java 21 · Spring Boot 4 · JPA · PostgreSQL/H2    REST API used by both
+backend/   Java 21 · Spring Boot 4 · JPA · Flyway · PostgreSQL    REST API used by both (H2 in memory for local development)
 ```
 
 ## Run it
@@ -68,6 +68,29 @@ The public website is a static site too: `cd landing && VITE_API_BASE_URL=https:
 then upload `dist/`. `VITE_SITE_URL` makes the WhatsApp and social share preview work. Add the site's address to
 `TGN_CORS_ALLOWED_ORIGINS` on the backend, and set `VITE_SUPPORT_WHATSAPP` / `VITE_SUPPORT_PHONE` to show contact details in the footer.
 The Docker files are written but have not been built or run yet.
+
+## The database
+
+**PostgreSQL** in production (and in `deploy/`), an in-memory **H2** database for local development and tests. The schema is
+created and changed **only by Flyway migrations**: numbered SQL files in `backend/src/main/resources/db/migration`
+(`V1__baseline.sql`, `V2__lookup_indexes.sql`, ...). The app starts with Hibernate in `validate` mode, so it **refuses to start**
+if an entity and the migrations disagree. That also means every normal test run checks your entities against the migrations.
+
+**To change the database** (a new column, table or index):
+1. Change the entity.
+2. Add the next file, e.g. `V3__add_something.sql`, with plain SQL that runs on PostgreSQL (and H2).
+3. Run `mvn test`. Never edit a migration that has already run anywhere; always add a new one.
+
+**Check it on real PostgreSQL** (the normal tests use H2). Point the opt-in test at an **empty** database:
+```bash
+TGN_TEST_POSTGRES_URL=jdbc:postgresql://localhost:5432/tgn_test TGN_TEST_POSTGRES_USER=tgn TGN_TEST_POSTGRES_PASSWORD=... \
+  mvn test -Dtest=PostgresMigrationTest
+```
+
+**First start of a real server.** Flyway builds the whole schema on an empty database. The cover rules and catalogue are *data*, not
+schema, and production does not load the placeholder ones, so until they exist `/api/cover` answers "Cover isn't available yet" (503).
+Start once with `TGN_SEED_SAMPLE_COVER=true` to load the placeholder rules (only ever into an empty database), then edit every number in
+the admin (Cover & Pricing). Back the database up before every release: migrations run automatically when the new version starts.
 
 ## How it works
 
@@ -167,7 +190,7 @@ underwritten or approved.
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).
   Lapsing is a manual staff action until collections exist.
 - An SMS provider (codes only log in development), push/SMS notifications (preferences decide what appears in the in-app inbox; nothing is sent outside the app yet).
-- Database migrations (Flyway/Liquibase), staff roles beyond a single admin role.
+- Staff roles beyond a single admin role, and reports and exports.
 - Policy documents (claims already take uploads).
 - Scheduling and tracking of livestock deliveries and herd movements (the herd is a count plus a promise limit).
 - Brand photography/illustration beyond the logo mark.

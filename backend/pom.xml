@@ -34,6 +34,16 @@
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
     <dependency>
+      <!-- Database migrations: the schema only ever changes through the SQL files in db/migration. -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <!-- Password hashing only; the API uses its own opaque bearer tokens. -->
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-crypto</artifactId>

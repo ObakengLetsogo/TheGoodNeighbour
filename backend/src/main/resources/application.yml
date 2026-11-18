@@ -7,13 +7,18 @@ spring:
     name: tgn-backend
   datasource:
     # Local development uses an in-memory H2 database. Production uses PostgreSQL (see application-prod.yml).
-    url: jdbc:h2:mem:tgn;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:tgn;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     username: sa
     password: ""
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      # The schema is created and changed ONLY by the migrations in db/migration (Flyway). Hibernate just checks that the
+      # entities match it, so an entity change without a migration fails at startup (and in the tests).
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
 tgn:
   # Browser origins allowed to call the API (admin dashboard, Expo web).

@@ -5,8 +5,11 @@ spring:
     password: ${TGN_DB_PASSWORD}
   jpa:
     hibernate:
-      # TODO before launch: replace schema auto-update with Flyway/Liquibase migrations.
-      ddl-auto: update
+      ddl-auto: validate
+  flyway:
+    # A database that already has tables but no migration history must be baselined by hand, never automatically.
+    baseline-on-migrate: false
+    validate-on-migrate: true
 
 tgn:
   seed-sample-cover: ${TGN_SEED_SAMPLE_COVER:false}
