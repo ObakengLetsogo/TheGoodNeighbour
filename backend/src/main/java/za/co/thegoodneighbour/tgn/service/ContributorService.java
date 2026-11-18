@@ -35,10 +35,11 @@ public class ContributorService {
     private final NotificationService inbox;
     private final AuditService audit;
     private final Clock clock;
+    private final WishService wishService;
 
     public ContributorService(PolicyContributorRepository contributors, PolicyRepository policies, PaymentRecordRepository payments, AppUserRepository users,
-                              CoverService cover, NotificationService inbox, AuditService audit, Clock clock) {
-        this.contributors = contributors; this.policies = policies; this.payments = payments; this.users = users;
+                              CoverService cover, NotificationService inbox, AuditService audit, Clock clock, WishService wishService) {
+        this.wishService = wishService; this.contributors = contributors; this.policies = policies; this.payments = payments; this.users = users;
         this.cover = cover; this.inbox = inbox; this.audit = audit; this.clock = clock;
     }
 
@@ -220,7 +221,7 @@ public class ContributorService {
         p.activeMembers().forEach(m -> members.add(new SharedMemberDto(m.getRelationship(), m.getFullName(), CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today))));
         return new SharedPolicyDto(c.getId(), p.getId(), p.getReference(), owner, p.getStatus(), p.getMonthlyTotalCents(), c.getShareBps(),
                 share(p.getMonthlyTotalCents(), c.getShareBps()), paidThisMonth(p, u.getId()), nextDebit(p), cover.current(p).lines(), members,
-                contributorsOf(p, false), ownerShareBps(p), ownerShareCents(p), paidThisMonth(p, null));
+                contributorsOf(p, false), ownerShareBps(p), ownerShareCents(p), paidThisMonth(p, null), wishService.forPolicy(p, false));
     }
 
     private String nextDebit(Policy p) {

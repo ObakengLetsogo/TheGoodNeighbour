@@ -304,4 +304,68 @@ class FamilyPlanFlowTest {
             minContribution(0);
         }
     }
+
+    // ---------- funeral wishes ----------
+
+    private String wish(String disposition, String place, String phone) {
+        return "{\"disposition\":\"" + disposition + "\",\"place\":\"" + place + "\",\"denomination\":\"Zion Christian Church\",\"music\":\"Hymn 31, then Mama Afrika\","
+                + "\"notes\":\"A small service at home. No alcohol.\",\"contactName\":\"Uncle Joe\"" + (phone == null ? "" : ",\"contactPhone\":\"" + phone + "\"") + "}";
+    }
+
+    @Test void theOwnerRecordsWishesForEachCoveredPersonAndNobodyElseCanChangeThem() throws Exception {
+        Person owner = person("Owner Wishes", true), stranger = person("Stranger Wishes", true); String s = staff();
+        JsonNode plan = plan(owner, s); String pid = plan.get("id").asString(); String parentId = plan.get("members").get(0).get("id").asString();
+        JsonNode list = ok(call("GET", "/api/policies/" + pid + "/wishes", owner.token, null), 200);
+        assertEquals(2, list.size());                                                             // the owner and their mother
+        assertFalse(list.get(0).get("recorded").asBoolean());
+        assertEquals("main", list.get(0).get("memberKey").asString());
+
+        JsonNode saved = ok(call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, owner.token, wish("burial", "Tshing village, North West", "+27829990011")), 200);
+        assertTrue(saved.get("recorded").asBoolean());
+        assertEquals("Tshing village, North West", saved.get("place").asString());
+        assertEquals("+27829990011", saved.get("contactPhone").asString());
+        ok(call("PUT", "/api/policies/" + pid + "/wishes/main", owner.token, wish("family_decides", "", null)), 200);
+        JsonNode again = ok(call("GET", "/api/policies/" + pid + "/wishes", owner.token, null), 200);
+        assertTrue(again.get(0).get("recorded").asBoolean() && again.get(1).get("recorded").asBoolean());
+        assertTrue(again.get(0).get("place").isNull());                                           // a blank becomes empty
+
+        // rules
+        assertEquals(400, call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, owner.token, wish("scatter", "x", null)).statusCode());          // not one of the choices
+        assertEquals(400, call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, owner.token, wish("burial", "x", "0829990011")).statusCode());    // not a valid number
+        assertEquals(400, call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, owner.token, wish("burial", "x".repeat(300), null)).statusCode()); // too long
+        assertEquals(404, call("PUT", "/api/policies/" + pid + "/wishes/not-a-person", owner.token, wish("burial", "x", null)).statusCode());
+        assertEquals(404, call("GET", "/api/policies/" + pid + "/wishes", stranger.token, null).statusCode());
+        assertEquals(404, call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, stranger.token, wish("cremation", "x", null)).statusCode());
+        assertEquals(401, call("GET", "/api/policies/" + pid + "/wishes", null, null).statusCode());
+        assertTrue(ok(call("GET", "/api/admin/audit", s, null), 200).toString().contains("wishes.updated"));
+    }
+
+    @Test void familyWhoShareTheCostCanReadTheWishesButNotThePhoneNumberAndStaffSeeThemOnAClaim() throws Exception {
+        Person owner = person("Owner W2", true), sibling = person("Sibling W2", true); String s = staff();
+        JsonNode plan = plan(owner, s); String pid = plan.get("id").asString(); String parentId = plan.get("members").get(0).get("id").asString();
+        ok(call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, owner.token, wish("burial", "Home village, Zeerust", "+27829990022")), 200);
+        invite(owner, pid, "Sibling", sibling.phone, 40, 201);
+        String cid = ok(call("GET", "/api/me/invitations", sibling.token, null), 200).get("items").get(0).get("id").asString();
+        ok(call("POST", "/api/me/invitations/" + cid + "/accept", sibling.token, null), 200);
+
+        JsonNode shared = ok(call("GET", "/api/me/shared-policies", sibling.token, null), 200).get(0);
+        String raw = shared.get("wishes").toString();
+        assertTrue(raw.contains("Home village, Zeerust"), raw);
+        assertFalse(raw.contains("+27829990022"), "the contact's phone number must not reach a contributor");
+        assertEquals(401, call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, null, wish("cremation", "x", null)).statusCode());
+        assertEquals(404, call("PUT", "/api/policies/" + pid + "/wishes/" + parentId, sibling.token, wish("cremation", "x", null)).statusCode());   // only the owner edits
+
+        // staff see them, with the phone, on the plan and on the claim
+        assertTrue(ok(call("GET", "/api/admin/policies/" + pid + "/wishes", s, null), 200).toString().contains("+27829990022"));
+        ok(call("POST", "/api/admin/policies/" + pid + "/payments", s, "{\"amountCents\":" + plan.get("monthlyTotalCents").asLong() + ",\"paidOn\":\"" + TestData.today() + "\",\"reference\":\"EFT-W\"}"), 201);
+        String claim = "{\"policyId\":\"" + pid + "\",\"memberId\":\"" + parentId + "\",\"dateOfDeath\":\"" + TestData.today() + "\",\"causeOfDeath\":\"accidental\",\"claimantName\":\"Owner\",\"claimantPhone\":\"+27821234567\","
+                + "\"delivery\":{\"recipientName\":\"Sipho\",\"recipientPhone\":\"+27715550000\",\"addressLine\":\"12 Street\",\"suburb\":\"Seshego\",\"city\":\"Polokwane\",\"province\":\"Limpopo\",\"postalCode\":\"0742\"}}";
+        String claimId = ok(call("POST", "/api/claims", owner.token, claim), 201).get("id").asString();
+        assertTrue(ok(call("GET", "/api/claims", owner.token, null), 200).get(0).get("wishes").isNull());       // customers don't get this on a claim
+        JsonNode adminClaim = null;
+        for (JsonNode c : ok(call("GET", "/api/admin/claims", s, null), 200)) if (claimId.equals(c.get("id").asString())) adminClaim = c;
+        assertNotNull(adminClaim);
+        assertEquals("Home village, Zeerust", adminClaim.get("wishes").get("place").asString());
+        assertEquals("+27829990022", adminClaim.get("wishes").get("contactPhone").asString());
+    }
 }

@@ -42,6 +42,7 @@ function Routes() {
         <Stack.Screen name="builder" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="shared" />
+        <Stack.Screen name="wishes" />
         <Stack.Screen name="invite-contributor" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="cancel-cover" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="verify-phone" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />

@@ -14,7 +14,7 @@ import { POLICY_STATUS_LABEL } from '../src/lib/status';
 import { useFamily } from '../src/store/FamilyContext';
 import { useOptions } from '../src/store/OptionsContext';
 import { colors, spacing } from '../src/theme';
-import { RELATIONSHIP_LABEL, type SharedPolicy } from '../src/types';
+import { DISPOSITION_LABEL, RELATIONSHIP_LABEL, type SharedPolicy } from '../src/types';
 
 const CHOICES = [10, 20, 25, 30, 40, 50, 60, 75, 90];
 
@@ -107,6 +107,15 @@ function SharedCard({ plan, run, busy }: { plan: SharedPolicy; run: (key: string
           {plan.members.map((m, i) => <Text key={i} variant="body">{m.fullName} <Text variant="bodyS">· {m.relationship === 'main' ? 'Main member' : RELATIONSHIP_LABEL[m.relationship]} · age {m.age}</Text></Text>)}
           <Text variant="bodyS" style={{ marginTop: spacing.xs }}>{plan.bundleLines.map((l) => (l.quantity > 1 ? `${l.quantity} × ${l.name}` : l.name)).join(', ')}</Text>
         </View>
+
+        {plan.wishes.some((w) => w.recorded) ? (
+          <View style={{ gap: 2 }}>
+            <Text variant="label" color={colors.inkSoft}>Funeral wishes</Text>
+            {plan.wishes.filter((w) => w.recorded).map((w) => (
+              <Text key={w.memberKey} variant="body">{w.personName} <Text variant="bodyS">· {DISPOSITION_LABEL[w.disposition ?? 'family_decides']}{w.place ? `, ${w.place}` : ''}{w.denomination ? ` · ${w.denomination}` : ''}</Text></Text>
+            ))}
+          </View>
+        ) : null}
 
         {editing ? (
           <View style={{ gap: spacing.sm }}>

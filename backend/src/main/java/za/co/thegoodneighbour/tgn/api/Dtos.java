@@ -129,7 +129,7 @@ public final class Dtos {
                            boolean overAgeLimit, String staffNote, DeliveryIn delivery, BundleVersionDto bundle, String createdAt, String updatedAt,
                            List<ClaimDocumentDto> documents, List<String> missingDocuments,
                            String deliveryDate, String deliveryWindow, String deliveryNote, String deliveredAt,
-                           String benefitChoice, long cashAlternativeCents, Long ourCostCents) {}
+                           String benefitChoice, long cashAlternativeCents, Long ourCostCents, WishDto wishes) {}
     public record ClaimChoiceIn(@NotBlank @Pattern(regexp = "^(bundle|cash)$", message = "Choose the bundle or cash.") String choice) {}
     public record ScheduleDelivery(@NotBlank @Pattern(regexp = DATE) String date, @Pattern(regexp = "^(morning|afternoon|day)$") String window,
                                    @Size(max = 1000) String note) {}
@@ -145,7 +145,16 @@ public final class Dtos {
     /** What someone who shares the cost may see of the plan. No ID numbers and no phone numbers. */
     public record SharedPolicyDto(String contributorId, String policyId, String reference, String ownerName, String status, long monthlyTotalCents,
                                   int myShareBps, long myShareCents, long myPaidThisMonthCents, String nextDebitDate, List<BundleLineDto> bundleLines,
-                                  List<SharedMemberDto> members, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents) {}
+                                  List<SharedMemberDto> members, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents,
+                                  List<WishDto> wishes) {}
+
+    // ---------- Funeral wishes ----------
+    public record WishIn(@NotBlank @Pattern(regexp = "^(burial|cremation|family_decides)$", message = "Choose burial, cremation or let the family decide.") String disposition,
+                         @Size(max = 200) String place, @Size(max = 120) String denomination, @Size(max = 800) String music, @Size(max = 1500) String notes,
+                         @Size(max = 100) String contactName, @Pattern(regexp = PHONE, message = "Please use a valid South African mobile number.") String contactPhone) {}
+    /** One covered person's wishes. recorded is false until someone fills them in. contactPhone is shown only to the plan's owner and to our team. */
+    public record WishDto(String memberKey, String personName, String relationship, boolean recorded, String disposition, String place, String denomination,
+                          String music, String notes, String contactName, String contactPhone, String updatedAt) {}
 
     // ---------- Notifications ----------
     public record NotificationDto(String id, String category, String title, String body, String refType, String refId, boolean read, String createdAt) {}

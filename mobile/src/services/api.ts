@@ -1,6 +1,6 @@
 import { config } from '../config';
 import type {
-  Invitations, SharedPolicy, AppNotification, Inbox, ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
+  FuneralWish, WishInput, Invitations, SharedPolicy, AppNotification, Inbox, ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
   QuoteMemberInput, Session, SupportRequest, User,
 } from '../types';
 import { KEYS, readJSON, removeKey, writeJSON } from './storage';
@@ -57,6 +57,8 @@ export const policyService = {
   list: () => request<Policy[]>('/api/policies'),
   get: (id: string) => request<Policy>(`/api/policies/${id}`),
   apply: (input: ApplyInput) => request<Policy>('/api/policies', { method: 'POST', body: json(input) }),
+  wishes: (policyId: string) => request<FuneralWish[]>(`/api/policies/${policyId}/wishes`),
+  saveWish: (policyId: string, memberKey: string, input: WishInput) => request<FuneralWish>(`/api/policies/${policyId}/wishes/${memberKey}`, { method: 'PUT', body: json(input) }),
   /** Before cover starts this cancels at once; afterwards it asks staff to cancel. */
   requestCancel: (policyId: string, reason?: string, note?: string) =>
     request<Policy>(`/api/policies/${policyId}/cancel-request`, { method: 'POST', body: json({ reason, note }) }),

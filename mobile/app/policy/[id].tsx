@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { Pressable } from 'react-native';
 import { Button } from '../../src/components/Button';
@@ -20,13 +20,16 @@ import { callSupport, openWhatsApp } from '../../src/lib/support';
 import { policyService } from '../../src/services/api';
 import { useCover } from '../../src/store/CoverContext';
 import { colors, radii, spacing } from '../../src/theme';
-import { RELATIONSHIP_LABEL } from '../../src/types';
+import { DISPOSITION_LABEL, RELATIONSHIP_LABEL, type FuneralWish } from '../../src/types';
 
 export default function PolicyDetails() {
   const { id, applied, changed } = useLocalSearchParams<{ id: string; applied?: string; changed?: string }>();
   const { status, policies, claims, removeMember, removeContributor, keepCover, requestReinstate } = useCover();
   const policy = policies.find((p) => p.id === id);
   const [debitMsg, setDebitMsg] = useState<string>();
+  const [wishes, setWishes] = useState<FuneralWish[]>([]);
+  // Reload when we come back from the wishes form.
+  useFocusEffect(useCallback(() => { if (id) policyService.wishes(id).then(setWishes).catch(() => {}); }, [id]));
   const [busy, setBusy] = useState(false);
   const [cycleBusy, setCycleBusy] = useState(false);
   const [cycleError, setCycleError] = useState<string>();
@@ -204,6 +207,28 @@ export default function PolicyDetails() {
           {open && policy.contributors.length < 6 ? <Button label="Invite Someone To Share" icon="account-multiple-plus-outline" variant="secondary" onPress={() => router.push({ pathname: '/invite-contributor', params: { policyId: policy.id } })} /> : null}
         </View>
       </Card>
+
+      {wishes.length > 0 ? (
+        <>
+          <Text variant="section" style={styles.h}>Funeral Wishes</Text>
+          <Card accent="gold" tabLabel="Their wishes">
+            <View style={{ gap: spacing.md }}>
+              <Text variant="bodyS">Write down what each person would like, so your family doesn't have to guess. It takes a couple of minutes and you can change it any time.</Text>
+              {wishes.map((w) => (
+                <Pressable key={w.memberKey} onPress={() => router.push({ pathname: '/wishes', params: { policyId: policy.id, memberKey: w.memberKey } })} accessibilityRole="button"
+                  accessibilityLabel={`${w.personName}. ${w.recorded ? 'Wishes recorded' : 'No wishes yet'}`} style={styles.shareRow}>
+                  <Icon name={w.recorded ? 'check-circle-outline' : 'circle-outline'} size={24} color={w.recorded ? colors.success : colors.muted} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="cardTitle">{w.personName}</Text>
+                    <Text variant="bodyS">{w.recorded ? `${DISPOSITION_LABEL[w.disposition ?? 'family_decides']}${w.place ? ` · ${w.place}` : ''}` : 'Not recorded yet'}</Text>
+                  </View>
+                  <Text variant="label" color={colors.olive} style={{ fontFamily: 'Urbanist_600SemiBold' }}>{w.recorded ? 'Edit' : 'Add'}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </Card>
+        </>
+      ) : null}
 
       <Text variant="section" style={styles.h}>Family On Your Cover</Text>
       <View style={{ gap: spacing.sm }}>

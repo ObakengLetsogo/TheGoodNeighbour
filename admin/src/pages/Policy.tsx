@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
 import { dateShort, displayPhone, label, ordinal, today, zar } from '../format';
-import type { AdminPolicy, BundleLine, Member, Policy } from '../types';
+import { DISPOSITION_LABEL, type AdminPolicy, type BundleLine, type FuneralWish, type Member, type Policy } from '../types';
 
 export function PolicyPage() {
   const { id = '' } = useParams();
@@ -136,6 +136,8 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
           </table>
         )}
       </Card>
+
+      <WishesCard policyId={p.id} />
 
       {p.inMemory.length > 0 ? (
         <Card tab="In memory" accent="berry">
@@ -302,6 +304,30 @@ function HandOver({ p, onChange }: { p: Policy; onChange: (a: AdminPolicy) => vo
         <button type="submit" disabled={busy} style={{ marginTop: 14 }}>Hand Over The Plan</button>
         {msg ? <p className="err" role="alert">{msg}</p> : null}
       </form>
+    </Card>
+  );
+}
+
+/** What each covered person would like for their funeral, as recorded by the plan's owner. */
+export function WishLines({ w }: { w: FuneralWish }) {
+  if (!w.recorded) return <p className="muted">No wishes recorded for {w.personName}.</p>;
+  return (
+    <dl className="dl">
+      <dt>Would like</dt><dd>{DISPOSITION_LABEL[w.disposition ?? 'family_decides']}{w.place ? `: ${w.place}` : ''}</dd>
+      {w.denomination ? <><dt>Church</dt><dd>{w.denomination}</dd></> : null}
+      {w.music ? <><dt>Music</dt><dd style={{ whiteSpace: 'pre-wrap' }}>{w.music}</dd></> : null}
+      {w.notes ? <><dt>For the service</dt><dd style={{ whiteSpace: 'pre-wrap' }}>{w.notes}</dd></> : null}
+      {w.contactName || w.contactPhone ? <><dt>First to call</dt><dd>{w.contactName ?? ''}{w.contactPhone ? <> · <a href={`tel:${w.contactPhone}`}>{displayPhone(w.contactPhone)}</a></> : null}</dd></> : null}
+    </dl>
+  );
+}
+
+function WishesCard({ policyId }: { policyId: string }) {
+  const { data } = useLoad(() => api.wishes(policyId), [policyId]);
+  if (!data || !data.some((w) => w.recorded)) return null;
+  return (
+    <Card tab="Funeral wishes" accent="gold">
+      {data.filter((w) => w.recorded).map((w) => <div key={w.memberKey} style={{ marginBottom: 12 }}><h3>{w.personName}</h3><WishLines w={w} /></div>)}
     </Card>
   );
 }

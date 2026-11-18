@@ -35,10 +35,11 @@ public class ClaimService {
     private final Clock clock;
     private final NotificationService inbox;
     private final PolicyService policyService;
+    private final WishService wishService;
 
     public ClaimService(ClaimRepository claims, PolicyRepository policies, CoverService cover, AuditService audit, ClaimDocumentRepository documents,
-                        DocumentStore store, Clock clock, NotificationService inbox, PolicyService policyService) {
-        this.policyService = policyService; this.inbox = inbox; this.claims = claims; this.policies = policies; this.cover = cover; this.audit = audit; this.documents = documents; this.store = store; this.clock = clock;
+                        DocumentStore store, Clock clock, NotificationService inbox, PolicyService policyService, WishService wishService) {
+        this.wishService = wishService; this.policyService = policyService; this.inbox = inbox; this.claims = claims; this.policies = policies; this.cover = cover; this.audit = audit; this.documents = documents; this.store = store; this.clock = clock;
     }
 
     @Transactional
@@ -167,7 +168,7 @@ public class ClaimService {
                 cover.readOne(c.getBundleJson()), iso(c.getCreatedAt()), iso(c.getUpdatedAt()),
                 documents.findByClaimIdOrderByCreatedAtAsc(c.getId()).stream().map(ClaimService::toDto).toList(), missing(c),
                 c.getDeliveryDate(), c.getDeliveryWindow(), c.getDeliveryNote(), c.getDeliveredAt() == null ? null : iso(c.getDeliveredAt()),
-                c.getBenefitChoice(), c.getCashAlternativeCents(), admin ? c.getOurCostCents() : null);
+                c.getBenefitChoice(), c.getCashAlternativeCents(), admin ? c.getOurCostCents() : null, admin ? wishService.forClaim(c) : null);
     }
 
     // ---------------- documents ----------------

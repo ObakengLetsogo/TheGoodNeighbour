@@ -26,13 +26,18 @@ export interface AdminPolicy { policy: Policy; customer: Customer | null }
 export interface Delivery { recipientName: string; recipientPhone: string; addressLine: string; suburb: string; city: string; province: string; postalCode: string; instructions?: string | null }
 export type ClaimDocumentType = 'death_certificate' | 'deceased_id' | 'other';
 export interface ClaimDocument { id: string; type: ClaimDocumentType; fileName: string; contentType: string; sizeBytes: number; uploadedAt: string }
+export interface FuneralWish {
+  memberKey: string; personName: string; relationship: string; recorded: boolean; disposition?: 'burial' | 'cremation' | 'family_decides' | null;
+  place?: string | null; denomination?: string | null; music?: string | null; notes?: string | null; contactName?: string | null; contactPhone?: string | null; updatedAt?: string | null;
+}
+export const DISPOSITION_LABEL = { burial: 'Burial', cremation: 'Cremation', family_decides: 'The family decides' } as const;
 export interface Claim {
   id: string; reference: string; policyId: string; policyReference: string; deceasedName: string; dateOfDeath: string;
   causeOfDeath: 'natural' | 'accidental'; claimantName: string; claimantPhone: string; status: ClaimStatus;
   withinWaitingPeriod: boolean; overAgeLimit: boolean; staffNote?: string | null; delivery: Delivery; bundle: BundleVersion;
   documents: ClaimDocument[]; missingDocuments: ClaimDocumentType[];
   deliveryDate?: string | null; deliveryWindow?: 'morning' | 'afternoon' | 'day' | null; deliveryNote?: string | null; deliveredAt?: string | null;
-  benefitChoice: 'bundle' | 'cash'; cashAlternativeCents: number; ourCostCents?: number | null;
+  benefitChoice: 'bundle' | 'cash'; cashAlternativeCents: number; ourCostCents?: number | null; wishes?: FuneralWish | null;
   createdAt: string; updatedAt: string;
 }
 export interface AgeBand { fromAge: number; toAge: number; multiplierBps: number }

@@ -200,6 +200,26 @@ export interface Contributor {
   paidThisMonthCents: Cents;
 }
 
+export type WishDisposition = 'burial' | 'cremation' | 'family_decides';
+export const DISPOSITION_LABEL: Record<WishDisposition, string> = { burial: 'Burial', cremation: 'Cremation', family_decides: 'The family decides' };
+
+/** What one covered person would like for their funeral. Empty until recorded. contactPhone is only shown to the plan's owner. */
+export interface FuneralWish {
+  memberKey: string;
+  personName: string;
+  relationship: Relationship | 'main';
+  recorded: boolean;
+  disposition?: WishDisposition | null;
+  place?: string | null;
+  denomination?: string | null;
+  music?: string | null;
+  notes?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  updatedAt?: string | null;
+}
+export interface WishInput { disposition: WishDisposition; place?: string; denomination?: string; music?: string; notes?: string; contactName?: string; contactPhone?: string }
+
 export interface Invitation {
   id: string;
   ownerName: string;
@@ -226,6 +246,8 @@ export interface SharedPolicy {
   nextDebitDate?: string | null;
   bundleLines: BundleLine[];
   members: { relationship: Relationship | 'main'; fullName: string; age: number }[];
+  /** Funeral wishes recorded for the people covered (without the contact's phone number). */
+  wishes: FuneralWish[];
   contributors: Contributor[];
   ownerShareBps: number;
   ownerShareCents: Cents;

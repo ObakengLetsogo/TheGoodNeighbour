@@ -10,6 +10,7 @@ import za.co.thegoodneighbour.tgn.domain.AppUser;
 import za.co.thegoodneighbour.tgn.domain.StaffUser;
 import za.co.thegoodneighbour.tgn.domain.SupportRequest;
 import za.co.thegoodneighbour.tgn.repo.AuditEventRepository;
+import za.co.thegoodneighbour.tgn.repo.PolicyRepository;
 import za.co.thegoodneighbour.tgn.repo.SupportRequestRepository;
 import za.co.thegoodneighbour.tgn.service.*;
 
@@ -99,8 +100,12 @@ public final class Controllers {
     public static class PolicyController {
         private final PolicyService policies;
         private final ContributorService family;
-        public PolicyController(PolicyService policies, ContributorService family) { this.policies = policies; this.family = family; }
+        private final WishService wishService;
+        public PolicyController(PolicyService policies, ContributorService family, WishService wishService) { this.policies = policies; this.family = family; this.wishService = wishService; }
 
+        @GetMapping("/{id}/wishes") public List<WishDto> wishes(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id) { return wishService.list(u, id); }
+        @PutMapping("/{id}/wishes/{memberKey}")
+        public WishDto saveWish(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String memberKey, @Valid @RequestBody WishIn in) { return wishService.save(u, id, memberKey, in); }
         @PostMapping("/{id}/contributors") @ResponseStatus(HttpStatus.CREATED)
         public PolicyDto invite(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody InviteContributorIn in) { family.invite(u, id, in); return policies.get(u, id); }
         @DeleteMapping("/{id}/contributors/{contributorId}")
@@ -169,10 +174,12 @@ public final class Controllers {
         private final LegalService legal;
         private final AuditEventRepository audit;
         private final WaitlistService waitlist;
+        private final WishService wishService;
+        private final PolicyRepository policyRepo;
 
         public AdminController(StaffAuthService staffAuth, PolicyService policies, ClaimService claims, CoverAdminService coverAdmin,
-                               AdminDirectoryService directory, LegalService legal, AuditEventRepository audit, WaitlistService waitlist) {
-            this.waitlist = waitlist;
+                               AdminDirectoryService directory, LegalService legal, AuditEventRepository audit, WaitlistService waitlist, WishService wishService, PolicyRepository policyRepo) {
+            this.wishService = wishService; this.policyRepo = policyRepo; this.waitlist = waitlist;
             this.staffAuth = staffAuth; this.policies = policies; this.claims = claims; this.coverAdmin = coverAdmin; this.directory = directory; this.legal = legal; this.audit = audit;
         }
 
@@ -185,6 +192,8 @@ public final class Controllers {
         @GetMapping("/policies/{id}") public AdminPolicyDto policy(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id) { return policies.adminGet(s, id); }
         @PostMapping("/policies/{id}/status")
         public AdminPolicyDto policyStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return policies.setStatus(s, id, c); }
+        @GetMapping("/policies/{id}/wishes")
+        public List<WishDto> adminWishes(@PathVariable String id) { return wishService.forPolicy(policyRepo.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that policy.")), true); }
         @PostMapping("/policies/{id}/successor")
         public AdminPolicyDto successor(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody SuccessorIn in) { return policies.setSuccessor(s, id, in); }
         @PutMapping("/policies/{id}/members/{memberId}")

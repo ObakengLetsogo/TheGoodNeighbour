@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
 import { dateShort, displayPhone, zar } from '../format';
-import { BundleList } from './Policy';
+import { BundleList, WishLines } from './Policy';
 import type { Claim } from '../types';
 
 const DOC_LABEL = { death_certificate: 'Death certificate', deceased_id: "Deceased's ID", other: 'Other' } as const;
@@ -85,6 +85,7 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
             <dt>Submitted</dt><dd>{dateShort(c.createdAt)}</dd>
             {c.staffNote ? <><dt>Staff note</dt><dd>{c.staffNote}</dd></> : null}
           </dl>
+          {c.wishes ? <div style={{ marginBottom: 12 }}><h3>{c.deceasedName}'s funeral wishes</h3><WishLines w={c.wishes} /></div> : null}
           <div style={{ marginBottom: 12 }}>
             <h3>What the family receives</h3>
             <dl className="dl" style={{ marginTop: 8 }}>
