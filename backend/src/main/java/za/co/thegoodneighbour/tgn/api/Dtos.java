@@ -90,7 +90,9 @@ public final class Dtos {
     public record BundleChangeRequest(@NotEmpty List<@Valid BundleLineIn> items) {}
     public record MemberDto(String id, String relationship, String fullName, String idNumber, String dateOfBirth, long feeCents,
                             String status, String coverStartsOn, int age, int relationshipBps, int ageBps) {}
-    public record PaymentDto(String id, long amountCents, String paidOn, String status, String source, String reference) {}
+    public record PaymentDto(String id, long amountCents, String paidOn, String status, String source, String reference, String paidBy) {}
+    /** One person sharing a plan's cost. The phone is shown only to the plan's owner. */
+    public record ContributorDto(String id, String name, String phone, String status, int shareBps, long shareCents, long paidThisMonthCents) {}
     public record HolderDto(String name, String idNumber, String dateOfBirth) {}
     /** What the family is owed. Earlier versions stay on record because an upgrade only applies after its waiting period. */
     public record BundleVersionDto(int version, String effectiveFrom, String upgradeWaitingEndsOn, long bundleValueCents,
@@ -100,7 +102,7 @@ public final class Dtos {
                             String nextDebitDate, BundleVersionDto bundle, List<BundleVersionDto> bundleHistory,
                             List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt,
                             String lapsedAt, String reinstateUntil, String cancelledAt, String cancelRequestedAt, String reinstateRequestedAt,
-                            boolean withinCoolingOff) {}
+                            boolean withinCoolingOff, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents) {}
     public record CancelRequestIn(@Size(max = 100) String reason, @Size(max = 1000) String note) {}
     public record ReinstateRequestIn(@Size(max = 1000) String note) {}
     public record DebitOrderState(String state, String message) {}
@@ -124,6 +126,19 @@ public final class Dtos {
     public record ScheduleDelivery(@NotBlank @Pattern(regexp = DATE) String date, @Pattern(regexp = "^(morning|afternoon|day)$") String window,
                                    @Size(max = 1000) String note) {}
 
+    // ---------- Family plans (sharing the cost) ----------
+    public record InviteContributorIn(@NotBlank @Size(max = 60) String name,
+                                      @NotBlank @Pattern(regexp = PHONE, message = "Please use a valid South African mobile number.") String phone,
+                                      @Min(value = 5, message = "A share is at least 5%.") @Max(value = 90, message = "A share is at most 90%.") int sharePercent) {}
+    public record SharePercentIn(@Min(value = 5, message = "A share is at least 5%.") @Max(value = 90, message = "A share is at most 90%.") int sharePercent) {}
+    public record InvitationDto(String id, String ownerName, int shareBps, long shareCents, long monthlyTotalCents, String bundleSummary, int peopleCovered, String invitedAt) {}
+    public record InvitationsDto(boolean needsVerification, List<InvitationDto> items) {}
+    public record SharedMemberDto(String relationship, String fullName, int age) {}
+    /** What someone who shares the cost may see of the plan. No ID numbers and no phone numbers. */
+    public record SharedPolicyDto(String contributorId, String policyId, String reference, String ownerName, String status, long monthlyTotalCents,
+                                  int myShareBps, long myShareCents, long myPaidThisMonthCents, String nextDebitDate, List<BundleLineDto> bundleLines,
+                                  List<SharedMemberDto> members, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents) {}
+
     // ---------- Notifications ----------
     public record NotificationDto(String id, String category, String title, String body, String refType, String refId, boolean read, String createdAt) {}
     public record NotificationsDto(long unread, List<NotificationDto> items) {}
@@ -143,7 +158,7 @@ public final class Dtos {
     public record CollectionsDto(List<CollectionRowDto> rows, long active, long behind, long shouldLapse, long dueSoon, long owedCents, long dueSoonCents, int lapseAfter) {}
     public record StatusChange(@NotBlank String status, @Size(max = 1000) String note) {}
     public record RecordPayment(@Positive long amountCents, @NotBlank @Pattern(regexp = DATE) String paidOn,
-                                @NotBlank @Size(max = 100) String reference) {}
+                                @NotBlank @Size(max = 100) String reference, String contributorId) {}
     public record Dashboard(long pendingReview, long approvedAwaitingPayment, long active, long lapsed, long openClaims, long monthlyRecurringCents,
                             long cancellationRequests, long reinstatementRequests) {}
     public record AuditDto(String at, String actor, String action, String entityType, String entityId, String detail) {}

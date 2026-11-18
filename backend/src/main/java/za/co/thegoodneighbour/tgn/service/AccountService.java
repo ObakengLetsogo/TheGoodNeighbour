@@ -22,12 +22,13 @@ public class AccountService {
     private final OtpService otp;
     private final AuthService auth;
     private final za.co.thegoodneighbour.tgn.repo.NotificationRepository notifications;
+    private final za.co.thegoodneighbour.tgn.repo.PolicyContributorRepository contributors;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public AccountService(AppUserRepository users, AuthTokenRepository tokens, PolicyRepository policies, ClaimRepository claims,
                           SupportRequestRepository support, OtpService otp, AuthService auth,
-                          za.co.thegoodneighbour.tgn.repo.NotificationRepository notifications) {
-        this.notifications = notifications; this.users = users; this.tokens = tokens; this.policies = policies; this.claims = claims; this.support = support; this.otp = otp; this.auth = auth;
+                          za.co.thegoodneighbour.tgn.repo.NotificationRepository notifications, za.co.thegoodneighbour.tgn.repo.PolicyContributorRepository contributors) {
+        this.contributors = contributors; this.notifications = notifications; this.users = users; this.tokens = tokens; this.policies = policies; this.claims = claims; this.support = support; this.otp = otp; this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -127,7 +128,8 @@ public class AccountService {
     public DeleteAccountResult deleteAccount(AppUser u, String password) {
         AppUser user = fresh(u);
         if (!encoder.matches(password, user.getPasswordHash())) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "That password isn't right.");
-        boolean hasRecords = !policies.findByUserIdOrderByCreatedAtDesc(user.getId()).isEmpty() || !claims.findByUserIdOrderByCreatedAtDesc(user.getId()).isEmpty();
+        boolean hasRecords = !policies.findByUserIdOrderByCreatedAtDesc(user.getId()).isEmpty() || !claims.findByUserIdOrderByCreatedAtDesc(user.getId()).isEmpty()
+                || !contributors.findByUserIdAndStatus(user.getId(), "active").isEmpty();   // someone is paying towards a plan
         if (hasRecords) {
             support.save(new SupportRequest(user.getId(), "deletion_request", null, "Customer asked to delete their account and personal data.", user.getPhone()));
             return new DeleteAccountResult("requested", "We've received your request. Because you have a cover or claim on file, our team needs to review it first and will contact you.");
@@ -135,6 +137,8 @@ public class AccountService {
         tokens.deleteCustomerTokens(user.getId());
         support.deleteByUserId(user.getId());
         notifications.deleteByUserId(user.getId());
+        contributors.deleteByUserId(user.getId());
+        contributors.deleteByPhone(user.getPhone());
         users.delete(user);
         return new DeleteAccountResult("deleted", "Your account and personal information have been deleted.");
     }

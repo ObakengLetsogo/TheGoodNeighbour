@@ -16,7 +16,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Runs the migrations and the whole app against a REAL PostgreSQL database, which is what production uses. Skipped unless
- * TGN_TEST_POSTGRES_URL is set, so nobody needs a database just to run the normal tests. Point it at an EMPTY database:
+ * TGN_TEST_POSTGRES_URL is set, so nobody needs a database just to run the normal tests. Point it at a throwaway database (it can be re-run):
  *
  *   TGN_TEST_POSTGRES_URL=jdbc:postgresql://localhost:5432/tgn_migrate TGN_TEST_POSTGRES_USER=tgn TGN_TEST_POSTGRES_PASSWORD=... mvn test -Dtest=PostgresMigrationTest
  *
@@ -48,7 +48,7 @@ class PostgresMigrationTest {
         assertEquals(200, cover.statusCode());
         assertTrue(json.readTree(cover.body()).get("items").size() > 0);
         var reg = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/auth/register")).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString("{\"fullName\":\"Pg Test\",\"phone\":\"+27821119999\",\"password\":\"password123\"}")).build(), HttpResponse.BodyHandlers.ofString());
+                .POST(HttpRequest.BodyPublishers.ofString("{\"fullName\":\"Pg Test\",\"phone\":\"+2782" + String.format("%07d", System.nanoTime() % 10_000_000) + "\",\"password\":\"password123\"}")).build(), HttpResponse.BodyHandlers.ofString());
         assertEquals(201, reg.statusCode(), reg.body());
         var wl = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/waitlist")).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("{\"firstName\":\"Pg\",\"email\":\"pg@example.com\",\"consent\":true}")).build(), HttpResponse.BodyHandlers.ofString());

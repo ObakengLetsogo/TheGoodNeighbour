@@ -19,6 +19,8 @@ public class PaymentRecord {
     private String source; // provider | manual
     private String reference;
     private String recordedBy;
+    /** The contributor who paid this, or null when the plan's owner did. */
+    private String contributorUserId;
     private Instant createdAt = Instant.now();
 
     protected PaymentRecord() {}
@@ -28,6 +30,8 @@ public class PaymentRecord {
         this.source = source; this.reference = reference; this.recordedBy = recordedBy;
     }
 
+    public void attributeTo(String userId) { this.contributorUserId = userId; }
+    public String getContributorUserId() { return contributorUserId; }
     public String getId() { return id; }
     public String getPolicyId() { return policyId; }
     public long getAmountCents() { return amountCents; }

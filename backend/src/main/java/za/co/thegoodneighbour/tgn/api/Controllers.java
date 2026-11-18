@@ -63,7 +63,17 @@ public final class Controllers {
         private final AuthService auth;
         private final AccountService account;
         private final NotificationService inbox;
-        public MeController(AuthService auth, AccountService account, NotificationService inbox) { this.auth = auth; this.account = account; this.inbox = inbox; }
+        private final ContributorService family;
+        public MeController(AuthService auth, AccountService account, NotificationService inbox, ContributorService family) { this.auth = auth; this.account = account; this.inbox = inbox; this.family = family; }
+        @GetMapping("/invitations") public InvitationsDto invitations(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return family.invitations(user); }
+        @PostMapping("/invitations/{id}/accept") public SharedPolicyDto acceptInvitation(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @PathVariable String id) { return family.accept(user, id); }
+        @PostMapping("/invitations/{id}/decline") @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void declineInvitation(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @PathVariable String id) { family.decline(user, id); }
+        @GetMapping("/shared-policies") public List<SharedPolicyDto> sharedPolicies(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return family.shared(user); }
+        @PutMapping("/shared-policies/{id}/share")
+        public SharedPolicyDto updateShare(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @PathVariable String id, @Valid @RequestBody SharePercentIn in) { return family.updateMyShare(user, id, in.sharePercent()); }
+        @PostMapping("/shared-policies/{id}/leave") @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void leaveShared(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @PathVariable String id) { family.leave(user, id); }
         @GetMapping("/notifications") public NotificationsDto notifications(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return inbox.list(user); }
         @PostMapping("/notifications/read-all") @ResponseStatus(HttpStatus.NO_CONTENT)
         public void readAll(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { inbox.markAllRead(user); }
@@ -88,7 +98,13 @@ public final class Controllers {
     @RestController @RequestMapping("/api/policies")
     public static class PolicyController {
         private final PolicyService policies;
-        public PolicyController(PolicyService policies) { this.policies = policies; }
+        private final ContributorService family;
+        public PolicyController(PolicyService policies, ContributorService family) { this.policies = policies; this.family = family; }
+
+        @PostMapping("/{id}/contributors") @ResponseStatus(HttpStatus.CREATED)
+        public PolicyDto invite(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody InviteContributorIn in) { family.invite(u, id, in); return policies.get(u, id); }
+        @DeleteMapping("/{id}/contributors/{contributorId}")
+        public PolicyDto removeContributor(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String contributorId) { family.removeContributor(u, id, contributorId); return policies.get(u, id); }
 
         @PostMapping @ResponseStatus(HttpStatus.CREATED)
         public PolicyDto apply(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @Valid @RequestBody ApplyRequest r) { return policies.apply(u, r); }

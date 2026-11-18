@@ -33,11 +33,12 @@ public class PolicyService {
     private final SupportRequestRepository support;
     private final Clock clock;
     private final NotificationService inbox;
+    private final ContributorService family;
 
     public PolicyService(PolicyRepository policies, PaymentRecordRepository payments, AppUserRepository users, CoverService cover,
                          AuditService audit, DebitOrderGateway debitOrders, LegalService legal, OtpService otp, SupportRequestRepository support, Clock clock,
-                         NotificationService inbox) {
-        this.inbox = inbox; this.policies = policies; this.payments = payments; this.users = users; this.cover = cover; this.audit = audit;
+                         NotificationService inbox, ContributorService family) {
+        this.inbox = inbox; this.family = family; this.policies = policies; this.payments = payments; this.users = users; this.cover = cover; this.audit = audit;
         this.debitOrders = debitOrders; this.legal = legal; this.otp = otp; this.support = support; this.clock = clock;
     }
 
@@ -325,6 +326,8 @@ public class PolicyService {
         CoverConfig cfg = cover.config();
         LocalDate today = today();
         if (LocalDate.parse(r.paidOn()).isAfter(today)) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "A payment can't be dated in the future.");
+        boolean shared = family.hasActiveContributors(p);
+        PolicyContributor payer = r.contributorId() == null || r.contributorId().isBlank() ? null : family.activeContributor(p, r.contributorId());
         switch (p.getStatus()) {
             case "pending_review" -> throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "Approve the application before recording a payment.");
             case "declined", "cancelled" -> throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "This policy is " + p.getStatus() + ".");
@@ -332,14 +335,17 @@ public class PolicyService {
                 if ("lapsed".equals(p.getStatus()) && p.getLapsedAt() != null
                         && !CoverRules.canReinstate(LocalDate.parse(p.getLapsedAt()), cfg.getReinstateWithinDays(), today))
                     throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The reinstatement period ended on " + CoverRules.reinstateUntil(LocalDate.parse(p.getLapsedAt()), cfg.getReinstateWithinDays()) + ". The customer needs to apply again.");
-                if (r.amountCents() < p.getMonthlyTotalCents())
+                // On a family plan several people each pay their share, so cover starts when the payments together reach the monthly price.
+                if (!shared && r.amountCents() < p.getMonthlyTotalCents())
                     throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The first premium is " + CoverRules.rand(p.getMonthlyTotalCents()) + ". A smaller amount can't start cover.");
             }
             default -> { }
         }
         String statusBefore = p.getStatus();
-        payments.save(new PaymentRecord(p.getId(), r.amountCents(), r.paidOn(), "collected", "manual", r.reference().trim(), staff.getEmail()));
-        if ("approved".equals(p.getStatus()) || "lapsed".equals(p.getStatus())) {
+        PaymentRecord rec = new PaymentRecord(p.getId(), r.amountCents(), r.paidOn(), "collected", "manual", r.reference().trim(), staff.getEmail());
+        if (payer != null) rec.attributeTo(payer.getUserId());
+        rec = payments.save(rec);
+        if (("approved".equals(p.getStatus()) || "lapsed".equals(p.getStatus())) && (!shared || paidSince(p) >= p.getMonthlyTotalCents())) {
             p.activate(today, today.plusDays(cfg.getNaturalWaitingDays()));
             p.getMembers().stream().filter(m -> "active".equals(m.getStatus()) && m.getCoverStartsOn() == null)
                     .forEach(m -> m.setCoverStartsOn(p.getWaitingEndsOn()));
@@ -347,11 +353,13 @@ public class PolicyService {
         if ("active".equals(p.getStatus())) resolveRequests(p, "reinstatement_request", "Reinstated by a recorded payment.");
         audit.record(staff.getEmail(), "payment.recorded", "policy", id, CoverRules.rand(r.amountCents()) + " ref " + r.reference() + " (manual)");
         boolean started = "active".equals(p.getStatus()) && !"active".equals(statusBefore);
-        if (started) inbox.notify(p.getUserId(), "cover", "lapsed".equals(statusBefore) ? "Your cover is back" : "Your cover is active",
+        if (started) family.notifyAll(p, "cover", "lapsed".equals(statusBefore) ? "Your cover is back" : "Your cover is active",
                 "lapsed".equals(statusBefore) ? "We received your payment and your cover is active again. Thank you."
                         : "We received your first payment. Accidents are covered " + (cfg.getAccidentalWaitingDays() == 0 ? "from today" : "from " + CoverRules.friendlyDate(today.plusDays(cfg.getAccidentalWaitingDays()).toString()))
-                                + " and natural causes from " + CoverRules.friendlyDate(p.getWaitingEndsOn()) + ".", "policy", p.getId());
-        inbox.notify(p.getUserId(), "payment", "Payment received", "We received " + CoverRules.rand(r.amountCents()) + ". Thank you.", "policy", p.getId());
+                                + " and natural causes from " + CoverRules.friendlyDate(p.getWaitingEndsOn()) + ".");
+        family.onPayment(p, rec);
+        if (shared && !started && ("approved".equals(p.getStatus()) || "lapsed".equals(p.getStatus())))
+            family.notifyAll(p, "cover", "Waiting for the rest of the payments", "So far " + CoverRules.rand(paidSince(p)) + " of " + CoverRules.rand(p.getMonthlyTotalCents()) + " has come in. Cover starts when the full amount is in.");
         return new AdminPolicyDto(toDto(policies.save(p), true), customer(p));
     }
 
@@ -378,8 +386,10 @@ public class PolicyService {
             if (!"active".equals(p.getStatus()) || p.getStartDate() == null) continue;
             active++;
             List<LocalDate> dues = CoverRules.dueDates(LocalDate.parse(p.getStartDate()), p.getDebitDay(), today);
-            long received = payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).stream()
-                    .mapToLong(x -> "collected".equals(x.getStatus()) ? 1 : "reversed".equals(x.getStatus()) ? -1 : 0).sum();
+            // Several people pay towards a family plan, so there it is the money that counts, not the number of payments.
+            long received = family.hasActiveContributors(p)
+                    ? payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).stream().mapToLong(x -> "collected".equals(x.getStatus()) ? x.getAmountCents() : "reversed".equals(x.getStatus()) ? -x.getAmountCents() : 0).sum() / Math.max(1, p.getMonthlyTotalCents())
+                    : payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).stream().mapToLong(x -> "collected".equals(x.getStatus()) ? 1 : "reversed".equals(x.getStatus()) ? -1 : 0).sum();
             int missed = CoverRules.missedPayments(dues, received);
             String next = nextDebitDate(p);
             boolean soon = next != null && !LocalDate.parse(next).isAfter(today.plusDays(7));
@@ -397,6 +407,14 @@ public class PolicyService {
                 rows.stream().filter(r -> r.dueSoon() && r.missed() == 0).count(), owed, dueSoonCents, lapseAfter);
     }
 
+    /** Money received for this plan since it was approved (or, if it lapsed, since it lapsed), collected less reversed. */
+    private long paidSince(Policy p) {
+        String from = "lapsed".equals(p.getStatus()) ? p.getLapsedAt() : null;
+        return payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).stream()
+                .filter(x -> from == null || (x.getPaidOn() != null && x.getPaidOn().compareTo(from) >= 0))
+                .mapToLong(x -> "collected".equals(x.getStatus()) ? x.getAmountCents() : "reversed".equals(x.getStatus()) ? -x.getAmountCents() : 0).sum();
+    }
+
     /** Tells the customer, in plain words, when staff move their cover. */
     private void notifyStatus(Policy p, String status) {
         switch (status) {
@@ -404,9 +422,9 @@ public class PolicyService {
                     "Your cover starts once we receive your first payment of " + CoverRules.rand(p.getMonthlyTotalCents()) + ".", "policy", p.getId());
             case "declined" -> inbox.notify(p.getUserId(), "cover", "We couldn't approve your application",
                     "Please open your cover to read why, or contact us and we'll help.", "policy", p.getId());
-            case "lapsed" -> inbox.notify(p.getUserId(), "cover", "Your cover has lapsed",
-                    "Payments were missed. You can reinstate within " + cover.config().getReinstateWithinDays() + " days without a new waiting period. Open your cover to ask us.", "policy", p.getId());
-            case "cancelled" -> inbox.notify(p.getUserId(), "cover", "Your cover was cancelled", "Your cover has been cancelled. If this isn't what you expected, please contact us.", "policy", p.getId());
+            case "lapsed" -> family.notifyAll(p, "cover", "Your cover has lapsed",
+                    "Payments were missed. You can reinstate within " + cover.config().getReinstateWithinDays() + " days without a new waiting period. Open your cover to ask us.");
+            case "cancelled" -> family.notifyAll(p, "cover", "Your cover was cancelled", "Your cover has been cancelled. If this isn't what you expected, please contact us.");
             default -> { }
         }
     }
@@ -479,7 +497,9 @@ public class PolicyService {
                 new MemberDto(m.getId(), m.getRelationship(), m.getFullName(), full ? m.getIdNumber() : SaId.mask(m.getIdNumber()), m.getDateOfBirth(),
                         m.getFeeCents(), m.getStatus(), m.getCoverStartsOn(), CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today()), m.getMultiplierBps(), m.getAgeBps())).toList();
         List<PaymentDto> pays = new ArrayList<>();
-        payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).forEach(x -> pays.add(new PaymentDto(x.getId(), x.getAmountCents(), x.getPaidOn(), x.getStatus(), x.getSource(), x.getReference())));
+        Map<String, String> payers = family.payerNames(p);
+        payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).forEach(x -> pays.add(new PaymentDto(x.getId(), x.getAmountCents(), x.getPaidOn(), x.getStatus(), x.getSource(), x.getReference(),
+                x.getContributorUserId() == null ? null : payers.getOrDefault(x.getContributorUserId(), "A family member"))));
         List<BundleVersionDto> history = cover.versions(p);
         return new PolicyDto(p.getId(), p.getReference(), p.getStatus(),
                 new HolderDto(p.getHolderName(), full ? p.getHolderIdNumber() : SaId.mask(p.getHolderIdNumber()), p.getHolderDob()),
@@ -491,6 +511,7 @@ public class PolicyService {
                 p.getLapsedAt(), p.getLapsedAt() == null ? null : CoverRules.reinstateUntil(LocalDate.parse(p.getLapsedAt()), cover.config().getReinstateWithinDays()).toString(),
                 p.getCancelledAt(), iso(p.getCancelRequestedAt()), iso(p.getReinstateRequestedAt()),
                 p.getStartDate() != null && Set.of("active", "lapsed").contains(p.getStatus())
-                        && CoverRules.withinCoolingOff(LocalDate.parse(p.getStartDate()), cover.config().getCoolingOffDays(), today()));
+                        && CoverRules.withinCoolingOff(LocalDate.parse(p.getStartDate()), cover.config().getCoolingOffDays(), today()),
+                family.contributorsOf(p, true), family.ownerShareBps(p), family.ownerShareCents(p), family.paidThisMonth(p, null));
     }
 }
