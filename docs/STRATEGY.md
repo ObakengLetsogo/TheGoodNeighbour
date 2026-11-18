@@ -133,7 +133,7 @@ Funeral cover is insurance. The following is **our reading of public sources, no
 | When | What | Owner |
 |---|---|---|
 | Weeks 1–2 | Legal opinion on in-kind benefits and structure. Settle any employment declaration questions with their own lawyer. | Founder and a lawyer |
-| Weeks 1–6 | Phone 10 undertakers, 3 coffin makers, 3 livestock suppliers, 3 grocery wholesalers in and around Johannesburg and the North West. Real prices into the profit model. | Founder calls; product team prepares scripts and the quote sheet |
+| Weeks 1–6 | (Scripts and the quote sheet: [`SUPPLIER-CALLS.md`](SUPPLIER-CALLS.md), [`quote-sheet.csv`](quote-sheet.csv).) Phone 10 undertakers, 3 coffin makers, 3 livestock suppliers, 3 grocery wholesalers in and around Johannesburg and the North West. Real prices into the profit model. | Founder calls; product team prepares scripts and the quote sheet |
 | Weeks 1–6 | Payment provider quote (per collection, tiers, set-up). | Founder |
 | Weeks 4–10 | Approach 3 insurers or managing agents with a one-page pitch and real numbers. | Founder and product |
 | Weeks 2–12 | Grow the waiting list in the North West: 300 sign-ups is a good test of demand. Interview 20 families about the sibling plan. | Founder |

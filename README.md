@@ -14,7 +14,7 @@ landing/   React · Vite · TypeScript                        public website wit
 backend/   Java 21 · Spring Boot 4 · JPA · Flyway · PostgreSQL    REST API used by both (H2 in memory for local development)
 ```
 
-**Strategy and operating plan:** see [`docs/STRATEGY.md`](docs/STRATEGY.md) (the market, the model, margin guardrails, regulation questions for a lawyer, and the next 90 days).
+**Strategy and operating plan:** see [`docs/STRATEGY.md`](docs/STRATEGY.md); call scripts and the quote sheet for suppliers, the payment provider and insurers are in [`docs/SUPPLIER-CALLS.md`](docs/SUPPLIER-CALLS.md) (the market, the model, margin guardrails, regulation questions for a lawyer, and the next 90 days).
 
 ## Run it
 
