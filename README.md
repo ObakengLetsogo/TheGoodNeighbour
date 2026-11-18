@@ -203,6 +203,9 @@ underwritten or approved.
   where the margin on in-kind benefits lives. **Ask your lawyer whether the cash alternative must instead equal the stated value** of the
   benefit: if it must, that margin disappears. Cost is shown only to staff; the app never shows it. Banking details are never collected in
   the app: staff call the family to arrange payment.
+- **Minimum share (margin guardrail):** every person who pays costs a collection fee, so each contributor's share must be worth at least a
+  set amount a month (default R50, editable in Cover & Pricing). It is checked when inviting, accepting and changing a share, and the app
+  only offers shares that clear it. Set it from the payment provider's real per-collection fee.
 - **One claim per person:** the same person can't be claimed for twice unless the earlier claim was declined (a direct protection against paying twice).
 - **After a death:** when a death claim is decided (approved, or declined because it isn't payable) that person's **cover and premium end**
   from their date of death, so we never keep charging for someone who has died. Staff can tick "made in error" when declining a claim where

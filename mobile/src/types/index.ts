@@ -60,6 +60,8 @@ export interface CoverOptions {
   reinstateWithinDays: number;
   escalationCapPercent: number;
   debitDays: number[];
+  /** The least a contributor may pay a month. Every payer costs a collection fee. */
+  minContributionCents: Cents;
 }
 
 export interface BundleLineInput {

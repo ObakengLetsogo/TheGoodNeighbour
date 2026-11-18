@@ -25,6 +25,14 @@ class FamilyPlanFlowTest {
 
     record Person(String token, String phone) {}
 
+    /** The minimum share is a global setting. Most of these tests use small shares, so they switch it off; one test checks it. */
+    private void minContribution(long cents) throws Exception {
+        String s = staff();
+        String cur = ok(call("GET", "/api/admin/cover", s, null), 200).toString();
+        ok(call("PUT", "/api/admin/cover", s, cur.replaceFirst("\"minContributionCents\":\\d+", "\"minContributionCents\":" + cents)), 200);
+    }
+    @org.junit.jupiter.api.BeforeEach void noMinimumByDefault() throws Exception { minContribution(0); }
+
     private HttpResponse<String> call(String method, String path, String token, String body) throws Exception {
         var b = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).header("Content-Type", "application/json");
         if (token != null) b.header("Authorization", "Bearer " + token);
@@ -269,5 +277,31 @@ class FamilyPlanFlowTest {
         assertEquals(1, shared.get("members").size());
         assertEquals("parent", shared.get("members").get(0).get("relationship").asString());
         assertTrue(shared.toString().contains("Gogo Dube"));
+    }
+
+    @Test void eachContributorsShareMustBeWorthCollecting() throws Exception {
+        Person owner = person("Owner Min", true), a = person("Sibling Min", true); String s = staff();
+        JsonNode plan = plan(owner, s); String pid = plan.get("id").asString(); long total = plan.get("monthlyTotalCents").asLong();
+        try {
+            minContribution(5000);                                                                       // R50
+            assertEquals(5000, ok(call("GET", "/api/cover", null, null), 200).get("minContributionCents").asLong());     // the app can show it
+            int tooSmall = (int) (4000 * 100 / total);                                                  // a share worth about R40
+            HttpResponse<String> small = call("POST", "/api/policies/" + pid + "/contributors", owner.token, "{\"name\":\"Small\",\"phone\":\"" + a.phone + "\",\"sharePercent\":" + Math.max(5, tooSmall) + "}");
+            assertEquals(422, small.statusCode(), small.body());
+            assertTrue(small.body().contains("at least R50"), small.body());
+            int enough = (int) Math.ceil(5000 * 100.0 / total) + 1;                                      // a share worth a little over R50
+            invite(owner, pid, "Enough", a.phone, enough, 201);
+
+            // the price can change between the invitation and accepting, so it is checked again then
+            String cid = ok(call("GET", "/api/me/invitations", a.token, null), 200).get("items").get(0).get("id").asString();
+            minContribution(Math.round(total * enough / 100.0) + 100);                                   // now the share is just under the minimum
+            assertEquals(422, call("POST", "/api/me/invitations/" + cid + "/accept", a.token, null).statusCode());
+            minContribution(5000);
+            ok(call("POST", "/api/me/invitations/" + cid + "/accept", a.token, null), 200);
+            // and a contributor can't lower their own share below it
+            assertEquals(422, call("PUT", "/api/me/shared-policies/" + cid + "/share", a.token, "{\"sharePercent\":5}").statusCode());
+        } finally {
+            minContribution(0);
+        }
     }
 }

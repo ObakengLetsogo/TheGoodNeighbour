@@ -22,7 +22,7 @@ public final class Dtos {
     public record CoverOptionsDto(List<BenefitItemDto> items, List<RelationshipRuleDto> relationships, List<AgeBandDto> ageBands, long minBundleValueCents,
                                   int mainMinAge, int mainMaxAge, int maxMembers, int naturalWaitingDays, int accidentalWaitingDays,
                                   int upgradeWaitingDays, int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapPercent,
-                                  List<Integer> debitDays, int coolingOffDays) {}
+                                  List<Integer> debitDays, int coolingOffDays, long minContributionCents) {}
 
     // ---------- Waiting list (public) ----------
     public record WaitlistIn(@NotBlank @Size(max = 60) String firstName,
@@ -179,7 +179,7 @@ public final class Dtos {
                                  @Min(1) @Max(12) int lapseAfterMissedPayments, @Min(0) @Max(730) int reinstateWithinDays,
                                  @Min(0) @Max(10000) int escalationCapBps, @Min(0) @Max(365) int coolingOffDays,
                                  @NotNull @Valid List<RelationshipRuleDto> relationships, @NotNull @Valid List<AgeBandDto> ageBands,
-                                 @Min(1000) @Max(20000) Integer cashAlternativeBps) {}
+                                 @Min(1000) @Max(20000) Integer cashAlternativeBps, @Min(0) @Max(1000000) Long minContributionCents) {}
     public record BenefitItemAdminDto(String id, String kind, String name, String description, String unitLabel, long valueCents, long costCents,
                                       int maxQty, String groupId, boolean active, Integer onFarm, List<String> contents) {}
     public record BenefitItemUpdate(@NotBlank @Size(max = 100) String name, @Size(max = 1000) String description, @Positive long valueCents,

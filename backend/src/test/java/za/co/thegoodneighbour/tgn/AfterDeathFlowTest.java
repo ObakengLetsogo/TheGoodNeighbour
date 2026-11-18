@@ -26,6 +26,12 @@ class AfterDeathFlowTest {
     private static int seq = 0;
     record Person(String token, String phone) {}
 
+    @org.junit.jupiter.api.BeforeEach void noMinimumShare() throws Exception {      // the minimum share is global; these tests use small shares
+        String s = staff();
+        String cur = ok(call("GET", "/api/admin/cover", s, null), 200).toString();
+        ok(call("PUT", "/api/admin/cover", s, cur.replaceFirst("\"minContributionCents\":\\d+", "\"minContributionCents\":0")), 200);
+    }
+
     private HttpResponse<String> call(String method, String path, String token, String body) throws Exception {
         var b = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).header("Content-Type", "application/json");
         if (token != null) b.header("Authorization", "Bearer " + token);

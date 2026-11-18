@@ -55,6 +55,7 @@ public class CoverAdminService {
                 u.escalationCapBps(), u.coolingOffDays(), rules,
                 bands.stream().map(b -> new CoverConfig.AgeBand(b.fromAge(), b.toAge(), b.multiplierBps())).toList());
         if (u.cashAlternativeBps() != null) c.setCashAlternativeBps(u.cashAlternativeBps());
+        if (u.minContributionCents() != null) c.setMinContributionCents(u.minContributionCents());
         audit.record(staff.getEmail(), "cover.config.updated", "cover_config", CoverConfig.ID,
                 before + " -> rate=" + u.baseRateBps() + "bps natural=" + u.naturalWaitingDays() + "d min=" + u.minBundleValueCents());
         return toDto(configs.save(c));
@@ -93,7 +94,7 @@ public class CoverAdminService {
                 c.getUpgradeWaitingDays(), c.getMainMinAge(), c.getMainMaxAge(), c.getMainCoverEndAge(), c.getMaxMembers(), c.getMaxCommitmentMultiple(),
                 c.getLapseAfterMissedPayments(), c.getReinstateWithinDays(), c.getEscalationCapBps(), c.getCoolingOffDays(),
                 c.getRules().stream().map(r -> new RelationshipRuleDto(r.relationship(), r.multiplierBps(), r.minAge(), r.maxAge(), r.coverEndAge(), r.maxCount())).toList(),
-                c.getAgeBands().stream().map(b -> new AgeBandDto(b.fromAge(), b.toAge(), b.multiplierBps())).toList(), c.getCashAlternativeBps());
+                c.getAgeBands().stream().map(b -> new AgeBandDto(b.fromAge(), b.toAge(), b.multiplierBps())).toList(), c.getCashAlternativeBps(), c.getMinContributionCents());
     }
 
     static BenefitItemAdminDto toDto(BenefitItem i) {

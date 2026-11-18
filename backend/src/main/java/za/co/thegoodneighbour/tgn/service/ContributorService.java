@@ -54,6 +54,7 @@ public class ContributorService {
         if (live.stream().anyMatch(c -> c.getPhone().equals(in.phone()))) throw unprocessable("That person is already invited to this plan.");
         int bps = in.sharePercent() * 100;
         if (sum(live) + bps > 10000 - OWNER_MIN_BPS) throw unprocessable("The shares add up to too much. You keep at least " + OWNER_MIN_BPS / 100 + "% of the cost.");
+        requireWorthCollecting(p, bps);
         PolicyContributor c = contributors.save(new PolicyContributor(policyId, in.phone(), in.name().trim(), bps));
         users.findByPhone(in.phone()).ifPresent(u -> inbox.notify(u.getId(), "cover", "You're invited to share a family plan",
                 owner.getFullName() + " has asked you to share the cost of a family funeral plan. Open Shared Plans to see it.", "invitation", c.getId()));
@@ -89,6 +90,7 @@ public class ContributorService {
         if (!Policy.OPEN_FOR_CHANGES.contains(p.getStatus())) throw unprocessable("This plan is no longer open.");
         if (sum(active(c.getPolicyId())) + c.getShareBps() > 10000 - OWNER_MIN_BPS)
             throw unprocessable("The shares on this plan are full. Please ask the owner to adjust them.");
+        requireWorthCollecting(p, c.getShareBps());     // the price may have changed since the invitation
         c.accept(u.getId());
         inbox.notify(p.getUserId(), "cover", u.getFullName() + " joined your plan",
                 "They will pay " + c.getShareBps() / 100 + "% of the monthly price, about " + CoverRules.rand(share(p.getMonthlyTotalCents(), c.getShareBps())) + ".", "policy", p.getId());
@@ -119,8 +121,9 @@ public class ContributorService {
         int bps = percent * 100;
         int others = sum(active(c.getPolicyId())) - c.getShareBps();
         if (others + bps > 10000 - OWNER_MIN_BPS) throw unprocessable("The shares on this plan are full. The most you can take is " + Math.max(0, (10000 - OWNER_MIN_BPS - others) / 100) + "%.");
-        c.setShareBps(bps);
         Policy p = policy(c.getPolicyId());
+        requireWorthCollecting(p, bps);
+        c.setShareBps(bps);
         inbox.notify(p.getUserId(), "cover", c.getName() + " changed their share", "They now pay " + percent + "% of the monthly price. Your share is " + ownerShareBps(p) / 100 + "%.", "policy", p.getId());
         return sharedDto(u, c);
     }
@@ -248,6 +251,16 @@ public class ContributorService {
 
     private List<PolicyContributor> active(String policyId) {
         return contributors.findByPolicyIdOrderByInvitedAtAsc(policyId).stream().filter(c -> PolicyContributor.ACTIVE.equals(c.getStatus())).toList();
+    }
+
+    /** Every payer costs a collection fee, so a share below the minimum isn't allowed. The error says how big a share has to be at today's price. */
+    private void requireWorthCollecting(Policy p, int shareBps) {
+        long min = cover.config().getMinContributionCents();
+        long total = p.getMonthlyTotalCents();
+        if (min <= 0 || total <= 0 || share(total, shareBps) >= min) return;
+        long percent = (long) Math.ceil(min * 100.0 / total);
+        throw unprocessable("Each person's share has to be at least " + CoverRules.rand(min) + " a month, so every payment is worth collecting. At today's price of "
+                + CoverRules.rand(total) + " that is at least " + (percent > 90 ? "more than the plan allows" : percent + "%") + ". Fewer people paying bigger shares works best.");
     }
 
     private static int sum(List<PolicyContributor> list) { return list.stream().mapToInt(PolicyContributor::getShareBps).sum(); }

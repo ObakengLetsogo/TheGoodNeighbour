@@ -40,7 +40,7 @@ export interface RelationshipRule { relationship: Relationship; multiplierBps: n
 export interface CoverConfig {
   baseRateBps: number; minBundleValueCents: number; naturalWaitingDays: number; accidentalWaitingDays: number; upgradeWaitingDays: number;
   mainMinAge: number; mainMaxAge: number; mainCoverEndAge: number; maxMembers: number; maxCommitmentMultiple: number;
-  lapseAfterMissedPayments: number; reinstateWithinDays: number; escalationCapBps: number; coolingOffDays: number; cashAlternativeBps?: number; relationships: RelationshipRule[]; ageBands: AgeBand[];
+  lapseAfterMissedPayments: number; reinstateWithinDays: number; escalationCapBps: number; coolingOffDays: number; cashAlternativeBps?: number; minContributionCents?: number; relationships: RelationshipRule[]; ageBands: AgeBand[];
 }
 export interface BenefitItem {
   id: string; kind: 'grocery' | 'livestock'; name: string; description: string; unitLabel: string; valueCents: number; costCents: number;

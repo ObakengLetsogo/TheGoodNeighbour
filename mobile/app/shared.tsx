@@ -12,10 +12,11 @@ import { formatDate, formatZAR } from '../src/lib/format';
 import { confirmAction } from '../src/lib/confirm';
 import { POLICY_STATUS_LABEL } from '../src/lib/status';
 import { useFamily } from '../src/store/FamilyContext';
+import { useOptions } from '../src/store/OptionsContext';
 import { colors, spacing } from '../src/theme';
 import { RELATIONSHIP_LABEL, type SharedPolicy } from '../src/types';
 
-const CHOICES = [10, 20, 25, 30, 40, 50, 60];
+const CHOICES = [10, 20, 25, 30, 40, 50, 60, 75, 90];
 
 /** Plans you pay a share of, and invitations to join one. */
 export default function Shared() {
@@ -73,11 +74,13 @@ export default function Shared() {
 
 function SharedCard({ plan, run, busy }: { plan: SharedPolicy; run: (key: string, fn: () => Promise<void>) => Promise<void>; busy?: string }) {
   const { updateShare, leave } = useFamily();
+  const { options } = useOptions();
   const [editing, setEditing] = useState(false);
   const owing = Math.max(0, plan.myShareCents - plan.myPaidThisMonthCents);
   const currentPct = plan.myShareBps / 100;
   const others = plan.contributors.filter((c) => c.status === 'active').reduce((n, c) => n + c.shareBps / 100, 0) - currentPct;
   const room = 95 - others;
+  const minPct = options && options.minContributionCents > 0 && plan.monthlyTotalCents > 0 ? Math.max(5, Math.ceil((options.minContributionCents * 100) / plan.monthlyTotalCents)) : 5;
 
   return (
     <Card accent="berry" tabLabel={plan.reference}>
@@ -109,7 +112,7 @@ function SharedCard({ plan, run, busy }: { plan: SharedPolicy; run: (key: string
           <View style={{ gap: spacing.sm }}>
             <Text variant="label" color={colors.inkSoft}>Change your share</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-              {CHOICES.map((c) => <Chip key={c} label={`${c}%`} selected={c === currentPct} disabled={c > room} onPress={() => run(plan.contributorId, async () => { await updateShare(plan.contributorId, c); setEditing(false); })} />)}
+              {CHOICES.map((c) => <Chip key={c} label={`${c}%`} selected={c === currentPct} disabled={c > room || c < minPct} onPress={() => run(plan.contributorId, async () => { await updateShare(plan.contributorId, c); setEditing(false); })} />)}
             </View>
           </View>
         ) : null}

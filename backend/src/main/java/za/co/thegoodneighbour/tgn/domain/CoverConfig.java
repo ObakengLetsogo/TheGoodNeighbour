@@ -43,6 +43,8 @@ public class CoverConfig {
     private int coolingOffDays;
     /** What the cash alternative to an in-kind bundle is worth, as a percentage (in basis points) of our cost of that bundle. 10000 = at cost. */
     private int cashAlternativeBps = 10000;
+    /** The least a contributor may pay a month. Each payer costs a collection fee, so tiny shares would eat the margin. */
+    private long minContributionCents = 5000;
 
     @ElementCollection(fetch = FetchType.EAGER) @CollectionTable(name = "cover_relationship_rules", joinColumns = @JoinColumn(name = "config_id"))
     private List<RelationshipRule> rules = new ArrayList<>();
@@ -98,6 +100,8 @@ public class CoverConfig {
     public int getReinstateWithinDays() { return reinstateWithinDays; }
     public int getEscalationCapBps() { return escalationCapBps; }
     public int getCoolingOffDays() { return coolingOffDays; }
+    public long getMinContributionCents() { return minContributionCents; }
+    public void setMinContributionCents(long v) { this.minContributionCents = v; }
     public int getCashAlternativeBps() { return cashAlternativeBps; }
     public void setCashAlternativeBps(int v) { this.cashAlternativeBps = v; }
     public List<RelationshipRule> getRules() { return rules; }
