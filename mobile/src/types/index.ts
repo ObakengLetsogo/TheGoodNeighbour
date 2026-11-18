@@ -180,6 +180,11 @@ export interface Policy {
   ownerPaidThisMonthCents: Cents;
   /** False when the owner only pays for the plan and isn't covered themselves. */
   coversMainMember: boolean;
+  /** People on the plan who have passed away. Their cover and premium have ended. */
+  inMemory: { name: string; relationship: Relationship; passedOn: string }[];
+  holderDiedOn?: string | null;
+  /** After the main member dies, cover for the others carries on until this date while someone takes over. */
+  continuationUntil?: string | null;
 }
 
 /** Someone who shares a plan's cost. phone is only shown to the owner. */
@@ -302,6 +307,10 @@ export interface Claim {
   deliveryWindow?: 'morning' | 'afternoon' | 'day' | null;
   deliveryNote?: string | null;
   deliveredAt?: string | null;
+  /** bundle (the default) or cash. The family can change it until the claim is settled. */
+  benefitChoice: 'bundle' | 'cash';
+  /** What the cash alternative pays. */
+  cashAlternativeCents: Cents;
   createdAt: string;
   updatedAt: string;
 }

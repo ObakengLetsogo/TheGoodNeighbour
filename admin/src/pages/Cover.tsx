@@ -73,6 +73,7 @@ function ConfigEditor({ initial }: { initial: CoverConfig }) {
           {num('lapseAfterMissedPayments', 'Lapse after missed payments')}
           {num('reinstateWithinDays', 'Reinstate within (days)')}
           {num('coolingOffDays', 'Cooling-off period (days)', 'Cancellations inside this are flagged to staff. Confirm the figure with your underwriter.')}
+          <label className="f">Cash alternative (% of our cost of the bundle)<input type="number" value={(c.cashAlternativeBps ?? 10000) / 100} onChange={(e) => set('cashAlternativeBps', Math.round(Number(e.target.value) * 100) as never)} /><span className="muted small">What the family gets if they take cash instead of the bundle. 100 means exactly what the bundle costs us, so cash never costs more than delivering. Rules may require it to be fair to the customer: check with your lawyer.</span></label>
         </div>
       </Card>
       <Card tab="Who can be covered" accent="berry">

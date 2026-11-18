@@ -5,13 +5,14 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Badge } from '../../src/components/Chip';
 import { Card } from '../../src/components/Card';
+import { Choice } from '../../src/components/Choice';
 import { Icon } from '../../src/components/Icon';
 import { Screen, ScreenHeader } from '../../src/components/Screen';
 import { EmptyState } from '../../src/components/States';
 import { Text } from '../../src/components/Text';
 import { BundleSummary } from '../../src/components/BundleSummary';
 import { Timeline } from '../../src/components/Timeline';
-import { displayPhone, formatDateLong } from '../../src/lib/format';
+import { displayPhone, formatDateLong, formatZAR } from '../../src/lib/format';
 import { CLAIM_STATUS_LABEL, CLAIM_STEPS, claimStep } from '../../src/lib/status';
 import { callSupport, openWhatsApp } from '../../src/lib/support';
 import { confirmAction } from '../../src/lib/confirm';
@@ -24,7 +25,7 @@ const WINDOW_LABEL = { morning: 'In the morning', afternoon: 'In the afternoon',
 
 export default function ClaimDetails() {
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
-  const { claims, refresh } = useCover();
+  const { claims, refresh, chooseBenefit } = useCover();
   const [busy, setBusy] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const claim = claims.find((c) => c.id === id);
@@ -55,6 +56,13 @@ export default function ClaimDetails() {
     });
   };
   const open = claim ? claim.status === 'submitted' || claim.status === 'under_review' : false;
+  const cash = claim?.benefitChoice === 'cash';
+  const canChoose = claim ? ['submitted', 'under_review', 'approved'].includes(claim.status) : false;
+  const choose = async (choice: 'bundle' | 'cash') => {
+    if (!claim || claim.benefitChoice === choice) return;
+    setUploadError(null);
+    try { await chooseBenefit(claim.id, choice); } catch (e) { setUploadError(e instanceof Error ? e.message : 'We could not save that. Please try again.'); }
+  };
 
   if (!claim) return <Screen><ScreenHeader onBack={close} /><EmptyState icon="file-search-outline" title="We can't find that claim" message="It may not be on this account." actionLabel="My Cover" onAction={() => router.replace('/(tabs)/cover')} /></Screen>;
 
@@ -124,21 +132,48 @@ export default function ClaimDetails() {
         </View>
       </Card>
 
-      <Text variant="section" style={styles.h}>What We're Delivering</Text>
-      <Card accent="ember" tabLabel="Your bundle">
-        <BundleSummary lines={claim.bundle.lines} showValues={false} />
-      </Card>
+      {canChoose ? (
+        <>
+          <Text variant="section" style={styles.h}>How Would You Like To Receive It?</Text>
+          <View style={{ gap: spacing.sm }}>
+            <Choice selected={!cash} title="The bundle" text="We deliver the groceries and livestock to your family, on a day we agree with you." onPress={() => choose('bundle')} />
+            <Choice selected={cash} title={`Cash instead: ${formatZAR(claim.cashAlternativeCents)}`} text="We pay you this amount instead. You can change your mind until the claim is settled." onPress={() => choose('cash')} />
+            <Text variant="bodyS">If you choose cash, we'll call you to arrange the payment safely. We never ask for your banking details in the app.</Text>
+          </View>
+        </>
+      ) : null}
+
+      {cash ? (
+        <>
+          <Text variant="section" style={styles.h}>Your Cash Payment</Text>
+          <Card accent="gold" tabLabel="Cash">
+            <View style={{ gap: spacing.xs }}>
+              <Text variant="displayM" style={{ fontSize: 26, lineHeight: 30 }}>{formatZAR(claim.cashAlternativeCents)}</Text>
+              <Text variant="bodyS">Instead of the bundle: {claim.bundle.lines.map((l) => (l.quantity > 1 ? `${l.quantity} × ${l.name}` : l.name)).join(', ')}.</Text>
+            </View>
+          </Card>
+        </>
+      ) : (
+        <>
+          <Text variant="section" style={styles.h}>What We're Delivering</Text>
+          <Card accent="ember" tabLabel="Your bundle">
+            <BundleSummary lines={claim.bundle.lines} showValues={false} />
+          </Card>
+        </>
+      )}
 
       {claim.status === 'approved' || claim.status === 'delivered' ? (
         <>
-          <Text variant="section" style={styles.h}>{claim.status === 'delivered' ? 'Delivered' : 'When To Expect Us'}</Text>
-          <Card accent="olive" tabLabel={claim.status === 'delivered' ? 'Done' : 'Delivery date'}>
+          <Text variant="section" style={styles.h}>{claim.status === 'delivered' ? (cash ? 'Paid' : 'Delivered') : cash ? 'Your Payment' : 'When To Expect Us'}</Text>
+          <Card accent="olive" tabLabel={claim.status === 'delivered' ? 'Done' : cash ? 'Cash' : 'Delivery date'}>
             {claim.status === 'delivered' ? (
               <View style={{ gap: spacing.xs }}>
-                <Text variant="cardTitle">Your bundle was delivered</Text>
+                <Text variant="cardTitle">{cash ? 'Your payment was made' : 'Your bundle was delivered'}</Text>
                 {claim.deliveredAt ? <Text variant="body">{formatDateLong(claim.deliveredAt)}</Text> : null}
                 <Text variant="bodyS">We're thinking of you and your family.</Text>
               </View>
+            ) : cash ? (
+              <Text variant="body">Your claim is approved. We'll call you to arrange your payment.</Text>
             ) : claim.deliveryDate ? (
               <View style={{ gap: spacing.xs }}>
                 <Text variant="cardTitle">{formatDateLong(claim.deliveryDate)}</Text>
@@ -153,8 +188,8 @@ export default function ClaimDetails() {
         </>
       ) : null}
 
-      <Text variant="section" style={styles.h}>Delivery</Text>
-      <Card accent="berry" tabLabel="To">
+      {cash ? null : <Text variant="section" style={styles.h}>Delivery</Text>}
+      {cash ? null : <Card accent="berry" tabLabel="To">
         <View style={{ gap: spacing.xs }}>
           <Text variant="cardTitle">{claim.delivery.recipientName}</Text>
           <Text variant="body">{displayPhone(claim.delivery.recipientPhone)}</Text>
@@ -162,7 +197,7 @@ export default function ClaimDetails() {
           <Text variant="body">{claim.delivery.city}, {claim.delivery.province} {claim.delivery.postalCode}</Text>
           <Text variant="bodyS" style={{ marginTop: spacing.xs }}>We'll call to confirm the date and arrangements.</Text>
         </View>
-      </Card>
+      </Card>}
 
       <View style={{ marginTop: spacing.xl, flexDirection: 'row', gap: spacing.md }}>
         <Button label="WhatsApp" icon="whatsapp" variant="secondary" fullWidth={false} style={{ flex: 1 }} onPress={() => openWhatsApp(`Hi TGN, about claim ${claim.reference}.`)} />

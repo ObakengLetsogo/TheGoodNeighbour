@@ -36,7 +36,7 @@ export function CollectionsPage() {
                     <td><Link to={`/policies/${r.policyId}`}><strong>{r.reference}</strong></Link></td>
                     <td>{r.holderName}<div className="muted small"><a href={`tel:${r.phone}`}>{displayPhone(r.phone)}</a></div></td>
                     <td>{zar(r.monthlyCents)}<div className="muted small">on the {r.debitDay}th</div></td>
-                    <td>{dateShort(r.nextDebitDate)}{r.dueSoon ? <span className="badge warn" style={{ marginLeft: 6 }}>This week</span> : null}</td>
+                    <td>{dateShort(r.nextDebitDate)}{r.dueSoon ? <span className="badge warn" style={{ marginLeft: 6 }}>This week</span> : null}{r.continuationUntil ? <div><span className="badge bad">Needs a new owner by {dateShort(r.continuationUntil)}</span></div> : null}</td>
                     <td>{r.missed > 0 ? <><span className={`badge ${r.shouldLapse ? 'bad' : 'warn'}`}>{r.missed} missed</span><div className="muted small">since {dateShort(r.oldestUnpaidSince)}</div></> : '–'}</td>
                     <td>{r.owedCents > 0 ? zar(r.owedCents) : '–'}</td>
                     <td><Link to={`/policies/${r.policyId}`}>{r.missed > 0 ? 'Record Payment Or Lapse' : 'Open'}</Link></td>

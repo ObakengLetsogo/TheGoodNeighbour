@@ -20,6 +20,7 @@ export interface Policy {
   lapsedAt?: string | null; reinstateUntil?: string | null; cancelledAt?: string | null;
   cancelRequestedAt?: string | null; reinstateRequestedAt?: string | null; withinCoolingOff: boolean;
   contributors: Contributor[]; ownerShareBps: number; ownerShareCents: number; ownerPaidThisMonthCents: number; coversMainMember: boolean;
+  inMemory: { name: string; relationship: string; passedOn: string }[]; holderDiedOn?: string | null; continuationUntil?: string | null;
 }
 export interface AdminPolicy { policy: Policy; customer: Customer | null }
 export interface Delivery { recipientName: string; recipientPhone: string; addressLine: string; suburb: string; city: string; province: string; postalCode: string; instructions?: string | null }
@@ -31,6 +32,7 @@ export interface Claim {
   withinWaitingPeriod: boolean; overAgeLimit: boolean; staffNote?: string | null; delivery: Delivery; bundle: BundleVersion;
   documents: ClaimDocument[]; missingDocuments: ClaimDocumentType[];
   deliveryDate?: string | null; deliveryWindow?: 'morning' | 'afternoon' | 'day' | null; deliveryNote?: string | null; deliveredAt?: string | null;
+  benefitChoice: 'bundle' | 'cash'; cashAlternativeCents: number; ourCostCents?: number | null;
   createdAt: string; updatedAt: string;
 }
 export interface AgeBand { fromAge: number; toAge: number; multiplierBps: number }
@@ -38,7 +40,7 @@ export interface RelationshipRule { relationship: Relationship; multiplierBps: n
 export interface CoverConfig {
   baseRateBps: number; minBundleValueCents: number; naturalWaitingDays: number; accidentalWaitingDays: number; upgradeWaitingDays: number;
   mainMinAge: number; mainMaxAge: number; mainCoverEndAge: number; maxMembers: number; maxCommitmentMultiple: number;
-  lapseAfterMissedPayments: number; reinstateWithinDays: number; escalationCapBps: number; coolingOffDays: number; relationships: RelationshipRule[]; ageBands: AgeBand[];
+  lapseAfterMissedPayments: number; reinstateWithinDays: number; escalationCapBps: number; coolingOffDays: number; cashAlternativeBps?: number; relationships: RelationshipRule[]; ageBands: AgeBand[];
 }
 export interface BenefitItem {
   id: string; kind: 'grocery' | 'livestock'; name: string; description: string; unitLabel: string; valueCents: number; costCents: number;
@@ -62,6 +64,6 @@ export interface WaitlistEntry { id: string; firstName: string; phone?: string |
 
 export interface CollectionRow {
   policyId: string; reference: string; holderName: string; phone: string; monthlyCents: number; debitDay: number; nextDebitDate?: string | null;
-  paymentsReceived: number; missed: number; oldestUnpaidSince?: string | null; owedCents: number; shouldLapse: boolean; dueSoon: boolean;
+  paymentsReceived: number; missed: number; oldestUnpaidSince?: string | null; owedCents: number; shouldLapse: boolean; dueSoon: boolean; continuationUntil?: string | null;
 }
 export interface Collections { rows: CollectionRow[]; active: number; behind: number; shouldLapse: number; dueSoon: number; owedCents: number; dueSoonCents: number; lapseAfter: number }

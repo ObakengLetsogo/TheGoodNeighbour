@@ -99,6 +99,7 @@ export const claimService = {
     }
     return (await res.json()) as ClaimDocument;
   },
+  setChoice: (claimId: string, choice: 'bundle' | 'cash') => request<Claim>(`/api/claims/${claimId}/choice`, { method: 'PUT', body: json({ choice }) }),
   removeDocument: (claimId: string, docId: string) => request<void>(`/api/claims/${claimId}/documents/${docId}`, { method: 'DELETE' }),
 };
 

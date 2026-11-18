@@ -197,6 +197,20 @@ underwritten or approved.
   but are not a covered person: they aren't priced, have no age limit beyond being 18 or older, can't be claimed for, and the plan must
   cover at least one other person. The choice is fixed at application and survives later bundle and member changes.
 
+- **Cash alternative:** on a claim the family can take the bundle (the default) or cash, and change their mind until it is settled. The
+  cash amount is worked out **from what the bundle costs us** (a setting in Cover & Pricing, 100% = exactly our cost) and frozen when the
+  claim is made, so cash can never cost more than delivering. It is deliberately **less than the bundle is "worth" at shop prices**, which is
+  where the margin on in-kind benefits lives. **Ask your lawyer whether the cash alternative must instead equal the stated value** of the
+  benefit: if it must, that margin disappears. Cost is shown only to staff; the app never shows it. Banking details are never collected in
+  the app: staff call the family to arrange payment.
+- **One claim per person:** the same person can't be claimed for twice unless the earlier claim was declined (a direct protection against paying twice).
+- **After a death:** when a death claim is decided (approved, or declined because it isn't payable) that person's **cover and premium end**
+  from their date of death, so we never keep charging for someone who has died. Staff can tick "made in error" when declining a claim where
+  nobody died, which leaves cover untouched. If the covered **main member** dies, cover for everyone else **continues for 60 days** while
+  staff help a successor take over: a covered family member (who becomes the main member and is priced as one) or someone who already pays a
+  share (who then pays but isn't covered). If nobody is left covered, the plan closes. The family sees a gentle message and an "in loving
+  memory" list, and the plan shows in Collections until a new owner is recorded. If nobody takes over in time, staff lapse the cover as usual.
+
 ## Not built yet
 
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).

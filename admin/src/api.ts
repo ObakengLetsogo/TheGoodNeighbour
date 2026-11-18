@@ -52,7 +52,8 @@ export const api = {
   recordPayment: (id: string, amountCents: number, paidOn: string, reference: string, contributorId?: string) =>
     request<AdminPolicy>(`/policies/${id}/payments`, post({ amountCents, paidOn, reference, contributorId: contributorId || undefined })),
   claims: () => request<Claim[]>('/claims'),
-  setClaimStatus: (id: string, status: string, note?: string) => request<Claim>(`/claims/${id}/status`, post({ status, note })),
+  setClaimStatus: (id: string, status: string, note?: string, madeInError?: boolean) => request<Claim>(`/claims/${id}/status`, post({ status, note, madeInError })),
+  setSuccessor: (id: string, body: { memberId?: string; contributorId?: string; phone?: string; idNumber?: string; ownerDiedOn?: string }) => request<AdminPolicy>(`/policies/${id}/successor`, post(body)),
   scheduleDelivery: (id: string, date: string, window: string, note?: string) => request<Claim>(`/claims/${id}/delivery`, post({ date, window, note })),
   /** Fetches a claim document with the staff token and opens it in a new tab (the server audits each view). */
   openClaimDocument: async (claimId: string, docId: string) => {

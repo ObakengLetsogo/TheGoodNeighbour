@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
-import { dateShort, displayPhone } from '../format';
+import { dateShort, displayPhone, zar } from '../format';
 import { BundleList } from './Policy';
 import type { Claim } from '../types';
 
@@ -39,9 +39,10 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
   const [pending, setPending] = useState<string>();
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [inError, setInError] = useState(false);
   const act = async (status: string) => {
     setBusy(true); setMsg(undefined);
-    try { onChange(await api.setClaimStatus(c.id, status, note || undefined)); setPending(undefined); setNote(''); }
+    try { onChange(await api.setClaimStatus(c.id, status, note || undefined, status === 'declined' ? inError : undefined)); setPending(undefined); setNote(''); setInError(false); }
     catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
   };
   return (
@@ -84,10 +85,20 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
             <dt>Submitted</dt><dd>{dateShort(c.createdAt)}</dd>
             {c.staffNote ? <><dt>Staff note</dt><dd>{c.staffNote}</dd></> : null}
           </dl>
-          {c.status === 'approved' || c.status === 'delivered' ? <DeliveryPlan c={c} onChange={onChange} /> : null}
+          <div style={{ marginBottom: 12 }}>
+            <h3>What the family receives</h3>
+            <dl className="dl" style={{ marginTop: 8 }}>
+              <dt>Their choice</dt><dd>{c.benefitChoice === 'cash' ? `Cash: ${zar(c.cashAlternativeCents)}` : 'The bundle (delivered)'}</dd>
+              {c.ourCostCents != null ? <><dt>Our cost</dt><dd>{zar(c.ourCostCents)} <span className="muted small">· bundle worth {zar(c.bundle.bundleValueCents)} at shop prices · cash alternative {zar(c.cashAlternativeCents)}</span></dd></> : null}
+            </dl>
+          </div>
+          {(c.status === 'approved' || c.status === 'delivered') && c.benefitChoice !== 'cash' ? <DeliveryPlan c={c} onChange={onChange} /> : null}
+          {c.status === 'approved' && c.benefitChoice === 'cash' ? <p className="muted" style={{ marginBottom: 12 }}>The family chose cash. Call them to arrange the payment, then mark the claim as delivered once it has been paid.</p> : null}
           {pending ? (
             <div className="grid" style={{ gap: 10 }}>
               <label className="f">Reason (shown to the customer)<textarea value={note} onChange={(e) => setNote(e.target.value)} /></label>
+              <label className="row" style={{ gap: 8, alignItems: 'flex-start' }}><input type="checkbox" checked={inError} onChange={(e) => setInError(e.target.checked)} style={{ width: 'auto' }} />
+                <span className="small">This claim was made in error and nobody has passed away. If you leave this unticked, the person's cover and premium end because they have died, even though the claim is declined.</span></label>
               <div className="row"><button className="danger" disabled={busy || note.trim().length < 3} onClick={() => act(pending)}>Confirm Decline</button><button className="ghost" onClick={() => setPending(undefined)}>Cancel</button></div>
             </div>
           ) : (

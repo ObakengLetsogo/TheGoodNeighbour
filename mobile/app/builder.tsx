@@ -6,6 +6,7 @@ import { BundleSummary } from '../src/components/BundleSummary';
 import { Button } from '../src/components/Button';
 import { Card } from '../src/components/Card';
 import { Chip } from '../src/components/Chip';
+import { Choice } from '../src/components/Choice';
 import { HowPriceWorks } from '../src/components/HowPriceWorks';
 import { Icon } from '../src/components/Icon';
 import { PriceBreakdown, type PersonLine } from '../src/components/PriceBreakdown';
@@ -301,19 +302,6 @@ function Line({ label, value, bold }: { label: string; value: string; bold?: boo
   );
 }
 
-function Choice({ selected, title, text, onPress }: { selected: boolean; title: string; text: string; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${title}. ${text}`}
-      style={[styles.choice, selected && { borderColor: colors.olive, backgroundColor: colors.oliveLight }]}>
-      <Icon name={selected ? 'radiobox-marked' : 'radiobox-blank'} size={22} color={selected ? colors.olive : colors.muted} />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="cardTitle">{title}</Text>
-        <Text variant="bodyS" color={colors.inkSoft}>{text}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
 function Notice({ text }: { text: string }) {
   return (
     <View style={styles.notice}>
@@ -329,5 +317,4 @@ const styles = StyleSheet.create({
   member: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
   notice: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', backgroundColor: '#F7ECD8', borderRadius: radii.md, padding: spacing.md },
   agree: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', minHeight: 44 },
-  choice: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md },
 });

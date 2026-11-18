@@ -87,6 +87,15 @@ export default function PolicyDetails() {
       </View>
       <Text variant="body" style={{ marginTop: spacing.md }}>{POLICY_STATUS_MESSAGE[policy.status]}</Text>
 
+      {policy.continuationUntil ? (
+        <View style={[styles.lifecycle, { backgroundColor: '#F5D3E2' }]} accessibilityRole="alert">
+          <Icon name="heart-outline" size={24} color={colors.berry} />
+          <Text variant="cardTitle">We're so sorry for your loss</Text>
+          <Text variant="bodyS" color={colors.inkSoft}>Cover for everyone else on this plan carries on until {formatDateLong(policy.continuationUntil)} while someone takes over the plan and its payments. Our team will contact you to help. You don't need to do anything now.</Text>
+          <Button label="Talk To Us" size="small" fullWidth={false} variant="secondary" onPress={() => openWhatsApp(`Hi TGN, about plan ${policy.reference}.`)} />
+        </View>
+      ) : null}
+
       {policy.cancelRequestedAt && policy.status !== 'cancelled' ? (
         <View style={[styles.lifecycle, { backgroundColor: '#F7E1E1' }]} accessibilityRole="alert">
           <Text variant="cardTitle">You've asked to cancel</Text>
@@ -202,7 +211,7 @@ export default function PolicyDetails() {
           <Icon name="account-circle-outline" size={28} color={colors.olive} />
           <View style={{ flex: 1 }}>
             <Text variant="cardTitle">{policy.holder.name}</Text>
-            <Text variant="bodyS">{policy.coversMainMember ? 'Main member' : "Plan owner. You pay for this plan but aren't covered."}</Text>
+            <Text variant="bodyS">{policy.holderDiedOn ? `Main member · passed away ${formatDate(policy.holderDiedOn)}` : policy.coversMainMember ? 'Main member' : "Plan owner. You pay for this plan but aren't covered."}</Text>
           </View>
         </View>
         {policy.members.map((m) => (
@@ -226,6 +235,20 @@ export default function PolicyDetails() {
           </View>
         ))}
         {open ? <Button label="Add Family Member" icon="account-plus-outline" variant="secondary" onPress={() => router.push({ pathname: '/add-member', params: { policyId: policy.id } })} /> : null}
+        {policy.inMemory.length > 0 ? (
+          <View style={{ gap: spacing.xs, marginTop: spacing.sm }}>
+            <Text variant="label" color={colors.muted}>In loving memory</Text>
+            {policy.inMemory.map((m, i) => (
+              <View key={i} style={styles.member}>
+                <Icon name="heart-outline" size={24} color={colors.berry} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="cardTitle">{m.name}</Text>
+                  <Text variant="bodyS">{RELATIONSHIP_LABEL[m.relationship]} · passed away {formatDate(m.passedOn)}. No longer on your monthly price.</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {open ? (

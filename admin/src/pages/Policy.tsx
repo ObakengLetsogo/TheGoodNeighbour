@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Card, Empty, ErrorBox, Loading, StatusBadge, useLoad } from '../components/ui';
 import { dateShort, displayPhone, label, ordinal, today, zar } from '../format';
-import type { AdminPolicy, BundleLine, Member } from '../types';
+import type { AdminPolicy, BundleLine, Member, Policy } from '../types';
 
 export function PolicyPage() {
   const { id = '' } = useParams();
@@ -137,6 +137,14 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         )}
       </Card>
 
+      {p.inMemory.length > 0 ? (
+        <Card tab="In memory" accent="berry">
+          <ul>{p.inMemory.map((m, i) => <li key={i}>{m.name} ({label(m.relationship)}), passed away {dateShort(m.passedOn)}. Cover and premium ended.</li>)}</ul>
+        </Card>
+      ) : null}
+
+      {['pending_review', 'approved', 'active'].includes(p.status) && (p.continuationUntil || !p.coversMainMember) ? <HandOver p={p} onChange={onChange} /> : null}
+
       {p.contributors.length > 0 ? (
         <Card tab="Shared plan" accent="berry">
           <p className="muted small">People who share the monthly cost. The owner pays what is left. Cover starts when the payments together reach the monthly total.</p>
@@ -246,5 +254,54 @@ function MemberRow({ policyId, m, onChange }: { policyId: string; m: Member; onC
         </td></tr>
       ) : null}
     </>
+  );
+}
+
+/** After the owner or main member has died, staff hand the plan to the person who will take it over. */
+function HandOver({ p, onChange }: { p: Policy; onChange: (a: AdminPolicy) => void }) {
+  const active = p.contributors.filter((k) => k.status === 'active');
+  const [kind, setKind] = useState<'member' | 'contributor'>(p.members.length > 0 ? 'member' : 'contributor');
+  const [memberId, setMemberId] = useState(p.members[0]?.id ?? '');
+  const [contributorId, setContributorId] = useState(active[0]?.id ?? '');
+  const [phone, setPhone] = useState('');
+  const [idNumber, setIdNumber] = useState('');
+  const [died, setDied] = useState(today());
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string>();
+  const submit = async (e: FormEvent) => {
+    e.preventDefault(); setBusy(true); setMsg(undefined);
+    try {
+      const normal = phone.replace(/\D/g, '').replace(/^0/, '27').replace(/^(?!27)/, '27');
+      onChange(await api.setSuccessor(p.id, kind === 'member'
+        ? { memberId, phone: `+${normal}`, ownerDiedOn: p.holderDiedOn ? undefined : died }
+        : { contributorId, idNumber, ownerDiedOn: p.holderDiedOn ? undefined : died }));
+    } catch (err) { setMsg((err as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <Card tab="Hand over the plan" accent="ember">
+      <p className="muted small">{p.continuationUntil ? `The main member has passed away. Cover for everyone else carries on until ${dateShort(p.continuationUntil)}. Agree with the family who takes the plan over, then record it here. If nobody does by then, lapse the cover.` : 'If the person who owns this plan has passed away, hand it to the person taking over.'}</p>
+      <form onSubmit={submit} style={{ marginTop: 12 }}>
+        <div className="row" style={{ gap: 16, marginBottom: 12 }}>
+          <label><input type="radio" checked={kind === 'member'} disabled={p.members.length === 0} onChange={() => setKind('member')} /> A covered family member</label>
+          <label><input type="radio" checked={kind === 'contributor'} disabled={active.length === 0} onChange={() => setKind('contributor')} /> Someone who pays a share</label>
+        </div>
+        <div className="form-grid">
+          {kind === 'member' ? (
+            <>
+              <label className="f">Family member<select value={memberId} onChange={(e) => setMemberId(e.target.value)}>{p.members.map((m) => <option key={m.id} value={m.id}>{m.fullName}</option>)}</select></label>
+              <label className="f">Their TGN mobile number<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="082 123 4567" required /></label>
+            </>
+          ) : (
+            <>
+              <label className="f">Contributor<select value={contributorId} onChange={(e) => setContributorId(e.target.value)}>{active.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select></label>
+              <label className="f">Their ID number<input value={idNumber} onChange={(e) => setIdNumber(e.target.value.replace(/\D/g, '').slice(0, 13))} inputMode="numeric" required /></label>
+            </>
+          )}
+          {!p.holderDiedOn ? <label className="f">Owner passed away on<input type="date" max={today()} value={died} onChange={(e) => setDied(e.target.value)} required /></label> : null}
+        </div>
+        <button type="submit" disabled={busy} style={{ marginTop: 14 }}>Hand Over The Plan</button>
+        {msg ? <p className="err" role="alert">{msg}</p> : null}
+      </form>
+    </Card>
   );
 }

@@ -23,6 +23,7 @@ interface CoverState {
   inviteContributor: (policyId: string, input: { name: string; phone: string; sharePercent: number }) => Promise<void>;
   removeContributor: (policyId: string, contributorId: string) => Promise<void>;
   submitClaim: (input: ClaimInput) => Promise<Claim>;
+  chooseBenefit: (claimId: string, choice: 'bundle' | 'cash') => Promise<void>;
 }
 
 const Ctx = createContext<CoverState | null>(null);
@@ -90,6 +91,10 @@ export function CoverProvider({ children }: { children: ReactNode }) {
   const removeMember = useCallback(async (id: string, memberId: string) => replace(await policyService.removeMember(id, memberId)), []);
   const inviteContributor = useCallback(async (id: string, input: { name: string; phone: string; sharePercent: number }) => replace(await familyService.invite(id, input)), []);
   const removeContributor = useCallback(async (id: string, contributorId: string) => replace(await familyService.removeContributor(id, contributorId)), []);
+  const chooseBenefit = useCallback(async (claimId: string, choice: 'bundle' | 'cash') => {
+    const c = await claimService.setChoice(claimId, choice);
+    setClaims((all) => all.map((x) => (x.id === c.id ? c : x)));
+  }, []);
   const submitClaim = useCallback(async (input: ClaimInput) => {
     const c = await claimService.submit(input);
     setClaims((all) => [c, ...all]);
@@ -98,8 +103,8 @@ export function CoverProvider({ children }: { children: ReactNode }) {
 
   const current = policies.find((p) => OPEN.includes(p.status));
   const value = useMemo(
-    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, inviteContributor, removeContributor, submitClaim }),
-    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, inviteContributor, removeContributor, submitClaim],
+    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, inviteContributor, removeContributor, submitClaim, chooseBenefit }),
+    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, inviteContributor, removeContributor, submitClaim, chooseBenefit],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
