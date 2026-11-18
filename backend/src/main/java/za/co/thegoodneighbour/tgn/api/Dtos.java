@@ -134,6 +134,9 @@ public final class Dtos {
                                  String createdAt, UserDto customer) {}
     public record CustomerDto(String id, String fullName, String phone, String email, boolean phoneVerified, String createdAt,
                               String policyId, String policyReference, String policyStatus) {}
+    public record CollectionRowDto(String policyId, String reference, String holderName, String phone, long monthlyCents, int debitDay, String nextDebitDate,
+                                   int paymentsReceived, int missed, String oldestUnpaidSince, long owedCents, boolean shouldLapse, boolean dueSoon) {}
+    public record CollectionsDto(List<CollectionRowDto> rows, long active, long behind, long shouldLapse, long dueSoon, long owedCents, long dueSoonCents, int lapseAfter) {}
     public record StatusChange(@NotBlank String status, @Size(max = 1000) String note) {}
     public record RecordPayment(@Positive long amountCents, @NotBlank @Pattern(regexp = DATE) String paidOn,
                                 @NotBlank @Size(max = 100) String reference) {}

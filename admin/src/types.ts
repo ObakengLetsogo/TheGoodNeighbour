@@ -57,3 +57,9 @@ export interface LegalSummary { slug: string; title: string; version: number; dr
 export interface LegalDoc extends LegalSummary { body: string; updatedAt: string }
 
 export interface WaitlistEntry { id: string; firstName: string; phone?: string | null; email?: string | null; province?: string | null; createdAt: string }
+
+export interface CollectionRow {
+  policyId: string; reference: string; holderName: string; phone: string; monthlyCents: number; debitDay: number; nextDebitDate?: string | null;
+  paymentsReceived: number; missed: number; oldestUnpaidSince?: string | null; owedCents: number; shouldLapse: boolean; dueSoon: boolean;
+}
+export interface Collections { rows: CollectionRow[]; active: number; behind: number; shouldLapse: number; dueSoon: number; owedCents: number; dueSoonCents: number; lapseAfter: number }

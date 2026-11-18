@@ -13,6 +13,7 @@ const MARK = `<circle cx="111" cy="60" r="43" fill="#D45B38"/><circle cx="310" c
 const NAV = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/policies', label: 'Policies' },
+  { to: '/collections', label: 'Collections' },
   { to: '/claims', label: 'Claims' },
   { to: '/customers', label: 'Customers' },
   { to: '/support', label: 'Support Inbox' },

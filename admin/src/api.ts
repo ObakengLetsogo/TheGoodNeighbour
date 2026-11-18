@@ -1,4 +1,4 @@
-import type { AdminPolicy, AuditEvent, BenefitItem, Claim, CoverConfig, CustomerRow, Dashboard, Herd, LegalDoc, LegalSummary, Session, Staff, SupportItem, WaitlistEntry } from './types';
+import type { AdminPolicy, AuditEvent, BenefitItem, Claim, CoverConfig, CustomerRow, Dashboard, Herd, LegalDoc, LegalSummary, Session, Staff, SupportItem, WaitlistEntry, Collections } from './types';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
 const TOKEN_KEY = 'tgn.admin.token';
@@ -63,6 +63,7 @@ export const api = {
     window.open(url, '_blank', 'noopener');
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
+  collections: () => request<Collections>('/collections'),
   waitlist: () => request<WaitlistEntry[]>('/waitlist'),
   removeWaitlist: (id: string) => request<void>(`/waitlist/${id}`, { method: 'DELETE' }),
   cover: () => request<CoverConfig>('/cover'),

@@ -149,6 +149,13 @@ underwritten or approved.
   **encrypted at rest** on disk (`TGN_STORAGE_DIR`, a persistent volume in `deploy/`); only the customer and staff can
   read them, and each staff view is audited. Documents lock once a claim is decided.
 
+- **Delivery planning:** once a claim is approved, staff set a delivery date, time of day (morning, afternoon or any time) and a
+  note for the family. It shows in the app under "When To Expect Us", and the claim shows as delivered when staff mark it.
+- **Collections (staff):** a page listing active covers that are **behind** (fewer payments received than debit dates have passed)
+  and those with a debit due in the next 7 days, with the amount owed. A cover that has missed as many payments as the lapse
+  rule allows is flagged, but lapsing stays a manual staff decision. Missed payments are *inferred from recorded payments*; they
+  become exact once a payment provider reports failed debits.
+
 ## Not built yet
 
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).

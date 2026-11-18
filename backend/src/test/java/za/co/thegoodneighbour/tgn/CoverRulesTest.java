@@ -75,4 +75,29 @@ class CoverRulesTest {
         assertEquals(25_440, CoverRules.personFee(8_480, 10000, 30000));
         assertEquals(1, CoverRules.personFee(3, 4000, 10000));           // 1.2 rounds to 1, not truncated to 0 per factor
     }
+
+    @Test void debitDatesThatHavePassedAreCountedFromTheMonthAfterCoverStarted() {
+        LocalDate start = LocalDate.of(2026, 1, 10);
+        assertEquals(List.of(LocalDate.of(2026, 1, 25), LocalDate.of(2026, 2, 25), LocalDate.of(2026, 3, 25)), CoverRules.dueDates(start, 25, LocalDate.of(2026, 4, 10)));
+        assertEquals(2, CoverRules.dueDates(start, 25, LocalDate.of(2026, 3, 25)).size());      // a debit due today is not late yet
+        assertEquals(3, CoverRules.dueDates(start, 25, LocalDate.of(2026, 3, 26)).size());
+        assertTrue(CoverRules.dueDates(start, 25, start).isEmpty());
+        // started on the debit day itself: that day's payment was the first one, so the next is a month later
+        assertEquals(List.of(LocalDate.of(2026, 2, 25)), CoverRules.dueDates(LocalDate.of(2026, 1, 25), 25, LocalDate.of(2026, 3, 1)));
+        // a debit day of 31 falls on the last day of shorter months
+        assertEquals(List.of(LocalDate.of(2026, 1, 31), LocalDate.of(2026, 2, 28), LocalDate.of(2026, 3, 31)), CoverRules.dueDates(start, 31, LocalDate.of(2026, 4, 5)));
+    }
+
+    @Test void missedPaymentsAreDebitsPassedLessPaymentsReceived() {
+        List<LocalDate> dues = CoverRules.dueDates(LocalDate.of(2026, 1, 10), 25, LocalDate.of(2026, 4, 10));   // 3 passed, so 4 payments owed with the first
+        assertEquals(0, CoverRules.missedPayments(dues, 4));
+        assertEquals(0, CoverRules.missedPayments(dues, 6));            // paid ahead is never negative
+        assertEquals(1, CoverRules.missedPayments(dues, 3));
+        assertEquals(2, CoverRules.missedPayments(dues, 2));
+        assertEquals(4, CoverRules.missedPayments(dues, 0));
+        assertNull(CoverRules.oldestUnpaid(dues, 0));
+        assertEquals(LocalDate.of(2026, 3, 25), CoverRules.oldestUnpaid(dues, 1));
+        assertEquals(LocalDate.of(2026, 2, 25), CoverRules.oldestUnpaid(dues, 2));
+        assertEquals(LocalDate.of(2026, 1, 25), CoverRules.oldestUnpaid(dues, 4));   // never earlier than the first debit
+    }
 }

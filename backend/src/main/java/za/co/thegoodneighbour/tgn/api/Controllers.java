@@ -156,6 +156,7 @@ public final class Controllers {
         @GetMapping("/me") public StaffDto me(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s) { return StaffAuthService.toDto(s); }
         @GetMapping("/dashboard") public Dashboard dashboard() { return policies.dashboard(claims.openCount()); }
 
+        @GetMapping("/collections") public CollectionsDto collections() { return policies.collections(); }
         @GetMapping("/policies") public List<AdminPolicyDto> policies(@RequestParam(required = false) String status) { return policies.adminList(status); }
         @GetMapping("/policies/{id}") public AdminPolicyDto policy(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id) { return policies.adminGet(s, id); }
         @PostMapping("/policies/{id}/status")

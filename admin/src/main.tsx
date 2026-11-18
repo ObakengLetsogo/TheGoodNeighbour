@@ -13,6 +13,7 @@ import { CustomersPage } from './pages/Customers';
 import { EconomicsPage } from './pages/Economics';
 import { HerdPage } from './pages/Herd';
 import { LegalPage } from './pages/Legal';
+import { CollectionsPage } from './pages/Collections';
 import { SupportPage } from './pages/Support';
 import { WaitlistPage } from './pages/Waitlist';
 import { PolicyPage } from './pages/Policy';
@@ -30,6 +31,7 @@ function Gate() {
         <Route path="policies" element={<PoliciesPage />} />
         <Route path="policies/:id" element={<PolicyPage />} />
         <Route path="claims" element={<ClaimsPage />} />
+        <Route path="collections" element={<CollectionsPage />} />
         <Route path="cover" element={<CoverPage />} />
         <Route path="herd" element={<HerdPage />} />
         <Route path="customers" element={<CustomersPage />} />

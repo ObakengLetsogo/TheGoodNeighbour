@@ -1,6 +1,8 @@
 package za.co.thegoodneighbour.tgn.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.time.Period;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
@@ -70,6 +72,33 @@ public final class CoverRules {
     /** True while a cancellation is inside the cooling-off period that follows the start of cover. */
     public static boolean withinCoolingOff(LocalDate coverStarted, int coolingOffDays, LocalDate today) {
         return coverStarted != null && !today.isAfter(coverStarted.plusDays(coolingOffDays));
+    }
+
+    /**
+     * The debit dates that have already passed for a cover: the first debit day after cover started, then every month,
+     * stopping before today (a debit due today isn't late yet). The first payment, taken when cover started, is not in this list.
+     */
+    public static List<LocalDate> dueDates(LocalDate coverStarted, int debitDay, LocalDate today) {
+        List<LocalDate> out = new ArrayList<>();
+        LocalDate month = coverStarted.withDayOfMonth(1);
+        while (true) {
+            LocalDate due = month.withDayOfMonth(Math.min(debitDay, month.lengthOfMonth()));
+            if (!due.isBefore(today)) break;
+            if (due.isAfter(coverStarted)) out.add(due);
+            month = month.plusMonths(1);
+        }
+        return out;
+    }
+
+    /** Payments owed so far (the first one plus one per passed debit date) less payments actually received. Never negative. */
+    public static int missedPayments(List<LocalDate> dueDates, long paymentsReceived) {
+        return (int) Math.max(0, 1 + dueDates.size() - paymentsReceived);
+    }
+
+    /** The oldest debit date that is still unpaid, assuming payments were made in order. Null when nothing is missed. */
+    public static LocalDate oldestUnpaid(List<LocalDate> dueDates, int missed) {
+        if (missed <= 0 || dueDates.isEmpty()) return null;
+        return dueDates.get(Math.max(0, dueDates.size() - missed));
     }
 
     static ApiException reject(String message) { return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, message); }

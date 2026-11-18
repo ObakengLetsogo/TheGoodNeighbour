@@ -211,4 +211,15 @@ class DocumentFlowTest {
         assertEquals(422, call("POST", "/api/admin/claims/" + claimId + "/delivery", s, body).statusCode());           // already delivered
         assertTrue(call("GET", "/api/admin/audit", s, null).body().contains("claim.delivery.scheduled"));
     }
+
+    @Test void collectionsViewIsStaffOnlyAndListsActiveCoversThatAreDue() throws Exception {
+        String t = customer(), s = staff();
+        assertEquals(401, call("GET", "/api/admin/collections", t, null).statusCode());
+        claim(t, s);   // an active cover paid up to date
+        JsonNode view = ok(call("GET", "/api/admin/collections", s, null), 200);
+        assertTrue(view.get("active").asInt() >= 1);
+        assertEquals(2, view.get("lapseAfter").asInt());
+        assertEquals(0, view.get("behind").asInt());        // nothing can be behind on day one
+        for (JsonNode row : view.get("rows")) assertEquals(0, row.get("missed").asInt());
+    }
 }

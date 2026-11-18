@@ -354,6 +354,39 @@ public class PolicyService {
                 all.stream().filter(p -> p.getReinstateRequestedAt() != null && "lapsed".equals(p.getStatus())).count());
     }
 
+    /**
+     * Who to chase. Covers behind on payments (fewer payments received than debit dates passed) and covers with a debit due in the
+     * next week. Lapsing is still a staff decision: this only shows who has reached the limit.
+     */
+    @Transactional(readOnly = true)
+    public CollectionsDto collections() {
+        LocalDate today = today();
+        int lapseAfter = cover.config().getLapseAfterMissedPayments();
+        List<CollectionRowDto> rows = new ArrayList<>();
+        long active = 0, owed = 0, dueSoonCents = 0;
+        for (Policy p : policies.findAll()) {
+            if (!"active".equals(p.getStatus()) || p.getStartDate() == null) continue;
+            active++;
+            List<LocalDate> dues = CoverRules.dueDates(LocalDate.parse(p.getStartDate()), p.getDebitDay(), today);
+            long received = payments.findByPolicyIdOrderByCreatedAtDesc(p.getId()).stream()
+                    .mapToLong(x -> "collected".equals(x.getStatus()) ? 1 : "reversed".equals(x.getStatus()) ? -1 : 0).sum();
+            int missed = CoverRules.missedPayments(dues, received);
+            String next = nextDebitDate(p);
+            boolean soon = next != null && !LocalDate.parse(next).isAfter(today.plusDays(7));
+            if (missed == 0 && !soon) continue;
+            LocalDate oldest = CoverRules.oldestUnpaid(dues, missed);
+            long owedHere = missed * p.getMonthlyTotalCents();
+            owed += owedHere;
+            if (soon && missed == 0) dueSoonCents += p.getMonthlyTotalCents();
+            AppUser u = users.findById(p.getUserId()).orElse(null);
+            rows.add(new CollectionRowDto(p.getId(), p.getReference(), p.getHolderName(), u == null ? "" : u.getPhone(), p.getMonthlyTotalCents(), p.getDebitDay(), next,
+                    (int) received, missed, oldest == null ? null : oldest.toString(), owedHere, missed >= lapseAfter, soon));
+        }
+        rows.sort(java.util.Comparator.comparingInt(CollectionRowDto::missed).reversed().thenComparing(r -> r.nextDebitDate() == null ? "" : r.nextDebitDate()));
+        return new CollectionsDto(rows, active, rows.stream().filter(r -> r.missed() > 0).count(), rows.stream().filter(CollectionRowDto::shouldLapse).count(),
+                rows.stream().filter(r -> r.dueSoon() && r.missed() == 0).count(), owed, dueSoonCents, lapseAfter);
+    }
+
     // ---------------- helpers ----------------
 
     private static long count(List<Policy> all, String status) { return all.stream().filter(p -> status.equals(p.getStatus())).count(); }
