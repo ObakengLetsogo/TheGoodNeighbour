@@ -1,6 +1,6 @@
 import { config } from '../config';
 import type {
-  ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
+  AppNotification, Inbox, ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
   QuoteMemberInput, Session, SupportRequest, User,
 } from '../types';
 import { KEYS, readJSON, removeKey, writeJSON } from './storage';
@@ -155,6 +155,13 @@ export const authService = {
     return updated;
   },
 };
+
+export const notificationService = {
+  list: () => request<Inbox>('/api/me/notifications'),
+  markRead: (id: string) => request<void>(`/api/me/notifications/${id}/read`, { method: 'POST' }),
+  markAllRead: () => request<void>('/api/me/notifications/read-all', { method: 'POST' }),
+};
+export type { AppNotification };
 
 export const accountService = {
   me: async (): Promise<Me> => {

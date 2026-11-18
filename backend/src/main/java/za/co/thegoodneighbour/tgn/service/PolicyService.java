@@ -32,10 +32,12 @@ public class PolicyService {
     private final OtpService otp;
     private final SupportRequestRepository support;
     private final Clock clock;
+    private final NotificationService inbox;
 
     public PolicyService(PolicyRepository policies, PaymentRecordRepository payments, AppUserRepository users, CoverService cover,
-                         AuditService audit, DebitOrderGateway debitOrders, LegalService legal, OtpService otp, SupportRequestRepository support, Clock clock) {
-        this.policies = policies; this.payments = payments; this.users = users; this.cover = cover; this.audit = audit;
+                         AuditService audit, DebitOrderGateway debitOrders, LegalService legal, OtpService otp, SupportRequestRepository support, Clock clock,
+                         NotificationService inbox) {
+        this.inbox = inbox; this.policies = policies; this.payments = payments; this.users = users; this.cover = cover; this.audit = audit;
         this.debitOrders = debitOrders; this.legal = legal; this.otp = otp; this.support = support; this.clock = clock;
     }
 
@@ -312,6 +314,7 @@ public class PolicyService {
         if ("lapsed".equals(c.status())) p.markLapsed(today());
         if ("cancelled".equals(c.status())) { p.markCancelled(today()); resolveRequests(p, "cancellation_request", "Cancelled by staff."); }
         audit.record(staff.getEmail(), "policy.status", "policy", id, from + " -> " + c.status() + (c.note() == null ? "" : ": " + c.note()));
+        notifyStatus(p, c.status());
         return new AdminPolicyDto(toDto(policies.save(p), true), customer(p));
     }
 
@@ -334,6 +337,7 @@ public class PolicyService {
             }
             default -> { }
         }
+        String statusBefore = p.getStatus();
         payments.save(new PaymentRecord(p.getId(), r.amountCents(), r.paidOn(), "collected", "manual", r.reference().trim(), staff.getEmail()));
         if ("approved".equals(p.getStatus()) || "lapsed".equals(p.getStatus())) {
             p.activate(today, today.plusDays(cfg.getNaturalWaitingDays()));
@@ -342,6 +346,12 @@ public class PolicyService {
         }
         if ("active".equals(p.getStatus())) resolveRequests(p, "reinstatement_request", "Reinstated by a recorded payment.");
         audit.record(staff.getEmail(), "payment.recorded", "policy", id, CoverRules.rand(r.amountCents()) + " ref " + r.reference() + " (manual)");
+        boolean started = "active".equals(p.getStatus()) && !"active".equals(statusBefore);
+        if (started) inbox.notify(p.getUserId(), "cover", "lapsed".equals(statusBefore) ? "Your cover is back" : "Your cover is active",
+                "lapsed".equals(statusBefore) ? "We received your payment and your cover is active again. Thank you."
+                        : "We received your first payment. Accidents are covered " + (cfg.getAccidentalWaitingDays() == 0 ? "from today" : "from " + CoverRules.friendlyDate(today.plusDays(cfg.getAccidentalWaitingDays()).toString()))
+                                + " and natural causes from " + CoverRules.friendlyDate(p.getWaitingEndsOn()) + ".", "policy", p.getId());
+        inbox.notify(p.getUserId(), "payment", "Payment received", "We received " + CoverRules.rand(r.amountCents()) + ". Thank you.", "policy", p.getId());
         return new AdminPolicyDto(toDto(policies.save(p), true), customer(p));
     }
 
@@ -385,6 +395,20 @@ public class PolicyService {
         rows.sort(java.util.Comparator.comparingInt(CollectionRowDto::missed).reversed().thenComparing(r -> r.nextDebitDate() == null ? "" : r.nextDebitDate()));
         return new CollectionsDto(rows, active, rows.stream().filter(r -> r.missed() > 0).count(), rows.stream().filter(CollectionRowDto::shouldLapse).count(),
                 rows.stream().filter(r -> r.dueSoon() && r.missed() == 0).count(), owed, dueSoonCents, lapseAfter);
+    }
+
+    /** Tells the customer, in plain words, when staff move their cover. */
+    private void notifyStatus(Policy p, String status) {
+        switch (status) {
+            case "approved" -> inbox.notify(p.getUserId(), "cover", "Your application is approved",
+                    "Your cover starts once we receive your first payment of " + CoverRules.rand(p.getMonthlyTotalCents()) + ".", "policy", p.getId());
+            case "declined" -> inbox.notify(p.getUserId(), "cover", "We couldn't approve your application",
+                    "Please open your cover to read why, or contact us and we'll help.", "policy", p.getId());
+            case "lapsed" -> inbox.notify(p.getUserId(), "cover", "Your cover has lapsed",
+                    "Payments were missed. You can reinstate within " + cover.config().getReinstateWithinDays() + " days without a new waiting period. Open your cover to ask us.", "policy", p.getId());
+            case "cancelled" -> inbox.notify(p.getUserId(), "cover", "Your cover was cancelled", "Your cover has been cancelled. If this isn't what you expected, please contact us.", "policy", p.getId());
+            default -> { }
+        }
     }
 
     // ---------------- helpers ----------------

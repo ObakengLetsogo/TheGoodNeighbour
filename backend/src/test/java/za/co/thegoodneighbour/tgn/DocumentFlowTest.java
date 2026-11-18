@@ -222,4 +222,51 @@ class DocumentFlowTest {
         assertEquals(0, view.get("behind").asInt());        // nothing can be behind on day one
         for (JsonNode row : view.get("rows")) assertEquals(0, row.get("missed").asInt());
     }
+
+    private JsonNode inbox(String token) throws Exception { return ok(call("GET", "/api/me/notifications", token, null), 200); }
+    private boolean hasTitle(JsonNode inbox, String title) { for (JsonNode n : inbox.get("items")) if (title.equals(n.get("title").asString())) return true; return false; }
+
+    @Test void customersGetPlainMessagesAsTheirCoverAndClaimMove() throws Exception {
+        String t = customer(), other = customer(), s = staff();
+        assertEquals(0, inbox(t).get("unread").asInt());
+        JsonNode p = ok(call("POST", "/api/policies", t, "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1}],\"holderIdNumber\":\"" + TestData.HOLDER_ID + "\",\"debitDay\":25,\"members\":[]" + consent() + "}"), 201);
+        String pid = p.get("id").asString();
+        ok(call("POST", "/api/admin/policies/" + pid + "/status", s, "{\"status\":\"approved\"}"), 200);
+        assertTrue(hasTitle(inbox(t), "Your application is approved"));
+        ok(call("POST", "/api/admin/policies/" + pid + "/payments", s, "{\"amountCents\":" + p.get("monthlyTotalCents").asLong() + ",\"paidOn\":\"" + TestData.today() + "\",\"reference\":\"EFT-N\"}"), 201);
+        JsonNode box = inbox(t);
+        assertTrue(hasTitle(box, "Your cover is active"));
+        assertTrue(hasTitle(box, "Payment received"));
+        assertEquals(3, box.get("unread").asInt());
+        assertEquals(0, inbox(other).get("items").size());                          // nobody else's messages
+
+        String id = box.get("items").get(0).get("id").asString();
+        assertEquals(204, call("POST", "/api/me/notifications/" + id + "/read", t, null).statusCode());
+        assertEquals(2, inbox(t).get("unread").asInt());
+        assertEquals(404, call("POST", "/api/me/notifications/" + id + "/read", other, null).statusCode());
+        assertEquals(204, call("POST", "/api/me/notifications/read-all", t, null).statusCode());
+        assertEquals(0, inbox(t).get("unread").asInt());
+        assertEquals(401, call("GET", "/api/me/notifications", null, null).statusCode());
+    }
+
+    @Test void switchedOffKindsAreNotAddedButCoverMessagesAre() throws Exception {
+        String t = customer(), s = staff();
+        ok(call("PUT", "/api/me/notifications", t, "{\"claims\":false,\"payments\":false,\"news\":false}"), 200);
+        String claimId = claim(t, s)[0];                                                                     // approve + pay happen inside
+        JsonNode box = inbox(t);
+        assertTrue(hasTitle(box, "Your cover is active"));                                                   // always kept
+        assertFalse(hasTitle(box, "Payment received"));                                                      // switched off
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"under_review\"}"), 200);
+        assertFalse(hasTitle(inbox(t), "We're looking at your claim"));
+        ok(call("PUT", "/api/me/notifications", t, "{\"claims\":true,\"payments\":true,\"news\":false}"), 200);
+        ok(upload(t, claimId, "death_certificate", "c.pdf", pdf("c", 20)), 201);
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"approved\"}"), 200);
+        ok(call("POST", "/api/admin/claims/" + claimId + "/delivery", s, "{\"date\":\"" + TestData.today().plusDays(2) + "\"}"), 200);
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"delivered\"}"), 200);
+        JsonNode after = inbox(t);
+        assertTrue(hasTitle(after, "Your claim is approved"));
+        assertTrue(hasTitle(after, "Your bundle was delivered"));
+        assertTrue(after.toString().contains("Delivery planned for"));
+        assertEquals("claim", after.get("items").get(0).get("refType").asString());
+    }
 }

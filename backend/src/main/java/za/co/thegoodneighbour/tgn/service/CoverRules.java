@@ -101,6 +101,11 @@ public final class CoverRules {
         return dueDates.get(Math.max(0, dueDates.size() - missed));
     }
 
+    /** "2027-05-17" -> "17 May 2027", for messages people read. */
+    public static String friendlyDate(String iso) {
+        return LocalDate.parse(iso).format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.ENGLISH));
+    }
+
     static ApiException reject(String message) { return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, message); }
 
     /** "R2 500" with a non-breaking space for thousands. */

@@ -21,11 +21,13 @@ public class AccountService {
     private final SupportRequestRepository support;
     private final OtpService otp;
     private final AuthService auth;
+    private final za.co.thegoodneighbour.tgn.repo.NotificationRepository notifications;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public AccountService(AppUserRepository users, AuthTokenRepository tokens, PolicyRepository policies, ClaimRepository claims,
-                          SupportRequestRepository support, OtpService otp, AuthService auth) {
-        this.users = users; this.tokens = tokens; this.policies = policies; this.claims = claims; this.support = support; this.otp = otp; this.auth = auth;
+                          SupportRequestRepository support, OtpService otp, AuthService auth,
+                          za.co.thegoodneighbour.tgn.repo.NotificationRepository notifications) {
+        this.notifications = notifications; this.users = users; this.tokens = tokens; this.policies = policies; this.claims = claims; this.support = support; this.otp = otp; this.auth = auth;
     }
 
     @Transactional(readOnly = true)
@@ -132,6 +134,7 @@ public class AccountService {
         }
         tokens.deleteCustomerTokens(user.getId());
         support.deleteByUserId(user.getId());
+        notifications.deleteByUserId(user.getId());
         users.delete(user);
         return new DeleteAccountResult("deleted", "Your account and personal information have been deleted.");
     }

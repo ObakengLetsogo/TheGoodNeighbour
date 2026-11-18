@@ -156,11 +156,17 @@ underwritten or approved.
   rule allows is flagged, but lapsing stays a manual staff decision. Missed payments are *inferred from recorded payments*; they
   become exact once a payment provider reports failed debits.
 
+- **Messages (in-app inbox):** customers get a plain-words message when their application is approved or declined, their cover
+  starts, lapses or is cancelled, a payment is recorded, and at each step of a claim including the planned delivery date. A bell
+  on the Home screen shows how many are unread, and the app checks every minute while open. Cover messages are always kept;
+  payment and claim messages follow the customer's notification settings. **Nothing is sent by SMS or push yet** (that needs
+  an SMS provider), so the inbox is only seen when the app is open.
+
 ## Not built yet
 
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).
   Lapsing is a manual staff action until collections exist.
-- An SMS provider (codes only log in development), push/SMS notifications (preferences are saved but nothing is sent yet).
+- An SMS provider (codes only log in development), push/SMS notifications (preferences decide what appears in the in-app inbox; nothing is sent outside the app yet).
 - Database migrations (Flyway/Liquibase), staff roles beyond a single admin role.
 - Policy documents (claims already take uploads).
 - Scheduling and tracking of livestock deliveries and herd movements (the herd is a count plus a promise limit).

@@ -33,10 +33,11 @@ public class ClaimService {
     private final ClaimDocumentRepository documents;
     private final DocumentStore store;
     private final Clock clock;
+    private final NotificationService inbox;
 
     public ClaimService(ClaimRepository claims, PolicyRepository policies, CoverService cover, AuditService audit, ClaimDocumentRepository documents,
-                        DocumentStore store, Clock clock) {
-        this.claims = claims; this.policies = policies; this.cover = cover; this.audit = audit; this.documents = documents; this.store = store; this.clock = clock;
+                        DocumentStore store, Clock clock, NotificationService inbox) {
+        this.inbox = inbox; this.claims = claims; this.policies = policies; this.cover = cover; this.audit = audit; this.documents = documents; this.store = store; this.clock = clock;
     }
 
     @Transactional
@@ -96,6 +97,13 @@ public class ClaimService {
         String from = c.getStatus();
         c.setStatus(change.status(), change.note());
         audit.record(staff.getEmail(), "claim.status", "claim", id, from + " -> " + change.status() + (change.note() == null ? "" : ": " + change.note()));
+        switch (change.status()) {
+            case "under_review" -> inbox.notify(c.getUserId(), "claim", "We're looking at your claim", "Claim " + c.getReference() + " is being reviewed. We'll be in touch if we need anything.", "claim", id);
+            case "approved" -> inbox.notify(c.getUserId(), "claim", "Your claim is approved", "We'll call to agree a delivery date for " + c.getReference() + ".", "claim", id);
+            case "declined" -> inbox.notify(c.getUserId(), "claim", "We couldn't approve your claim", "Please open claim " + c.getReference() + " to read why. We're here if you'd like to talk it through.", "claim", id);
+            case "delivered" -> inbox.notify(c.getUserId(), "claim", "Your bundle was delivered", "Claim " + c.getReference() + " is complete. We're thinking of you and your family.", "claim", id);
+            default -> { }
+        }
         return toDto(claims.save(c), ref(c));
     }
 
@@ -111,6 +119,7 @@ public class ClaimService {
         String note = in.note() == null || in.note().isBlank() ? null : in.note().trim();
         c.schedule(in.date(), in.window() == null ? "day" : in.window(), note);
         audit.record(staff.getEmail(), "claim.delivery.scheduled", "claim", id, in.date() + " (" + (in.window() == null ? "day" : in.window()) + ")" + (note == null ? "" : ": " + note));
+        inbox.notify(c.getUserId(), "claim", "Delivery planned for " + CoverRules.friendlyDate(in.date()), "We plan to deliver on " + CoverRules.friendlyDate(in.date()) + ". Open claim " + c.getReference() + " for details.", "claim", id);
         return toDto(claims.save(c), ref(c));
     }
 

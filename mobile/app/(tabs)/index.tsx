@@ -10,6 +10,7 @@ import { formatDate, formatZAR, greeting } from '../../src/lib/format';
 import { POLICY_STATUS_LABEL } from '../../src/lib/status';
 import { useAuth } from '../../src/store/AuthContext';
 import { useCover } from '../../src/store/CoverContext';
+import { useNotifications } from '../../src/store/NotificationsContext';
 import { useOptions } from '../../src/store/OptionsContext';
 import { accents, colors, radii, spacing, type AccentName } from '../../src/theme';
 
@@ -25,6 +26,7 @@ export default function Home() {
   const { current, policies } = useCover();
   const lapsed = policies.find((p) => p.status === 'lapsed' && p.reinstateUntil && new Date(`${p.reinstateUntil}T23:59:59`) >= new Date());
   const { user, smsEnabled } = useAuth();
+  const { inbox } = useNotifications();
   const groceryFrom = options ? Math.min(...options.items.filter((i) => i.kind === 'grocery').map((i) => i.valueCents)) : null;
 
   return (
@@ -34,6 +36,10 @@ export default function Home() {
           <LogoMark size={36} />
           <Text variant="displayM" style={{ fontSize: 24, lineHeight: 28 }}>TGN</Text>
         </View>
+        <Pressable onPress={() => router.push('/notifications')} accessibilityRole="button" accessibilityLabel={inbox.unread > 0 ? `Messages, ${inbox.unread} unread` : 'Messages'} style={styles.bell}>
+          <Icon name={inbox.unread > 0 ? 'bell-badge-outline' : 'bell-outline'} size={26} color={colors.ink} />
+          {inbox.unread > 0 ? <View style={styles.badge}><Text variant="label" style={styles.badgeText}>{inbox.unread > 9 ? '9+' : inbox.unread}</Text></View> : null}
+        </Pressable>
       </View>
 
       <EditorialHeading lead={`${greeting()}, `} accent="Neighbour" trail="." variant="displayM" style={{ marginTop: spacing.sm }} />
@@ -147,6 +153,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 60 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  bell: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 3, right: 1, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: colors.ember, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: colors.white, fontSize: 11, lineHeight: 14, fontFamily: 'Urbanist_700Bold' },
   panel: { marginTop: spacing.xl, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.lg, overflow: 'hidden' },
   blob: { position: 'absolute', width: 170, height: 170, borderRadius: radii.pill, opacity: 0.25 },
   verify: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: accents.gold.tint, borderRadius: radii.md, padding: spacing.md, marginTop: spacing.lg },

@@ -124,6 +124,10 @@ public final class Dtos {
     public record ScheduleDelivery(@NotBlank @Pattern(regexp = DATE) String date, @Pattern(regexp = "^(morning|afternoon|day)$") String window,
                                    @Size(max = 1000) String note) {}
 
+    // ---------- Notifications ----------
+    public record NotificationDto(String id, String category, String title, String body, String refType, String refId, boolean read, String createdAt) {}
+    public record NotificationsDto(long unread, List<NotificationDto> items) {}
+
     // ---------- Support ----------
     public record SupportRequestIn(@NotBlank @Pattern(regexp = "^(policy_enquiry|claim_enquiry|problem)$") String kind, String reference,
                                    @NotBlank @Size(min = 5, max = 4000) String message, @NotBlank @Pattern(regexp = PHONE) String contactPhone) {}

@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/store/AuthContext';
 import { CoverProvider } from '../src/store/CoverContext';
+import { NotificationsProvider } from '../src/store/NotificationsContext';
 import { OptionsProvider } from '../src/store/OptionsContext';
 import { colors } from '../src/theme';
 
@@ -38,6 +39,7 @@ function Routes() {
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="builder" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="cancel-cover" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="verify-phone" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings/password" />
@@ -66,8 +68,10 @@ export default function RootLayout() {
         <AuthProvider>
           <OptionsProvider>
             <CoverProvider>
-              <StatusBar style="dark" />
-              <Routes />
+              <NotificationsProvider>
+                <StatusBar style="dark" />
+                <Routes />
+              </NotificationsProvider>
             </CoverProvider>
           </OptionsProvider>
         </AuthProvider>

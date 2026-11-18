@@ -62,7 +62,13 @@ public final class Controllers {
     public static class MeController {
         private final AuthService auth;
         private final AccountService account;
-        public MeController(AuthService auth, AccountService account) { this.auth = auth; this.account = account; }
+        private final NotificationService inbox;
+        public MeController(AuthService auth, AccountService account, NotificationService inbox) { this.auth = auth; this.account = account; this.inbox = inbox; }
+        @GetMapping("/notifications") public NotificationsDto notifications(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return inbox.list(user); }
+        @PostMapping("/notifications/read-all") @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void readAll(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { inbox.markAllRead(user); }
+        @PostMapping("/notifications/{id}/read") @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void readOne(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @PathVariable String id) { inbox.markRead(user, id); }
         @GetMapping public MeDto me(@RequestAttribute(WebConfig.USER_ATTR) AppUser user) { return account.me(user); }
         @PutMapping public UserDto update(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody ProfileRequest r) { return auth.updateProfile(user, r); }
         @PostMapping("/password") public SessionDto password(@RequestAttribute(WebConfig.USER_ATTR) AppUser user, @Valid @RequestBody ChangePasswordIn r) { return account.changePassword(user, r); }

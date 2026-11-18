@@ -302,3 +302,15 @@ export interface SupportRequest {
 }
 
 export const PROVINCES = ['Gauteng', 'Limpopo', 'Mpumalanga', 'North West', 'Free State', 'KwaZulu-Natal', 'Eastern Cape', 'Northern Cape', 'Western Cape'];
+
+export interface AppNotification {
+  id: string;
+  category: 'cover' | 'payment' | 'claim';
+  title: string;
+  body: string;
+  refType?: 'policy' | 'claim' | null;
+  refId?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+export interface Inbox { unread: number; items: AppNotification[] }
