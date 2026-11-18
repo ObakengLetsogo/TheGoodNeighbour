@@ -119,7 +119,10 @@ public final class Dtos {
     public record ClaimDto(String id, String reference, String policyId, String policyReference, String deceasedName, String dateOfDeath,
                            String causeOfDeath, String claimantName, String claimantPhone, String status, boolean withinWaitingPeriod,
                            boolean overAgeLimit, String staffNote, DeliveryIn delivery, BundleVersionDto bundle, String createdAt, String updatedAt,
-                           List<ClaimDocumentDto> documents, List<String> missingDocuments) {}
+                           List<ClaimDocumentDto> documents, List<String> missingDocuments,
+                           String deliveryDate, String deliveryWindow, String deliveryNote, String deliveredAt) {}
+    public record ScheduleDelivery(@NotBlank @Pattern(regexp = DATE) String date, @Pattern(regexp = "^(morning|afternoon|day)$") String window,
+                                   @Size(max = 1000) String note) {}
 
     // ---------- Support ----------
     public record SupportRequestIn(@NotBlank @Pattern(regexp = "^(policy_enquiry|claim_enquiry|problem)$") String kind, String reference,

@@ -183,4 +183,32 @@ class DocumentFlowTest {
         assertEquals(0, ok(call("GET", "/api/claims", t, null), 200).get(0).get("documents").size());
         assertEquals(404, bytes("/api/claims/" + claimId + "/documents/" + docId + "/file", t).statusCode());
     }
+
+    @Test void staffScheduleADeliveryOnlyForApprovedClaimsAndTheFamilySeesIt() throws Exception {
+        String t = customer(), s = staff();
+        String claimId = claim(t, s)[0];
+        String day = TestData.today().plusDays(3).toString();
+        String body = "{\"date\":\"" + day + "\",\"window\":\"morning\",\"note\":\"Please have someone home.\"}";
+        assertEquals(422, call("POST", "/api/admin/claims/" + claimId + "/delivery", s, body).statusCode());           // not approved yet
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"under_review\"}"), 200);
+        ok(upload(t, claimId, "death_certificate", "c.pdf", pdf("c", 20)), 201);
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"approved\"}"), 200);
+
+        assertEquals(422, call("POST", "/api/admin/claims/" + claimId + "/delivery", s, "{\"date\":\"" + TestData.today().minusDays(1) + "\"}").statusCode());   // the past
+        assertEquals(400, call("POST", "/api/admin/claims/" + claimId + "/delivery", s, "{\"date\":\"" + day + "\",\"window\":\"midnight\"}").statusCode());   // unknown window
+        assertEquals(401, call("POST", "/api/admin/claims/" + claimId + "/delivery", t, body).statusCode());              // customers can't
+
+        JsonNode scheduled = ok(call("POST", "/api/admin/claims/" + claimId + "/delivery", s, body), 200);
+        assertEquals(day, scheduled.get("deliveryDate").asString());
+        JsonNode mine = ok(call("GET", "/api/claims", t, null), 200).get(0);
+        assertEquals(day, mine.get("deliveryDate").asString());
+        assertEquals("morning", mine.get("deliveryWindow").asString());
+        assertEquals("Please have someone home.", mine.get("deliveryNote").asString());
+        assertTrue(mine.get("deliveredAt").isNull());
+
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"delivered\"}"), 200);
+        assertFalse(ok(call("GET", "/api/claims", t, null), 200).get(0).get("deliveredAt").isNull());
+        assertEquals(422, call("POST", "/api/admin/claims/" + claimId + "/delivery", s, body).statusCode());           // already delivered
+        assertTrue(call("GET", "/api/admin/audit", s, null).body().contains("claim.delivery.scheduled"));
+    }
 }

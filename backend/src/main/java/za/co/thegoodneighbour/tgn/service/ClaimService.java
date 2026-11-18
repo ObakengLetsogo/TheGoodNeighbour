@@ -99,6 +99,21 @@ public class ClaimService {
         return toDto(claims.save(c), ref(c));
     }
 
+    /** Staff pick the day (and a rough time) the family can expect the bundle. Only for approved claims, and never in the past. */
+    @Transactional
+    public ClaimDto scheduleDelivery(StaffUser staff, String id, ScheduleDelivery in) {
+        Claim c = claims.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that claim."));
+        if (!"approved".equals(c.getStatus()))
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "A delivery can only be scheduled once the claim is approved, and not after it has been delivered.");
+        LocalDate day;
+        try { day = LocalDate.parse(in.date()); } catch (java.time.DateTimeException e) { throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "That date doesn't look right."); }
+        if (day.isBefore(LocalDate.now(clock))) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The delivery date can't be in the past.");
+        String note = in.note() == null || in.note().isBlank() ? null : in.note().trim();
+        c.schedule(in.date(), in.window() == null ? "day" : in.window(), note);
+        audit.record(staff.getEmail(), "claim.delivery.scheduled", "claim", id, in.date() + " (" + (in.window() == null ? "day" : in.window()) + ")" + (note == null ? "" : ": " + note));
+        return toDto(claims.save(c), ref(c));
+    }
+
     private String ref(Claim c) { return policies.findById(c.getPolicyId()).map(Policy::getReference).orElse(""); }
     private static String iso(java.time.Instant t) { return DateTimeFormatter.ISO_INSTANT.format(t.atOffset(ZoneOffset.UTC)); }
 
@@ -108,7 +123,8 @@ public class ClaimService {
                 c.getClaimantName(), c.getClaimantPhone(), c.getStatus(), c.isWithinWaitingPeriod(), c.isOverAgeLimit(), c.getStaffNote(),
                 new DeliveryIn(d.recipientName(), d.recipientPhone(), d.addressLine(), d.suburb(), d.city(), d.province(), d.postalCode(), d.instructions()),
                 cover.readOne(c.getBundleJson()), iso(c.getCreatedAt()), iso(c.getUpdatedAt()),
-                documents.findByClaimIdOrderByCreatedAtAsc(c.getId()).stream().map(ClaimService::toDto).toList(), missing(c));
+                documents.findByClaimIdOrderByCreatedAtAsc(c.getId()).stream().map(ClaimService::toDto).toList(), missing(c),
+                c.getDeliveryDate(), c.getDeliveryWindow(), c.getDeliveryNote(), c.getDeliveredAt() == null ? null : iso(c.getDeliveredAt()));
     }
 
     // ---------------- documents ----------------

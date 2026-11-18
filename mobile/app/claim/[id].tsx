@@ -20,6 +20,8 @@ import { useCover } from '../../src/store/CoverContext';
 import { DOCUMENT_LABEL, type ClaimDocumentType } from '../../src/types';
 import { colors, radii, spacing } from '../../src/theme';
 
+const WINDOW_LABEL = { morning: 'In the morning', afternoon: 'In the afternoon', day: 'Some time during the day' } as const;
+
 export default function ClaimDetails() {
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
   const { claims, refresh } = useCover();
@@ -126,6 +128,30 @@ export default function ClaimDetails() {
       <Card accent="ember" tabLabel="Your bundle">
         <BundleSummary lines={claim.bundle.lines} showValues={false} />
       </Card>
+
+      {claim.status === 'approved' || claim.status === 'delivered' ? (
+        <>
+          <Text variant="section" style={styles.h}>{claim.status === 'delivered' ? 'Delivered' : 'When To Expect Us'}</Text>
+          <Card accent="olive" tabLabel={claim.status === 'delivered' ? 'Done' : 'Delivery date'}>
+            {claim.status === 'delivered' ? (
+              <View style={{ gap: spacing.xs }}>
+                <Text variant="cardTitle">Your bundle was delivered</Text>
+                {claim.deliveredAt ? <Text variant="body">{formatDateLong(claim.deliveredAt)}</Text> : null}
+                <Text variant="bodyS">We're thinking of you and your family.</Text>
+              </View>
+            ) : claim.deliveryDate ? (
+              <View style={{ gap: spacing.xs }}>
+                <Text variant="cardTitle">{formatDateLong(claim.deliveryDate)}</Text>
+                <Text variant="body">{WINDOW_LABEL[claim.deliveryWindow ?? 'day']}</Text>
+                {claim.deliveryNote ? <Text variant="bodyS" style={{ marginTop: spacing.xs }}>{claim.deliveryNote}</Text> : null}
+                <Text variant="bodyS" style={{ marginTop: spacing.xs }}>We'll call {claim.delivery.recipientName} before we arrive. If the date doesn't suit, please tell us.</Text>
+              </View>
+            ) : (
+              <Text variant="body">Your claim is approved. We'll call to agree a delivery date with you.</Text>
+            )}
+          </Card>
+        </>
+      ) : null}
 
       <Text variant="section" style={styles.h}>Delivery</Text>
       <Card accent="berry" tabLabel="To">

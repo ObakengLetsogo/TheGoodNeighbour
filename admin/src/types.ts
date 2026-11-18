@@ -28,6 +28,7 @@ export interface Claim {
   causeOfDeath: 'natural' | 'accidental'; claimantName: string; claimantPhone: string; status: ClaimStatus;
   withinWaitingPeriod: boolean; overAgeLimit: boolean; staffNote?: string | null; delivery: Delivery; bundle: BundleVersion;
   documents: ClaimDocument[]; missingDocuments: ClaimDocumentType[];
+  deliveryDate?: string | null; deliveryWindow?: 'morning' | 'afternoon' | 'day' | null; deliveryNote?: string | null; deliveredAt?: string | null;
   createdAt: string; updatedAt: string;
 }
 export interface AgeBand { fromAge: number; toAge: number; multiplierBps: number }

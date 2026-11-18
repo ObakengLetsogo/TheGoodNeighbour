@@ -31,6 +31,11 @@ public class Claim {
     @Column(columnDefinition = "text") private String bundleJson;
     @Embedded private Delivery delivery;
     @Column(length = 2000) private String staffNote;
+    /** When staff plan to deliver (yyyy-mm-dd), a window such as "morning", and a note the family can read. */
+    private String deliveryDate;
+    private String deliveryWindow;
+    @Column(length = 1000) private String deliveryNote;
+    private Instant deliveredAt;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 
@@ -44,7 +49,12 @@ public class Claim {
         this.reference = "TGN-C-" + id.substring(0, 6).toUpperCase();
     }
 
-    public void setStatus(String status, String note) { this.status = status; if (note != null) this.staffNote = note; this.updatedAt = Instant.now(); }
+    public void setStatus(String status, String note) {
+        this.status = status; if (note != null) this.staffNote = note; this.updatedAt = Instant.now();
+        if ("delivered".equals(status)) this.deliveredAt = this.updatedAt;
+    }
+    public void schedule(String date, String window, String note) { this.deliveryDate = date; this.deliveryWindow = window; this.deliveryNote = note; this.updatedAt = Instant.now(); }
+
 
     public String getId() { return id; }
     public String getReference() { return reference; }
@@ -63,6 +73,10 @@ public class Claim {
     public String getBundleJson() { return bundleJson; }
     public Delivery getDelivery() { return delivery; }
     public String getStaffNote() { return staffNote; }
+    public String getDeliveryDate() { return deliveryDate; }
+    public String getDeliveryWindow() { return deliveryWindow; }
+    public String getDeliveryNote() { return deliveryNote; }
+    public Instant getDeliveredAt() { return deliveredAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }

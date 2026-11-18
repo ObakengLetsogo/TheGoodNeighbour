@@ -84,6 +84,7 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
             <dt>Submitted</dt><dd>{dateShort(c.createdAt)}</dd>
             {c.staffNote ? <><dt>Staff note</dt><dd>{c.staffNote}</dd></> : null}
           </dl>
+          {c.status === 'approved' || c.status === 'delivered' ? <DeliveryPlan c={c} onChange={onChange} /> : null}
           {pending ? (
             <div className="grid" style={{ gap: 10 }}>
               <label className="f">Reason (shown to the customer)<textarea value={note} onChange={(e) => setNote(e.target.value)} /></label>
@@ -101,5 +102,34 @@ function ClaimRows({ c, open, onToggle, onChange }: { c: Claim; open: boolean; o
         </td></tr>
       ) : null}
     </>
+  );
+}
+
+const WINDOWS: [string, string][] = [['day', 'Some time during the day'], ['morning', 'In the morning'], ['afternoon', 'In the afternoon']];
+
+/** Staff pick the day the family can expect the bundle. The family sees it in the app. */
+function DeliveryPlan({ c, onChange }: { c: Claim; onChange: (c: Claim) => void }) {
+  const [date, setDate] = useState(c.deliveryDate ?? '');
+  const [window, setWindow] = useState<string>(c.deliveryWindow ?? 'day');
+  const [note, setNote] = useState(c.deliveryNote ?? '');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string>();
+  if (c.status === 'delivered') return <p className="muted" style={{ marginBottom: 12 }}>Delivered{c.deliveredAt ? ` on ${dateShort(c.deliveredAt)}` : ''}{c.deliveryDate ? ` (planned for ${dateShort(c.deliveryDate)})` : ''}.</p>;
+  const save = async () => {
+    setBusy(true); setMsg(undefined);
+    try { onChange(await api.scheduleDelivery(c.id, date, window, note || undefined)); } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <h3>Delivery plan</h3>
+      <p className="muted small">The family sees this in the app. Call them first to agree the day.</p>
+      <div className="grid two" style={{ marginTop: 8 }}>
+        <label className="f">Delivery date<input type="date" value={date} min={new Date().toLocaleDateString('en-CA')} onChange={(e) => setDate(e.target.value)} /></label>
+        <label className="f">Time of day<select value={window} onChange={(e) => setWindow(e.target.value)}>{WINDOWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+      </div>
+      <label className="f" style={{ marginTop: 8 }}>Note for the family (optional)<textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} /></label>
+      <div className="row" style={{ marginTop: 8 }}><button disabled={busy || !date} onClick={save}>{c.deliveryDate ? 'Update Delivery Plan' : 'Save Delivery Plan'}</button>{c.deliveryDate ? <span className="muted small">Planned for {dateShort(c.deliveryDate)}</span> : null}</div>
+      {msg ? <p className="err" role="alert">{msg}</p> : null}
+    </div>
   );
 }

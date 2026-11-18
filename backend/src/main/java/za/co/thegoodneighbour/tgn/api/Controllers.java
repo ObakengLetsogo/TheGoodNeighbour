@@ -168,6 +168,8 @@ public final class Controllers {
         @GetMapping("/claims") public List<ClaimDto> claims() { return claims.adminList(); }
         @GetMapping("/claims/{id}/documents/{docId}/file")
         public org.springframework.http.ResponseEntity<byte[]> claimFile(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @PathVariable String docId) { return fileResponse(claims.adminDownload(s, id, docId)); }
+        @PostMapping("/claims/{id}/delivery")
+        public ClaimDto claimDelivery(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody ScheduleDelivery d) { return claims.scheduleDelivery(s, id, d); }
         @PostMapping("/claims/{id}/status")
         public ClaimDto claimStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return claims.setStatus(s, id, c); }
 

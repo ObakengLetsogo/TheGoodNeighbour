@@ -53,6 +53,7 @@ export const api = {
     request<AdminPolicy>(`/policies/${id}/payments`, post({ amountCents, paidOn, reference })),
   claims: () => request<Claim[]>('/claims'),
   setClaimStatus: (id: string, status: string, note?: string) => request<Claim>(`/claims/${id}/status`, post({ status, note })),
+  scheduleDelivery: (id: string, date: string, window: string, note?: string) => request<Claim>(`/claims/${id}/delivery`, post({ date, window, note })),
   /** Fetches a claim document with the staff token and opens it in a new tab (the server audits each view). */
   openClaimDocument: async (claimId: string, docId: string) => {
     const token = tokenStore.get();

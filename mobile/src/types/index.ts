@@ -241,6 +241,11 @@ export interface Claim {
   documents: ClaimDocument[];
   /** Document types still needed before the claim can be approved. */
   missingDocuments: ClaimDocumentType[];
+  /** When we plan to deliver (yyyy-mm-dd), set by our team once the claim is approved. */
+  deliveryDate?: string | null;
+  deliveryWindow?: 'morning' | 'afternoon' | 'day' | null;
+  deliveryNote?: string | null;
+  deliveredAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
