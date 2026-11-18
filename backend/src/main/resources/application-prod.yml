@@ -11,3 +11,7 @@ spring:
 tgn:
   seed-sample-cover: ${TGN_SEED_SAMPLE_COVER:false}
   sms-mode: ${TGN_SMS_MODE:disabled}
+
+server:
+  # Behind Caddy: use the real visitor address (for rate limits), not the proxy's.
+  forward-headers-strategy: native

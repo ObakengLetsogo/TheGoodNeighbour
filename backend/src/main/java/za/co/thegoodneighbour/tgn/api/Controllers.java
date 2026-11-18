@@ -28,6 +28,15 @@ public final class Controllers {
         }
     }
 
+    /** Public: "tell me when you open". */
+    @RestController @RequestMapping("/api/waitlist")
+    public static class WaitlistController {
+        private final WaitlistService waitlist;
+        public WaitlistController(WaitlistService waitlist) { this.waitlist = waitlist; }
+        @PostMapping @ResponseStatus(HttpStatus.ACCEPTED)
+        public void join(jakarta.servlet.http.HttpServletRequest req, @Valid @RequestBody WaitlistIn in) { waitlist.join(req.getRemoteAddr(), in); }
+    }
+
     @RestController @RequestMapping("/api/legal")
     public static class LegalController {
         private final LegalService legal;
@@ -135,9 +144,11 @@ public final class Controllers {
         private final AdminDirectoryService directory;
         private final LegalService legal;
         private final AuditEventRepository audit;
+        private final WaitlistService waitlist;
 
         public AdminController(StaffAuthService staffAuth, PolicyService policies, ClaimService claims, CoverAdminService coverAdmin,
-                               AdminDirectoryService directory, LegalService legal, AuditEventRepository audit) {
+                               AdminDirectoryService directory, LegalService legal, AuditEventRepository audit, WaitlistService waitlist) {
+            this.waitlist = waitlist;
             this.staffAuth = staffAuth; this.policies = policies; this.claims = claims; this.coverAdmin = coverAdmin; this.directory = directory; this.legal = legal; this.audit = audit;
         }
 
@@ -171,6 +182,9 @@ public final class Controllers {
         @GetMapping("/support") public List<SupportItemDto> support() { return directory.inbox(); }
         @PostMapping("/support/{id}/status")
         public SupportItemDto supportStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return directory.setStatus(s, id, c); }
+        @GetMapping("/waitlist") public List<WaitlistItemDto> waitlist() { return waitlist.list(); }
+        @DeleteMapping("/waitlist/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void waitlistRemove(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id) { waitlist.remove(s, id); }
         @GetMapping("/customers") public List<CustomerDto> customers() { return directory.customers(); }
 
         @GetMapping("/legal") public List<LegalSummaryDto> legalList() { return legal.list(); }

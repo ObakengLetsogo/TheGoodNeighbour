@@ -52,7 +52,7 @@ public class CoverService {
                 cfg.getAgeBands().stream().map(b -> new AgeBandDto(b.fromAge(), b.toAge(), b.multiplierBps())).toList(),
                 cfg.getMinBundleValueCents(), cfg.getMainMinAge(), cfg.getMainMaxAge(), cfg.getMaxMembers(), cfg.getNaturalWaitingDays(),
                 cfg.getAccidentalWaitingDays(), cfg.getUpgradeWaitingDays(), cfg.getLapseAfterMissedPayments(), cfg.getReinstateWithinDays(),
-                cfg.getEscalationCapBps() / 100, DEBIT_DAYS);
+                cfg.getEscalationCapBps() / 100, DEBIT_DAYS, cfg.getCoolingOffDays());
     }
 
     // ---------------- quote ----------------

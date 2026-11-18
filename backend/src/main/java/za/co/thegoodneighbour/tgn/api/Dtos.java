@@ -22,7 +22,16 @@ public final class Dtos {
     public record CoverOptionsDto(List<BenefitItemDto> items, List<RelationshipRuleDto> relationships, List<AgeBandDto> ageBands, long minBundleValueCents,
                                   int mainMinAge, int mainMaxAge, int maxMembers, int naturalWaitingDays, int accidentalWaitingDays,
                                   int upgradeWaitingDays, int lapseAfterMissedPayments, int reinstateWithinDays, int escalationCapPercent,
-                                  List<Integer> debitDays) {}
+                                  List<Integer> debitDays, int coolingOffDays) {}
+
+    // ---------- Waiting list (public) ----------
+    public record WaitlistIn(@NotBlank @Size(max = 60) String firstName,
+                             @Pattern(regexp = PHONE, message = "Please use a valid South African mobile number.") String phone,
+                             @Email @Size(max = 120) String email,
+                             @Size(max = 40) String province,
+                             @AssertTrue(message = "Please tick the box so we know it's OK to contact you.") boolean consent,
+                             String website) {}
+    public record WaitlistItemDto(String id, String firstName, String phone, String email, String province, String createdAt) {}
 
     // ---------- Quote ----------
     public record BundleLineIn(@NotBlank String itemId, @Min(0) @Max(20) int quantity) {}
