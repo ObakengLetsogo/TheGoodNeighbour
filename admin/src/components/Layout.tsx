@@ -16,6 +16,7 @@ const NAV = [
   { to: '/claims', label: 'Claims' },
   { to: '/customers', label: 'Customers' },
   { to: '/support', label: 'Support Inbox' },
+  { to: '/waitlist', label: 'Waiting List' },
   { to: '/cover', label: 'Cover & Pricing' },
   { to: '/herd', label: 'Herd & Capacity' },
   { to: '/legal', label: 'Terms & Privacy' },

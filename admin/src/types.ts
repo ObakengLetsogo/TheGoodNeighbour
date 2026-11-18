@@ -54,3 +54,5 @@ export interface CustomerRow {
 }
 export interface LegalSummary { slug: string; title: string; version: number; draft: boolean }
 export interface LegalDoc extends LegalSummary { body: string; updatedAt: string }
+
+export interface WaitlistEntry { id: string; firstName: string; phone?: string | null; email?: string | null; province?: string | null; createdAt: string }
