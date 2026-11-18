@@ -179,6 +179,37 @@ minimum, a licensed underwriter and the right FSCA/FAIS authorisation, policy te
 disclosure flow (cooling-off, waiting periods, claims and lapse rules), and POPIA compliance. This software is
 built so those rules are configurable and so an application is never shown as cover; it does not make you compliant.
 
+### Checklist: before we take money or sign anyone up
+
+This is a list of questions to take to a South African financial-services lawyer, **not legal advice**. Building, testing and
+demoing the software needs none of it. Taking money, signing up customers or marketing cover does.
+
+**Who carries the risk, and who may sell it**
+- [ ] A **licensed insurer** (underwriter) signed up. Only an insurer licensed under the Insurance Act can carry funeral-cover risk.
+- [ ] How cover that pays out in **groceries and livestock** is classed by the regulators (a lawyer must say), and whether a
+      **microinsurance** licence or an arrangement under the insurer's licence fits.
+- [ ] **Authorisation to sell and administer it**: our own FSP licence from the FSCA, or acting as a representative under a licensed FSP or the insurer.
+- [ ] **Key individuals** named and passed as fit and proper, a **compliance officer**, and **professional indemnity** cover, if we hold our own licence.
+
+**The company**
+- [ ] Company registered with CIPC, and tax (SARS) compliance in order.
+- [ ] Business bank account.
+- [ ] **Information officer** registered with the Information Regulator (POPIA).
+- [ ] Registered with the **Financial Intelligence Centre** (insurers and FSPs are covered by anti-money-laundering rules).
+
+**Money and customers**
+- [ ] A payment provider (e.g. Stitch) that has finished its checks on the business, for DebiCheck debit orders.
+- [ ] Policy terms, Privacy Notice and Key Facts **approved by a lawyer** (they are drafts now), and the disclosure and cooling-off flow checked against the policyholder protection rules.
+- [ ] The **website reviewed by a lawyer** before it goes public: marketing a financial product can have its own rules, even before anything is sold.
+- [ ] Claims, complaints and lapse procedures written down.
+
+**Documents funders and partners will ask for**
+CIPC registration certificate · tax compliance status · signed agreement with the underwriter · FSP licence number or representative arrangement ·
+proof of professional indemnity cover · information officer registration · bank confirmation letter · the payment provider's approval.
+
+**If you work for a bank or another financial business:** read your employment contract, code of ethics and outside-interests policy first,
+and declare in writing before registering or taking money. The FSCA register of FSPs and key individuals is public.
+
 ## History
 
 **The Terms of Use and Privacy Notice are placeholder drafts**, labelled as drafts to customers. Replace them in the admin
