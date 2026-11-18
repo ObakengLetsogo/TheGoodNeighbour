@@ -4,6 +4,7 @@ import { notificationService } from '../services/api';
 import type { Inbox } from '../types';
 import { useAuth } from './AuthContext';
 import { useCover } from './CoverContext';
+import { useFamily } from './FamilyContext';
 
 /** The customer's in-app messages. Checked when the app opens, comes back to the front, and every minute while it is open. */
 interface NotificationsState {
@@ -20,6 +21,7 @@ const Ctx = createContext<NotificationsState | null>(null);
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { refresh: refreshCover } = useCover();
+  const { refresh: refreshFamily } = useFamily();
   const [inbox, setInbox] = useState<Inbox>(EMPTY);
   const [loaded, setLoaded] = useState(false);
   const lastTop = useRef<string | null>(null);
@@ -32,10 +34,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setLoaded(true);
       // A new message means something changed on a cover or claim, so bring those up to date too.
       const top = next.items[0]?.id ?? null;
-      if (lastTop.current !== null && top !== lastTop.current) refreshCover().catch(() => {});
+      if (lastTop.current !== null && top !== lastTop.current) { refreshCover().catch(() => {}); refreshFamily().catch(() => {}); }
       lastTop.current = top;
     } catch { /* stay quiet: the inbox is not worth an error screen */ }
-  }, [user, refreshCover]);
+  }, [user, refreshCover, refreshFamily]);
 
   useEffect(() => {
     if (!user) { setInbox(EMPTY); setLoaded(false); lastTop.current = null; return; }

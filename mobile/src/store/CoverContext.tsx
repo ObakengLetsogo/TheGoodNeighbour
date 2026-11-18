@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { claimService, policyService } from '../services/api';
+import { claimService, familyService, policyService } from '../services/api';
 import type { ApplyInput, BundleLineInput, Claim, ClaimInput, MemberInput, Policy } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -20,6 +20,8 @@ interface CoverState {
   addMember: (policyId: string, m: MemberInput) => Promise<void>;
   editMember: (policyId: string, memberId: string, patch: Partial<Pick<MemberInput, 'fullName' | 'idNumber' | 'dateOfBirth' | 'relationship'>>) => Promise<void>;
   removeMember: (policyId: string, memberId: string) => Promise<void>;
+  inviteContributor: (policyId: string, input: { name: string; phone: string; sharePercent: number }) => Promise<void>;
+  removeContributor: (policyId: string, contributorId: string) => Promise<void>;
   submitClaim: (input: ClaimInput) => Promise<Claim>;
 }
 
@@ -86,6 +88,8 @@ export function CoverProvider({ children }: { children: ReactNode }) {
   const addMember = useCallback(async (id: string, m: MemberInput) => replace(await policyService.addMember(id, m)), []);
   const editMember = useCallback(async (id: string, memberId: string, patch: Partial<Pick<MemberInput, 'fullName' | 'idNumber' | 'dateOfBirth' | 'relationship'>>) => replace(await policyService.editMember(id, memberId, patch)), []);
   const removeMember = useCallback(async (id: string, memberId: string) => replace(await policyService.removeMember(id, memberId)), []);
+  const inviteContributor = useCallback(async (id: string, input: { name: string; phone: string; sharePercent: number }) => replace(await familyService.invite(id, input)), []);
+  const removeContributor = useCallback(async (id: string, contributorId: string) => replace(await familyService.removeContributor(id, contributorId)), []);
   const submitClaim = useCallback(async (input: ClaimInput) => {
     const c = await claimService.submit(input);
     setClaims((all) => [c, ...all]);
@@ -94,8 +98,8 @@ export function CoverProvider({ children }: { children: ReactNode }) {
 
   const current = policies.find((p) => OPEN.includes(p.status));
   const value = useMemo(
-    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, submitClaim }),
-    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, submitClaim],
+    () => ({ status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, inviteContributor, removeContributor, submitClaim }),
+    [status, error, policies, claims, current, refresh, apply, changeBundle, cancelCover, keepCover, requestReinstate, addMember, editMember, removeMember, inviteContributor, removeContributor, submitClaim],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

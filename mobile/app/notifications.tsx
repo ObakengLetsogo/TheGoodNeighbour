@@ -30,7 +30,8 @@ export default function Notifications() {
 
   const open = (n: AppNotification) => {
     markRead(n.id);
-    if (n.refType === 'claim' && n.refId) router.push({ pathname: '/claim/[id]', params: { id: n.refId } });
+    if (n.refType === 'invitation') router.push('/shared');
+    else if (n.refType === 'claim' && n.refId) router.push({ pathname: '/claim/[id]', params: { id: n.refId } });
     else if (n.refType === 'policy' && n.refId) router.push({ pathname: '/policy/[id]', params: { id: n.refId } });
   };
 

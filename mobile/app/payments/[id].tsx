@@ -89,7 +89,7 @@ export default function Payments() {
             <Pressable key={p.id} onPress={() => share(`TGN receipt ${p.reference}`, receiptText(policy, p))} accessibilityRole="button" accessibilityLabel={`${formatDate(p.paidOn)}, ${formatZAR(p.amountCents)}, ${p.status}. Share receipt`} style={styles.pay}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="cardTitle">{formatDate(p.paidOn)}</Text>
-                <Text variant="bodyS">{p.status === 'collected' ? 'Received' : p.status === 'failed' ? 'Failed' : 'Reversed'} · {p.source === 'manual' ? 'Recorded by our team' : 'Debit order'} · ref {p.reference}</Text>
+                <Text variant="bodyS">{p.status === 'collected' ? 'Received' : p.status === 'failed' ? 'Failed' : 'Reversed'} · {p.paidBy ? `Paid by ${p.paidBy} · ` : ''}{p.source === 'manual' ? 'Recorded by our team' : 'Debit order'} · ref {p.reference}</Text>
                 <Text variant="bodyS" color={colors.olive}>Tap to share a receipt</Text>
               </View>
               <Text variant="price" color={p.status === 'collected' ? colors.success : colors.muted}>{formatZAR(p.amountCents)}</Text>

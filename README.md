@@ -185,6 +185,15 @@ underwritten or approved.
   payment and claim messages follow the customer's notification settings. **Nothing is sent by SMS or push yet** (that needs
   an SMS provider), so the inbox is only seen when the app is open.
 
+- **Family plans (sharing the cost):** one person owns a plan and invites brothers, sisters or anyone else by phone number (up to 6),
+  each paying a **percentage** of the monthly price; the owner pays the rest, so the shares always add up when the price changes.
+  Everyone on the plan sees who has paid this month, and is told when a payment arrives. Cover starts when the payments together
+  reach the monthly price, and lapses only under the normal rules, never because of one person. A contributor can change their own
+  share or leave at any time, and the owner can remove them. **Privacy:** an invitation is matched by phone number and shown only
+  once that number is verified; contributors see names, relationships, ages and prices, never ID numbers or anyone's phone number.
+  Staff record which person paid when they log a payment. This is the foundation for the "cover your parents together" product.
+  Open legal questions for a lawyer: a premium payer who is not the policyholder, and the consent of the people being covered.
+
 ## Not built yet
 
 - **A real payment provider** (DebiCheck mandate creation, collections, failed-payment handling, webhooks).

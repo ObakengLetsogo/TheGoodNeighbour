@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/store/AuthContext';
 import { CoverProvider } from '../src/store/CoverContext';
+import { FamilyProvider } from '../src/store/FamilyContext';
 import { NotificationsProvider } from '../src/store/NotificationsContext';
 import { OptionsProvider } from '../src/store/OptionsContext';
 import { colors } from '../src/theme';
@@ -40,6 +41,8 @@ function Routes() {
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="builder" />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="shared" />
+        <Stack.Screen name="invite-contributor" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="cancel-cover" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="verify-phone" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings/password" />
@@ -68,10 +71,12 @@ export default function RootLayout() {
         <AuthProvider>
           <OptionsProvider>
             <CoverProvider>
-              <NotificationsProvider>
-                <StatusBar style="dark" />
-                <Routes />
-              </NotificationsProvider>
+              <FamilyProvider>
+                <NotificationsProvider>
+                  <StatusBar style="dark" />
+                  <Routes />
+                </NotificationsProvider>
+              </FamilyProvider>
             </CoverProvider>
           </OptionsProvider>
         </AuthProvider>

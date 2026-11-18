@@ -20,7 +20,8 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState('');
   const [declining, setDeclining] = useState(false);
-  const [pay, setPay] = useState({ amount: String(p.monthlyTotalCents / 100), paidOn: today(), reference: '' });
+  const [pay, setPay] = useState({ amount: String(p.monthlyTotalCents / 100), paidOn: today(), reference: '', by: '' });
+  const shared = p.contributors.some((c) => c.status === 'active');
 
   const run = async (fn: () => Promise<AdminPolicy>, ok: string) => {
     setBusy(true); setMsg(undefined);
@@ -33,7 +34,7 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
     e.preventDefault();
     const cents = Math.round(Number(pay.amount) * 100);
     if (!cents || cents <= 0) return setMsg({ ok: false, text: 'Enter the amount received.' });
-    run(() => api.recordPayment(p.id, cents, pay.paidOn, pay.reference), 'Payment recorded.');
+    run(() => api.recordPayment(p.id, cents, pay.paidOn, pay.reference, pay.by), 'Payment recorded.');
   };
 
   const canPay = ['approved', 'active', 'lapsed'].includes(p.status);
@@ -136,23 +137,44 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         )}
       </Card>
 
+      {p.contributors.length > 0 ? (
+        <Card tab="Shared plan" accent="berry">
+          <p className="muted small">People who share the monthly cost. The owner pays what is left. Cover starts when the payments together reach the monthly total.</p>
+          <table>
+            <thead><tr><th>Who</th><th>Status</th><th className="num">Share</th><th className="num">Monthly</th><th className="num">Paid this month</th></tr></thead>
+            <tbody>
+              <tr><td>{c?.fullName ?? 'Owner'} (owner)</td><td>Owner</td><td className="num">{p.ownerShareBps / 100}%</td><td className="num">{zar(p.ownerShareCents)}</td><td className="num">{zar(p.ownerPaidThisMonthCents)}</td></tr>
+              {p.contributors.map((k) => (
+                <tr key={k.id}><td>{k.name}{k.phone ? <div className="muted small">{displayPhone(k.phone)}</div> : null}</td><td>{label(k.status)}</td><td className="num">{k.shareBps / 100}%</td><td className="num">{zar(k.shareCents)}</td><td className="num">{zar(k.paidThisMonthCents)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      ) : null}
+
       <Card tab="Payments" accent="gold">
         {p.payments.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
           <table>
-            <thead><tr><th>Paid on</th><th>Reference</th><th>Source</th><th>Status</th><th className="num">Amount</th></tr></thead>
+            <thead><tr><th>Paid on</th><th>Paid by</th><th>Reference</th><th>Source</th><th>Status</th><th className="num">Amount</th></tr></thead>
             <tbody>{p.payments.map((x) => (
-              <tr key={x.id}><td>{dateShort(x.paidOn)}</td><td>{x.reference}</td><td>{label(x.source)}</td><td><span className="badge money">{label(x.status)}</span></td><td className="num">{zar(x.amountCents)}</td></tr>
+              <tr key={x.id}><td>{dateShort(x.paidOn)}</td><td>{x.paidBy ?? 'Owner'}</td><td>{x.reference}</td><td>{label(x.source)}</td><td><span className="badge money">{label(x.status)}</span></td><td className="num">{zar(x.amountCents)}</td></tr>
             ))}</tbody>
           </table>
         )}
         {canPay ? (
           <form onSubmit={submitPayment} style={{ marginTop: 18, borderTop: '1px solid var(--border)', paddingTop: 18 }}>
             <h3>Record a payment received</h3>
-            <p className="muted small">Only record money that has actually arrived (e.g. an EFT). {p.status !== 'active' ? 'The first payment, covering the monthly total, starts cover.' : ''} This is audited.</p>
+            <p className="muted small">Only record money that has actually arrived (e.g. an EFT). {p.status !== 'active' ? 'The first payment, covering the monthly total, starts cover (on a shared plan, the payments together).' : ''} This is audited.</p>
             <div className="form-grid" style={{ marginTop: 12 }}>
               <label className="f">Amount (rand)<input inputMode="decimal" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} /></label>
               <label className="f">Paid on<input type="date" max={today()} value={pay.paidOn} onChange={(e) => setPay({ ...pay, paidOn: e.target.value })} /></label>
               <label className="f">Bank reference<input value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} required /></label>
+              {shared ? (
+                <label className="f">Paid by<select value={pay.by} onChange={(e) => setPay({ ...pay, by: e.target.value })}>
+                  <option value="">The owner</option>
+                  {p.contributors.filter((k) => k.status === 'active').map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </select></label>
+              ) : null}
             </div>
             <button type="submit" disabled={busy || !pay.reference.trim()} style={{ marginTop: 14 }}>Record Payment</button>
           </form>

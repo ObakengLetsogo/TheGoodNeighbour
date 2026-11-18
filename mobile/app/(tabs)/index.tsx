@@ -10,6 +10,7 @@ import { formatDate, formatZAR, greeting } from '../../src/lib/format';
 import { POLICY_STATUS_LABEL } from '../../src/lib/status';
 import { useAuth } from '../../src/store/AuthContext';
 import { useCover } from '../../src/store/CoverContext';
+import { useFamily } from '../../src/store/FamilyContext';
 import { useNotifications } from '../../src/store/NotificationsContext';
 import { useOptions } from '../../src/store/OptionsContext';
 import { accents, colors, radii, spacing, type AccentName } from '../../src/theme';
@@ -27,6 +28,7 @@ export default function Home() {
   const lapsed = policies.find((p) => p.status === 'lapsed' && p.reinstateUntil && new Date(`${p.reinstateUntil}T23:59:59`) >= new Date());
   const { user, smsEnabled } = useAuth();
   const { inbox } = useNotifications();
+  const { invitations, shared } = useFamily();
   const groceryFrom = options ? Math.min(...options.items.filter((i) => i.kind === 'grocery').map((i) => i.valueCents)) : null;
 
   return (
@@ -43,6 +45,17 @@ export default function Home() {
       </View>
 
       <EditorialHeading lead={`${greeting()}, `} accent="Neighbour" trail="." variant="displayM" style={{ marginTop: spacing.sm }} />
+
+      {invitations.items.length > 0 || shared.length > 0 ? (
+        <Pressable onPress={() => router.push('/shared')} accessibilityRole="button" accessibilityLabel={invitations.items.length > 0 ? 'You have an invitation to share a family plan' : 'Plans you share'} style={[styles.verify, { backgroundColor: accents.berry.tint }]}>
+          <Icon name="account-group-outline" size={24} color={colors.berry} />
+          <View style={{ flex: 1 }}>
+            <Text variant="cardTitle">{invitations.items.length > 0 ? "You've been invited to share a family plan" : 'Plans you share'}</Text>
+            <Text variant="bodyS" color={colors.inkSoft}>{invitations.items.length > 0 ? 'See what it covers and what your share would be.' : `You pay a share of ${shared.length === 1 ? 'one family plan' : `${shared.length} family plans`}.`}</Text>
+          </View>
+          <Icon name="chevron-right" size={22} color={colors.ink} />
+        </Pressable>
+      ) : null}
 
       {smsEnabled && user && !user.phoneVerified ? (
         <Pressable onPress={() => router.push('/verify-phone')} accessibilityRole="button" accessibilityLabel="Verify your mobile number" style={styles.verify}>

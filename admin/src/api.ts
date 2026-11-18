@@ -49,8 +49,8 @@ export const api = {
   setPolicyStatus: (id: string, status: string, note?: string) => request<AdminPolicy>(`/policies/${id}/status`, post({ status, note })),
   editMember: (id: string, memberId: string, patch: { fullName?: string; idNumber?: string; dateOfBirth?: string; relationship?: string }) =>
     request<AdminPolicy>(`/policies/${id}/members/${memberId}`, { method: 'PUT', body: JSON.stringify(patch) }),
-  recordPayment: (id: string, amountCents: number, paidOn: string, reference: string) =>
-    request<AdminPolicy>(`/policies/${id}/payments`, post({ amountCents, paidOn, reference })),
+  recordPayment: (id: string, amountCents: number, paidOn: string, reference: string, contributorId?: string) =>
+    request<AdminPolicy>(`/policies/${id}/payments`, post({ amountCents, paidOn, reference, contributorId: contributorId || undefined })),
   claims: () => request<Claim[]>('/claims'),
   setClaimStatus: (id: string, status: string, note?: string) => request<Claim>(`/claims/${id}/status`, post({ status, note })),
   scheduleDelivery: (id: string, date: string, window: string, note?: string) => request<Claim>(`/claims/${id}/delivery`, post({ date, window, note })),

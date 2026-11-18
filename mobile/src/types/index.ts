@@ -127,6 +127,8 @@ export interface Payment {
   status: 'collected' | 'failed' | 'reversed';
   source: 'provider' | 'manual';
   reference: string;
+  /** The name of the family member who paid, when it wasn't the plan's owner. */
+  paidBy?: string | null;
 }
 
 /** What the family is owed. An upgrade only counts after its waiting period, so earlier versions are kept. */
@@ -169,6 +171,54 @@ export interface Policy {
   cancelRequestedAt?: string | null;
   reinstateRequestedAt?: string | null;
   withinCoolingOff: boolean;
+  /** People sharing the monthly cost (invited or active). The owner pays the rest. */
+  contributors: Contributor[];
+  ownerShareBps: number;
+  ownerShareCents: Cents;
+  ownerPaidThisMonthCents: Cents;
+}
+
+/** Someone who shares a plan's cost. phone is only shown to the owner. */
+export interface Contributor {
+  id: string;
+  name: string;
+  phone?: string | null;
+  status: 'invited' | 'active';
+  shareBps: number;
+  shareCents: Cents;
+  paidThisMonthCents: Cents;
+}
+
+export interface Invitation {
+  id: string;
+  ownerName: string;
+  shareBps: number;
+  shareCents: Cents;
+  monthlyTotalCents: Cents;
+  bundleSummary: string;
+  peopleCovered: number;
+  invitedAt: string;
+}
+export interface Invitations { needsVerification: boolean; items: Invitation[] }
+
+/** A plan someone else owns, seen by a person who pays a share. No ID numbers or phone numbers. */
+export interface SharedPolicy {
+  contributorId: string;
+  policyId: string;
+  reference: string;
+  ownerName: string;
+  status: PolicyStatus;
+  monthlyTotalCents: Cents;
+  myShareBps: number;
+  myShareCents: Cents;
+  myPaidThisMonthCents: Cents;
+  nextDebitDate?: string | null;
+  bundleLines: BundleLine[];
+  members: { relationship: Relationship | 'main'; fullName: string; age: number }[];
+  contributors: Contributor[];
+  ownerShareBps: number;
+  ownerShareCents: Cents;
+  ownerPaidThisMonthCents: Cents;
 }
 
 export interface MemberInput {
@@ -308,7 +358,7 @@ export interface AppNotification {
   category: 'cover' | 'payment' | 'claim';
   title: string;
   body: string;
-  refType?: 'policy' | 'claim' | null;
+  refType?: 'policy' | 'claim' | 'invitation' | null;
   refId?: string | null;
   read: boolean;
   createdAt: string;

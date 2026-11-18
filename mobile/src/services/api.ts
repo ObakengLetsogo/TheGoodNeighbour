@@ -1,6 +1,6 @@
 import { config } from '../config';
 import type {
-  AppNotification, Inbox, ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
+  Invitations, SharedPolicy, AppNotification, Inbox, ApplyInput, BundleLineInput, Claim, ClaimDocument, ClaimDocumentType, ClaimInput, CoverOptions, DebitOrderState, LegalDoc, LegalSummary, Me, MemberInput, Policy, Quote,
   QuoteMemberInput, Session, SupportRequest, User,
 } from '../types';
 import { KEYS, readJSON, removeKey, writeJSON } from './storage';
@@ -154,6 +154,19 @@ export const authService = {
     if (s) await writeJSON(KEYS.session, { ...s, user: updated });
     return updated;
   },
+};
+
+export const familyService = {
+  /** The owner invites someone to share the cost. Returns the updated plan. */
+  invite: (policyId: string, input: { name: string; phone: string; sharePercent: number }) =>
+    request<Policy>(`/api/policies/${policyId}/contributors`, { method: 'POST', body: json(input) }),
+  removeContributor: (policyId: string, contributorId: string) => request<Policy>(`/api/policies/${policyId}/contributors/${contributorId}`, { method: 'DELETE' }),
+  invitations: () => request<Invitations>('/api/me/invitations'),
+  accept: (id: string) => request<SharedPolicy>(`/api/me/invitations/${id}/accept`, { method: 'POST' }),
+  decline: (id: string) => request<void>(`/api/me/invitations/${id}/decline`, { method: 'POST' }),
+  shared: () => request<SharedPolicy[]>('/api/me/shared-policies'),
+  updateShare: (contributorId: string, sharePercent: number) => request<SharedPolicy>(`/api/me/shared-policies/${contributorId}/share`, { method: 'PUT', body: json({ sharePercent }) }),
+  leave: (contributorId: string) => request<void>(`/api/me/shared-policies/${contributorId}/leave`, { method: 'POST' }),
 };
 
 export const notificationService = {

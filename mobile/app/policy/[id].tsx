@@ -24,7 +24,7 @@ import { RELATIONSHIP_LABEL } from '../../src/types';
 
 export default function PolicyDetails() {
   const { id, applied, changed } = useLocalSearchParams<{ id: string; applied?: string; changed?: string }>();
-  const { status, policies, claims, removeMember, keepCover, requestReinstate } = useCover();
+  const { status, policies, claims, removeMember, removeContributor, keepCover, requestReinstate } = useCover();
   const policy = policies.find((p) => p.id === id);
   const [debitMsg, setDebitMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -162,6 +162,40 @@ export default function PolicyDetails() {
         </View>
       </Card>
 
+      <Text variant="section" style={styles.h}>Share The Cost</Text>
+      <Card accent="berry" tabLabel="Family plan">
+        <View style={{ gap: spacing.md }}>
+          {policy.contributors.length === 0 ? (
+            <Text variant="body" color={colors.inkSoft}>Do you look after your parents together with your brothers and sisters? Invite them to pay a share of the monthly price. Everyone can see who has paid, so nobody has to chase.</Text>
+          ) : (
+            <View style={{ gap: spacing.sm }}>
+              <View style={styles.shareRow}>
+                <Icon name="account-circle-outline" size={24} color={colors.olive} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="cardTitle">You</Text>
+                  <Text variant="bodyS">{policy.ownerShareBps / 100}% · {formatZAR(policy.ownerShareCents)} a month{policy.ownerPaidThisMonthCents >= policy.ownerShareCents && policy.ownerShareCents > 0 ? ' · paid this month' : ''}</Text>
+                </View>
+              </View>
+              {policy.contributors.map((c) => (
+                <View key={c.id} style={styles.shareRow}>
+                  <Icon name={c.status === 'active' ? 'account-check-outline' : 'account-clock-outline'} size={24} color={c.status === 'active' ? colors.success : colors.gold} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="cardTitle">{c.name}</Text>
+                    <Text variant="bodyS">{c.status === 'invited' ? `Invited · ${c.shareBps / 100}% (${formatZAR(c.shareCents)})` : `${c.shareBps / 100}% · ${formatZAR(c.shareCents)} a month${c.paidThisMonthCents >= c.shareCents && c.shareCents > 0 ? ' · paid this month' : ''}`}</Text>
+                  </View>
+                  {open ? (
+                    <Pressable onPress={() => confirmAction('Remove Them From The Plan?', `${c.name} will be told and won't be asked to pay.`, 'Remove', () => { removeContributor(policy.id, c.id).catch(() => {}); })} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${c.name}`}>
+                      <Icon name="trash-can-outline" size={22} color={colors.muted} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+          {open && policy.contributors.length < 6 ? <Button label="Invite Someone To Share" icon="account-multiple-plus-outline" variant="secondary" onPress={() => router.push({ pathname: '/invite-contributor', params: { policyId: policy.id } })} /> : null}
+        </View>
+      </Card>
+
       <Text variant="section" style={styles.h}>Family On Your Cover</Text>
       <View style={{ gap: spacing.sm }}>
         <View style={styles.member}>
@@ -270,5 +304,6 @@ const styles = StyleSheet.create({
   thanks: { backgroundColor: colors.oliveLight, borderRadius: radii.lg, padding: spacing.xl, gap: spacing.sm, marginTop: spacing.sm },
   lifecycle: { borderRadius: radii.lg, padding: spacing.lg, gap: spacing.sm, marginTop: spacing.lg, alignItems: 'flex-start' },
   notice: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', backgroundColor: '#F7ECD8', borderRadius: radii.md, padding: spacing.md },
+  shareRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   member: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
 });

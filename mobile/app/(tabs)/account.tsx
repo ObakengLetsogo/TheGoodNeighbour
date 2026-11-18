@@ -84,6 +84,7 @@ export default function Account() {
             onPress={() => router.push(user.phoneVerified || !smsEnabled ? '/settings/phone' : '/verify-phone')}
             right={user.phoneVerified ? <Badge label="Verified" color={colors.olive} bg={colors.oliveLight} /> : smsEnabled ? <Badge label="Verify" color={colors.ink} bg="#F8EAC2" /> : undefined} />
           {user.phoneVerified ? <SettingsRow icon="swap-horizontal" accent="ember" title="Change Mobile Number" subtitle="We'll text a code to the new number" onPress={() => router.push('/settings/phone')} /> : null}
+          <SettingsRow icon="account-group-outline" accent="berry" title="Shared Plans" subtitle="Plans you share with family" onPress={() => router.push('/shared')} />
           <SettingsRow icon="lock-outline" accent="berry" title="Change Password" onPress={() => router.push('/settings/password')} />
           <SettingsRow icon="logout-variant" accent="gold" title="Sign Out Of All Devices" subtitle="Useful if you've lost a phone" onPress={signOutAll} />
         </View>
