@@ -27,6 +27,9 @@ public class Policy {
     private int debitDay;
     /** False when the owner only pays: they are not a covered person and are not priced or claimable. */
     private boolean coverMainMember = true;
+    /** Set when the covered main member dies. Cover for the others continues until continuationUntil while someone takes over. */
+    private String holderDiedOn;
+    private String continuationUntil;
     /** JSON list of bundle versions (what the family is owed). The last is current; earlier ones can still apply during an upgrade's waiting period. */
     @Column(columnDefinition = "text") private String bundleVersionsJson;
     /** The reference monthly price: the bundle's cost times the base rate, before anyone's relationship or age is applied. */
@@ -103,6 +106,17 @@ public class Policy {
     public String getHolderDob() { return holderDob; }
     public int getDebitDay() { return debitDay; }
     public boolean isCoverMainMember() { return coverMainMember; }
+    /** Whether the owner is a covered, priced person right now: they chose to be covered and are still living. */
+    public boolean coversHolder() { return coverMainMember && holderDiedOn == null; }
+    public String getHolderDiedOn() { return holderDiedOn; }
+    public String getContinuationUntil() { return continuationUntil; }
+    public void markHolderDied(String date) { this.holderDiedOn = date; }
+    public void setContinuationUntil(String d) { this.continuationUntil = d; }
+    /** A new person takes over the plan: new account, new holder details, and no longer a deceased main member. */
+    public void handOver(String userId, String name, String idNumber, String dob, boolean covered) {
+        this.userId = userId; this.holderName = name; this.holderIdNumber = idNumber; this.holderDob = dob;
+        this.coverMainMember = covered; this.holderDiedOn = null; this.continuationUntil = null;
+    }
     public void setCoverMainMember(boolean v) { this.coverMainMember = v; }
     public long getMonthlyTotalCents() { return monthlyTotalCents; }
     public String getMandateStatus() { return mandateStatus; }

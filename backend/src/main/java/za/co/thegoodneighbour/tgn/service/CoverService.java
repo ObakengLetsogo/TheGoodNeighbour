@@ -139,6 +139,14 @@ public class CoverService {
         return out;
     }
 
+    /** What a bundle costs us to supply (the catalogue's cost per unit times the quantity). Never shown to customers. */
+    @Transactional(readOnly = true)
+    public long bundleCostCents(BundleVersionDto v) {
+        long cost = 0;
+        for (BundleLineDto l : v.lines()) cost += items.findById(l.itemId()).map(BenefitItem::getCostCents).orElse(0L) * l.quantity();
+        return cost;
+    }
+
     // ---------------- bundle versions ----------------
 
     public List<BundleVersionDto> versions(Policy p) {

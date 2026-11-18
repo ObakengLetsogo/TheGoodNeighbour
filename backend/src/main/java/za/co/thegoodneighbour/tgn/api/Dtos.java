@@ -102,7 +102,13 @@ public final class Dtos {
                             String nextDebitDate, BundleVersionDto bundle, List<BundleVersionDto> bundleHistory,
                             List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt,
                             String lapsedAt, String reinstateUntil, String cancelledAt, String cancelRequestedAt, String reinstateRequestedAt,
-                            boolean withinCoolingOff, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents, boolean coversMainMember) {}
+                            boolean withinCoolingOff, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents, boolean coversMainMember,
+                            List<InMemoryDto> inMemory, String holderDiedOn, String continuationUntil) {}
+    /** Someone on the plan who has passed away. Their cover and premium have ended. */
+    public record InMemoryDto(String name, String relationship, String passedOn) {}
+    /** Staff hand a plan to a new owner after the owner or main member has died. Exactly one of memberId or contributorId. */
+    public record SuccessorIn(String memberId, String contributorId, @Pattern(regexp = PHONE) String phone, @Pattern(regexp = ID13) String idNumber,
+                              @Pattern(regexp = DATE) String ownerDiedOn) {}
     public record CancelRequestIn(@Size(max = 100) String reason, @Size(max = 1000) String note) {}
     public record ReinstateRequestIn(@Size(max = 1000) String note) {}
     public record DebitOrderState(String state, String message) {}
@@ -122,7 +128,9 @@ public final class Dtos {
                            String causeOfDeath, String claimantName, String claimantPhone, String status, boolean withinWaitingPeriod,
                            boolean overAgeLimit, String staffNote, DeliveryIn delivery, BundleVersionDto bundle, String createdAt, String updatedAt,
                            List<ClaimDocumentDto> documents, List<String> missingDocuments,
-                           String deliveryDate, String deliveryWindow, String deliveryNote, String deliveredAt) {}
+                           String deliveryDate, String deliveryWindow, String deliveryNote, String deliveredAt,
+                           String benefitChoice, long cashAlternativeCents, Long ourCostCents) {}
+    public record ClaimChoiceIn(@NotBlank @Pattern(regexp = "^(bundle|cash)$", message = "Choose the bundle or cash.") String choice) {}
     public record ScheduleDelivery(@NotBlank @Pattern(regexp = DATE) String date, @Pattern(regexp = "^(morning|afternoon|day)$") String window,
                                    @Size(max = 1000) String note) {}
 
@@ -154,9 +162,10 @@ public final class Dtos {
     public record CustomerDto(String id, String fullName, String phone, String email, boolean phoneVerified, String createdAt,
                               String policyId, String policyReference, String policyStatus) {}
     public record CollectionRowDto(String policyId, String reference, String holderName, String phone, long monthlyCents, int debitDay, String nextDebitDate,
-                                   int paymentsReceived, int missed, String oldestUnpaidSince, long owedCents, boolean shouldLapse, boolean dueSoon) {}
+                                   int paymentsReceived, int missed, String oldestUnpaidSince, long owedCents, boolean shouldLapse, boolean dueSoon, String continuationUntil) {}
     public record CollectionsDto(List<CollectionRowDto> rows, long active, long behind, long shouldLapse, long dueSoon, long owedCents, long dueSoonCents, int lapseAfter) {}
-    public record StatusChange(@NotBlank String status, @Size(max = 1000) String note) {}
+    /** madeInError is used when declining a claim: true means nobody has actually passed away, so their cover carries on. */
+    public record StatusChange(@NotBlank String status, @Size(max = 1000) String note, Boolean madeInError) {}
     public record RecordPayment(@Positive long amountCents, @NotBlank @Pattern(regexp = DATE) String paidOn,
                                 @NotBlank @Size(max = 100) String reference, String contributorId) {}
     public record Dashboard(long pendingReview, long approvedAwaitingPayment, long active, long lapsed, long openClaims, long monthlyRecurringCents,
@@ -169,7 +178,8 @@ public final class Dtos {
                                  @Min(1) @Max(50) int maxMembers, @Min(1) @Max(1000) int maxCommitmentMultiple,
                                  @Min(1) @Max(12) int lapseAfterMissedPayments, @Min(0) @Max(730) int reinstateWithinDays,
                                  @Min(0) @Max(10000) int escalationCapBps, @Min(0) @Max(365) int coolingOffDays,
-                                 @NotNull @Valid List<RelationshipRuleDto> relationships, @NotNull @Valid List<AgeBandDto> ageBands) {}
+                                 @NotNull @Valid List<RelationshipRuleDto> relationships, @NotNull @Valid List<AgeBandDto> ageBands,
+                                 @Min(1000) @Max(20000) Integer cashAlternativeBps) {}
     public record BenefitItemAdminDto(String id, String kind, String name, String description, String unitLabel, long valueCents, long costCents,
                                       int maxQty, String groupId, boolean active, Integer onFarm, List<String> contents) {}
     public record BenefitItemUpdate(@NotBlank @Size(max = 100) String name, @Size(max = 1000) String description, @Positive long valueCents,

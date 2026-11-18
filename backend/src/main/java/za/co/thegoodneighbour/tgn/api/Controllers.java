@@ -139,6 +139,8 @@ public final class Controllers {
         @PostMapping(path = "/{id}/documents", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED)
         public ClaimDocumentDto upload(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @RequestParam("type") String type,
                                        @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException { return claims.addDocument(u, id, type, file); }
+        @PutMapping("/{id}/choice")
+        public ClaimDto choice(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @Valid @RequestBody ClaimChoiceIn in) { return claims.setChoice(u, id, in.choice()); }
         @GetMapping("/{id}/documents/{docId}/file")
         public org.springframework.http.ResponseEntity<byte[]> file(@RequestAttribute(WebConfig.USER_ATTR) AppUser u, @PathVariable String id, @PathVariable String docId) { return fileResponse(claims.download(u, id, docId)); }
         @DeleteMapping("/{id}/documents/{docId}") @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -183,6 +185,8 @@ public final class Controllers {
         @GetMapping("/policies/{id}") public AdminPolicyDto policy(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id) { return policies.adminGet(s, id); }
         @PostMapping("/policies/{id}/status")
         public AdminPolicyDto policyStatus(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody StatusChange c) { return policies.setStatus(s, id, c); }
+        @PostMapping("/policies/{id}/successor")
+        public AdminPolicyDto successor(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @Valid @RequestBody SuccessorIn in) { return policies.setSuccessor(s, id, in); }
         @PutMapping("/policies/{id}/members/{memberId}")
         public AdminPolicyDto adminEditMember(@RequestAttribute(WebConfig.STAFF_ATTR) StaffUser s, @PathVariable String id, @PathVariable String memberId, @Valid @RequestBody EditMemberIn e) { return policies.adminEditMember(s, id, memberId, e); }
         @PostMapping("/policies/{id}/payments") @ResponseStatus(HttpStatus.CREATED)

@@ -41,6 +41,8 @@ public class CoverConfig {
     private int escalationCapBps;
     /** Days after cover starts in which a cancellation is flagged to staff as possibly refundable. Confirm with the underwriter. */
     private int coolingOffDays;
+    /** What the cash alternative to an in-kind bundle is worth, as a percentage (in basis points) of our cost of that bundle. 10000 = at cost. */
+    private int cashAlternativeBps = 10000;
 
     @ElementCollection(fetch = FetchType.EAGER) @CollectionTable(name = "cover_relationship_rules", joinColumns = @JoinColumn(name = "config_id"))
     private List<RelationshipRule> rules = new ArrayList<>();
@@ -96,6 +98,8 @@ public class CoverConfig {
     public int getReinstateWithinDays() { return reinstateWithinDays; }
     public int getEscalationCapBps() { return escalationCapBps; }
     public int getCoolingOffDays() { return coolingOffDays; }
+    public int getCashAlternativeBps() { return cashAlternativeBps; }
+    public void setCashAlternativeBps(int v) { this.cashAlternativeBps = v; }
     public List<RelationshipRule> getRules() { return rules; }
     public List<AgeBand> getAgeBands() { return ageBands; }
 }

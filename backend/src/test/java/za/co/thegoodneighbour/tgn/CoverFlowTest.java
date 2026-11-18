@@ -250,15 +250,18 @@ class CoverFlowTest {
         assertEquals(1, natural.get("bundle").get("version").asInt());             // the upgrade hasn't earned cover yet
         assertEquals("Polokwane", natural.get("delivery").get("city").asString());
 
+        String cid = natural.get("id").asString();
+        assertEquals(422, call("POST", "/api/admin/claims/" + cid + "/status", s, "{\"status\":\"delivered\"}").statusCode());
+        ok(call("POST", "/api/admin/claims/" + cid + "/status", s, "{\"status\":\"under_review\"}"), 200);
+        assertEquals("under_review", ok(call("GET", "/api/claims", t, null), 200).get(0).get("status").asString());
+        // the same person can't be claimed for twice while the first claim stands, but can be once it is declined
+        assertEquals(422, call("POST", "/api/claims", t, claim(id, "", "accidental", today())).statusCode());
+        ok(call("POST", "/api/admin/claims/" + cid + "/status", s, "{\"status\":\"declined\",\"note\":\"Re-filed as an accident.\",\"madeInError\":true}"), 200);
+
         JsonNode accident = ok(call("POST", "/api/claims", t, claim(id, "", "accidental", today())), 201);
         assertFalse(accident.get("withinWaitingPeriod").asBoolean());              // accidents have no waiting period
         assertEquals(2, accident.get("bundle").get("version").asInt());            // and the upgrade applies at once
         assertFalse(accident.get("overAgeLimit").asBoolean());
-
-        String cid = natural.get("id").asString();
-        assertEquals(422, call("POST", "/api/admin/claims/" + cid + "/status", s, "{\"status\":\"delivered\"}").statusCode());
-        ok(call("POST", "/api/admin/claims/" + cid + "/status", s, "{\"status\":\"under_review\"}"), 200);
-        assertEquals("under_review", ok(call("GET", "/api/claims", t, null), 200).get(1).get("status").asString());
     }
 
     @Test void herdCapacityStopsPromisesTheFarmCannotKeep() throws Exception {

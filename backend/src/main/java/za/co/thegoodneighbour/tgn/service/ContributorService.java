@@ -140,6 +140,12 @@ public class ContributorService {
                         share(total, c.getShareBps()), c.getUserId() == null ? 0 : paidThisMonth(p, c.getUserId()))).toList();
     }
 
+    /** A contributor becomes the plan's owner, so they stop being a contributor. */
+    @Transactional
+    public void endContribution(Policy p, String userId) {
+        contributors.findByPolicyIdOrderByInvitedAtAsc(p.getId()).stream().filter(c -> userId.equals(c.getUserId()) && LIVE.contains(c.getStatus())).forEach(PolicyContributor::leave);
+    }
+
     public boolean hasActiveContributors(Policy p) { return !active(p.getId()).isEmpty(); }
 
     /** The owner pays whatever the active contributors don't. */
@@ -199,7 +205,7 @@ public class ContributorService {
         if (p == null || !Policy.OPEN_FOR_CHANGES.contains(p.getStatus())) return Optional.empty();
         String owner = users.findById(p.getUserId()).map(AppUser::getFullName).orElse("A family member");
         return Optional.of(new InvitationDto(c.getId(), owner, c.getShareBps(), share(p.getMonthlyTotalCents(), c.getShareBps()), p.getMonthlyTotalCents(),
-                summary(cover.current(p).lines()), p.activeMembers().size() + (p.isCoverMainMember() ? 1 : 0), DateTimeFormatter.ISO_INSTANT.format(c.getInvitedAt().atOffset(ZoneOffset.UTC))));
+                summary(cover.current(p).lines()), p.activeMembers().size() + (p.coversHolder() ? 1 : 0), DateTimeFormatter.ISO_INSTANT.format(c.getInvitedAt().atOffset(ZoneOffset.UTC))));
     }
 
     private SharedPolicyDto sharedDto(AppUser u, PolicyContributor c) {
@@ -207,7 +213,7 @@ public class ContributorService {
         String owner = users.findById(p.getUserId()).map(AppUser::getFullName).orElse("A family member");
         LocalDate today = LocalDate.now(clock);
         List<SharedMemberDto> members = new java.util.ArrayList<>();
-        if (p.isCoverMainMember()) members.add(new SharedMemberDto("main", p.getHolderName(), CoverRules.age(LocalDate.parse(p.getHolderDob()), today)));
+        if (p.coversHolder()) members.add(new SharedMemberDto("main", p.getHolderName(), CoverRules.age(LocalDate.parse(p.getHolderDob()), today)));
         p.activeMembers().forEach(m -> members.add(new SharedMemberDto(m.getRelationship(), m.getFullName(), CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today))));
         return new SharedPolicyDto(c.getId(), p.getId(), p.getReference(), owner, p.getStatus(), p.getMonthlyTotalCents(), c.getShareBps(),
                 share(p.getMonthlyTotalCents(), c.getShareBps()), paidThisMonth(p, u.getId()), nextDebit(p), cover.current(p).lines(), members,

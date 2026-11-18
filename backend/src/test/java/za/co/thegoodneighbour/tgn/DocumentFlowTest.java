@@ -269,4 +269,62 @@ class DocumentFlowTest {
         assertTrue(after.toString().contains("Delivery planned for"));
         assertEquals("claim", after.get("items").get(0).get("refType").asString());
     }
+
+    // ---------- cash alternative and one-claim-per-person ----------
+
+    @Test void theCashAlternativeIsFrozenFromOurCostAndCustomersNeverSeeTheCost() throws Exception {
+        String t = customer(), s = staff();
+        String claimId = claim(t, s)[0];
+        JsonNode mine = ok(call("GET", "/api/claims", t, null), 200).get(0);
+        assertEquals("bundle", mine.get("benefitChoice").asString());                       // the bundle is the default
+        long cash = mine.get("cashAlternativeCents").asLong();
+        assertTrue(cash > 0 && cash < mine.get("bundle").get("bundleValueCents").asLong(), "cash is less than the bundle is worth at shop prices");
+        assertTrue(mine.get("ourCostCents").isNull(), "customers must never see what the bundle costs us");
+
+        JsonNode staffView = null;
+        for (JsonNode c : ok(call("GET", "/api/admin/claims", s, null), 200)) if (claimId.equals(c.get("id").asString())) staffView = c;
+        assertNotNull(staffView);
+        assertEquals(cash, staffView.get("ourCostCents").asLong());                          // at cost by default, so cash never costs us more than the bundle
+    }
+
+    @Test void theFamilyCanChooseCashAndChangeTheirMindUntilTheClaimIsSettled() throws Exception {
+        String t = customer(), other = customer(), s = staff();
+        String claimId = claim(t, s)[0];
+        assertEquals(400, call("PUT", "/api/claims/" + claimId + "/choice", t, "{\"choice\":\"gold\"}").statusCode());
+        assertEquals(404, call("PUT", "/api/claims/" + claimId + "/choice", other, "{\"choice\":\"cash\"}").statusCode());
+        assertEquals("cash", ok(call("PUT", "/api/claims/" + claimId + "/choice", t, "{\"choice\":\"cash\"}"), 200).get("benefitChoice").asString());
+
+        ok(upload(t, claimId, "death_certificate", "c.pdf", pdf("c", 20)), 201);
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"under_review\"}"), 200);
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"approved\"}"), 200);
+        // nothing to deliver when the family took cash
+        assertEquals(422, call("POST", "/api/admin/claims/" + claimId + "/delivery", s, "{\"date\":\"" + TestData.today().plusDays(2) + "\"}").statusCode());
+        assertEquals("bundle", ok(call("PUT", "/api/claims/" + claimId + "/choice", t, "{\"choice\":\"bundle\"}"), 200).get("benefitChoice").asString());
+        ok(call("POST", "/api/admin/claims/" + claimId + "/delivery", s, "{\"date\":\"" + TestData.today().plusDays(2) + "\"}"), 200);      // back to the bundle: delivery works again
+        ok(call("PUT", "/api/claims/" + claimId + "/choice", t, "{\"choice\":\"cash\"}"), 200);
+        JsonNode afterCash = ok(call("GET", "/api/claims", t, null), 200).get(0);
+        assertTrue(afterCash.get("deliveryDate").isNull(), "choosing cash clears the delivery plan");
+
+        ok(call("POST", "/api/admin/claims/" + claimId + "/status", s, "{\"status\":\"delivered\"}"), 200);                              // settled
+        assertTrue(hasTitle(t, "Your payment was made"));
+        assertEquals(422, call("PUT", "/api/claims/" + claimId + "/choice", t, "{\"choice\":\"bundle\"}").statusCode());
+    }
+
+    @Test void thePersonCannotBeClaimedForTwiceUnlessTheFirstClaimWasDeclined() throws Exception {
+        String t = customer(), s = staff();
+        String[] ids = claim(t, s);
+        String today = TestData.today().toString();
+        String again = "{\"policyId\":\"" + ids[1] + "\",\"dateOfDeath\":\"" + today + "\",\"causeOfDeath\":\"accidental\",\"claimantName\":\"Thandi\",\"claimantPhone\":\"+27821234567\","
+                + "\"delivery\":{\"recipientName\":\"Sipho\",\"recipientPhone\":\"+27715550000\",\"addressLine\":\"12 Street\",\"suburb\":\"Seshego\",\"city\":\"Polokwane\",\"province\":\"Limpopo\",\"postalCode\":\"0742\"}}";
+        HttpResponse<String> dup = call("POST", "/api/claims", t, again);
+        assertEquals(422, dup.statusCode());
+        assertTrue(dup.body().contains("already a claim"), dup.body());
+        ok(call("POST", "/api/admin/claims/" + ids[0] + "/status", s, "{\"status\":\"declined\",\"note\":\"Submitted by mistake.\",\"madeInError\":true}"), 200);
+        ok(call("POST", "/api/claims", t, again), 201);                                        // a declined claim doesn't block a fresh one
+    }
+
+    private boolean hasTitle(String token, String title) throws Exception {
+        for (JsonNode n : ok(call("GET", "/api/me/notifications", token, null), 200).get("items")) if (title.equals(n.get("title").asString())) return true;
+        return false;
+    }
 }

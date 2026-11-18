@@ -36,6 +36,11 @@ public class Claim {
     private String deliveryWindow;
     @Column(length = 1000) private String deliveryNote;
     private Instant deliveredAt;
+    /** bundle (the in-kind benefit, the default) or cash. The family can choose until the claim is decided and settled. */
+    private String benefitChoice = "bundle";
+    /** Frozen when the claim is made: what the cash alternative pays, and what the bundle costs us. */
+    private long cashAlternativeCents;
+    private long ourCostCents;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 
@@ -53,6 +58,8 @@ public class Claim {
         this.status = status; if (note != null) this.staffNote = note; this.updatedAt = Instant.now();
         if ("delivered".equals(status)) this.deliveredAt = this.updatedAt;
     }
+    public void setCosts(long ourCostCents, long cashAlternativeCents) { this.ourCostCents = ourCostCents; this.cashAlternativeCents = cashAlternativeCents; }
+    public void setBenefitChoice(String c) { this.benefitChoice = c; this.updatedAt = Instant.now(); }
     public void schedule(String date, String window, String note) { this.deliveryDate = date; this.deliveryWindow = window; this.deliveryNote = note; this.updatedAt = Instant.now(); }
 
 
@@ -73,6 +80,9 @@ public class Claim {
     public String getBundleJson() { return bundleJson; }
     public Delivery getDelivery() { return delivery; }
     public String getStaffNote() { return staffNote; }
+    public String getBenefitChoice() { return benefitChoice; }
+    public long getCashAlternativeCents() { return cashAlternativeCents; }
+    public long getOurCostCents() { return ourCostCents; }
     public String getDeliveryDate() { return deliveryDate; }
     public String getDeliveryWindow() { return deliveryWindow; }
     public String getDeliveryNote() { return deliveryNote; }

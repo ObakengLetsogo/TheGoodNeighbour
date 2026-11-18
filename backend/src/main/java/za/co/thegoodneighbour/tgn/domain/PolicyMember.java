@@ -24,6 +24,8 @@ public class PolicyMember {
     private int position;
     private String addedOn;
     private String coverStartsOn;
+    /** Set when a death claim is decided: their cover and premium end from this date (status becomes deceased). */
+    private String deceasedOn;
 
     protected PolicyMember() {}
 
@@ -36,6 +38,8 @@ public class PolicyMember {
     void setPolicy(Policy p) { this.policy = p; }
     void setPosition(int p) { this.position = p; }
     public void remove() { this.status = "removed"; }
+    public void markDeceased(String date) { this.status = "deceased"; this.deceasedOn = date; }
+    public String getDeceasedOn() { return deceasedOn; }
     public void setFullName(String n) { this.fullName = n; }
     public void setIdNumber(String id) { this.idNumber = id; }
     public void setDateOfBirth(String dob) { this.dateOfBirth = dob; }

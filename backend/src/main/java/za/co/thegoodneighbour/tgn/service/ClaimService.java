@@ -34,10 +34,11 @@ public class ClaimService {
     private final DocumentStore store;
     private final Clock clock;
     private final NotificationService inbox;
+    private final PolicyService policyService;
 
     public ClaimService(ClaimRepository claims, PolicyRepository policies, CoverService cover, AuditService audit, ClaimDocumentRepository documents,
-                        DocumentStore store, Clock clock, NotificationService inbox) {
-        this.inbox = inbox; this.claims = claims; this.policies = policies; this.cover = cover; this.audit = audit; this.documents = documents; this.store = store; this.clock = clock;
+                        DocumentStore store, Clock clock, NotificationService inbox, PolicyService policyService) {
+        this.policyService = policyService; this.inbox = inbox; this.claims = claims; this.policies = policies; this.cover = cover; this.audit = audit; this.documents = documents; this.store = store; this.clock = clock;
     }
 
     @Transactional
@@ -56,7 +57,7 @@ public class ClaimService {
         String name, relationship = null, memberId = null;
         LocalDate dob, coverFrom;
         if (in.memberId() == null || in.memberId().isBlank()) {
-            if (!policy.isCoverMainMember()) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The plan owner isn't covered on this plan. Please choose the person who passed away.");
+            if (!policy.coversHolder()) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The plan owner isn't covered on this plan. Please choose the person who passed away.");
             name = policy.getHolderName(); dob = LocalDate.parse(policy.getHolderDob());
             coverFrom = accidental ? start.plusDays(cfg.getAccidentalWaitingDays()) : LocalDate.parse(policy.getWaitingEndsOn());
         } else {
@@ -67,21 +68,43 @@ public class ClaimService {
             LocalDate from = joined.isAfter(start) ? joined : start;
             coverFrom = accidental ? from.plusDays(cfg.getAccidentalWaitingDays()) : LocalDate.parse(m.getCoverStartsOn());
         }
+        // One benefit per death: the same person can't be claimed for twice unless the earlier claim was declined.
+        final String claimedMember = memberId;
+        if (claims.findByPolicyId(policy.getId()).stream().anyMatch(x -> java.util.Objects.equals(x.getMemberId(), claimedMember) && !"declined".equals(x.getStatus())))
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "There is already a claim for " + name + ". Please call us if you need help with it.");
         boolean within = died.isBefore(coverFrom);
         boolean over = CoverRules.overAgeLimit(cfg, relationship, CoverRules.age(dob, died));
         BundleVersionDto owed = cover.applicable(policy, died, in.causeOfDeath());
         DeliveryIn d = in.delivery();
-        Claim c = claims.save(new Claim(policy.getId(), user.getId(), memberId, name, died.toString(), in.causeOfDeath(), in.claimantName().trim(),
+        long ourCost = cover.bundleCostCents(owed);
+        Claim c = new Claim(policy.getId(), user.getId(), memberId, name, died.toString(), in.causeOfDeath(), in.claimantName().trim(),
                 in.claimantPhone(), within, over, CoverRules.age(dob, died) >= 16, cover.writeOne(owed),
-                new Claim.Delivery(d.recipientName().trim(), d.recipientPhone(), d.addressLine().trim(), d.suburb().trim(), d.city().trim(), d.province(), d.postalCode(), d.instructions())));
+                new Claim.Delivery(d.recipientName().trim(), d.recipientPhone(), d.addressLine().trim(), d.suburb().trim(), d.city().trim(), d.province(), d.postalCode(), d.instructions()));
+        // The cash alternative is fixed now, from what the bundle costs us, so a later change to prices can't make it more than we would have spent.
+        c.setCosts(ourCost, Math.round(ourCost * cfg.getCashAlternativeBps() / 10000.0));
+        c = claims.save(c);
         return toDto(c, policy.getReference());
+    }
+
+    /** The family can take the bundle (the default) or the cash alternative, until the claim is settled. */
+    @Transactional
+    public ClaimDto setChoice(AppUser user, String id, String choice) {
+        Claim c = claims.findById(id).filter(x -> x.getUserId().equals(user.getId())).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that claim."));
+        if (!Set.of("submitted", "under_review", "approved").contains(c.getStatus()))
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "This claim is already settled or closed, so the choice can't be changed. Please call us.");
+        if (!choice.equals(c.getBenefitChoice())) {
+            c.setBenefitChoice(choice);
+            if ("cash".equals(choice)) c.schedule(null, null, null);   // a delivery date no longer applies
+            audit.record("customer", "claim.choice", "claim", id, "benefit choice: " + choice);
+        }
+        return toDto(claims.save(c), ref(c));
     }
 
     @Transactional(readOnly = true)
     public List<ClaimDto> list(AppUser user) { return claims.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().map(c -> toDto(c, ref(c))).toList(); }
 
     @Transactional(readOnly = true)
-    public List<ClaimDto> adminList() { return claims.findAllByOrderByCreatedAtDesc().stream().map(c -> toDto(c, ref(c))).toList(); }
+    public List<ClaimDto> adminList() { return claims.findAllByOrderByCreatedAtDesc().stream().map(c -> toAdminDto(c, ref(c))).toList(); }
 
     @Transactional(readOnly = true)
     public long openCount() { return claims.findAll().stream().filter(c -> OPEN.contains(c.getStatus())).count(); }
@@ -97,21 +120,26 @@ public class ClaimService {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The death certificate is required before this claim can be approved.");
         String from = c.getStatus();
         c.setStatus(change.status(), change.note());
+        // Once a death claim is decided their cover and premium stop, whether or not the claim is paid: we never keep charging for someone who has died.
+        // (Unless staff say the claim was made in error and nobody has died.)
+        if ("approved".equals(change.status()) || ("declined".equals(change.status()) && !Boolean.TRUE.equals(change.madeInError()))) policyService.recordDeath(c.getPolicyId(), c.getMemberId(), c.getDateOfDeath(), c.getClaimantPhone());
         audit.record(staff.getEmail(), "claim.status", "claim", id, from + " -> " + change.status() + (change.note() == null ? "" : ": " + change.note()));
         switch (change.status()) {
             case "under_review" -> inbox.notify(c.getUserId(), "claim", "We're looking at your claim", "Claim " + c.getReference() + " is being reviewed. We'll be in touch if we need anything.", "claim", id);
-            case "approved" -> inbox.notify(c.getUserId(), "claim", "Your claim is approved", "We'll call to agree a delivery date for " + c.getReference() + ".", "claim", id);
+            case "approved" -> inbox.notify(c.getUserId(), "claim", "Your claim is approved", "cash".equals(c.getBenefitChoice()) ? "We'll call to arrange your payment for " + c.getReference() + "." : "We'll call to agree a delivery date for " + c.getReference() + ".", "claim", id);
             case "declined" -> inbox.notify(c.getUserId(), "claim", "We couldn't approve your claim", "Please open claim " + c.getReference() + " to read why. We're here if you'd like to talk it through.", "claim", id);
-            case "delivered" -> inbox.notify(c.getUserId(), "claim", "Your bundle was delivered", "Claim " + c.getReference() + " is complete. We're thinking of you and your family.", "claim", id);
+            case "delivered" -> inbox.notify(c.getUserId(), "claim", "cash".equals(c.getBenefitChoice()) ? "Your payment was made" : "Your bundle was delivered", "Claim " + c.getReference() + " is complete. We're thinking of you and your family.", "claim", id);
             default -> { }
         }
-        return toDto(claims.save(c), ref(c));
+        return toAdminDto(claims.save(c), ref(c));
     }
 
     /** Staff pick the day (and a rough time) the family can expect the bundle. Only for approved claims, and never in the past. */
     @Transactional
     public ClaimDto scheduleDelivery(StaffUser staff, String id, ScheduleDelivery in) {
         Claim c = claims.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that claim."));
+        if ("cash".equals(c.getBenefitChoice()))
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The family chose cash for this claim, so there is nothing to deliver.");
         if (!"approved".equals(c.getStatus()))
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "A delivery can only be scheduled once the claim is approved, and not after it has been delivered.");
         LocalDate day;
@@ -121,20 +149,25 @@ public class ClaimService {
         c.schedule(in.date(), in.window() == null ? "day" : in.window(), note);
         audit.record(staff.getEmail(), "claim.delivery.scheduled", "claim", id, in.date() + " (" + (in.window() == null ? "day" : in.window()) + ")" + (note == null ? "" : ": " + note));
         inbox.notify(c.getUserId(), "claim", "Delivery planned for " + CoverRules.friendlyDate(in.date()), "We plan to deliver on " + CoverRules.friendlyDate(in.date()) + ". Open claim " + c.getReference() + " for details.", "claim", id);
-        return toDto(claims.save(c), ref(c));
+        return toAdminDto(claims.save(c), ref(c));
     }
 
     private String ref(Claim c) { return policies.findById(c.getPolicyId()).map(Policy::getReference).orElse(""); }
     private static String iso(java.time.Instant t) { return DateTimeFormatter.ISO_INSTANT.format(t.atOffset(ZoneOffset.UTC)); }
 
-    private ClaimDto toDto(Claim c, String policyRef) {
+    private ClaimDto toDto(Claim c, String policyRef) { return toDto(c, policyRef, false); }
+    /** Staff also see what the bundle costs us. Customers never do. */
+    private ClaimDto toAdminDto(Claim c, String policyRef) { return toDto(c, policyRef, true); }
+
+    private ClaimDto toDto(Claim c, String policyRef, boolean admin) {
         Claim.Delivery d = c.getDelivery();
         return new ClaimDto(c.getId(), c.getReference(), c.getPolicyId(), policyRef, c.getDeceasedName(), c.getDateOfDeath(), c.getCauseOfDeath(),
                 c.getClaimantName(), c.getClaimantPhone(), c.getStatus(), c.isWithinWaitingPeriod(), c.isOverAgeLimit(), c.getStaffNote(),
                 new DeliveryIn(d.recipientName(), d.recipientPhone(), d.addressLine(), d.suburb(), d.city(), d.province(), d.postalCode(), d.instructions()),
                 cover.readOne(c.getBundleJson()), iso(c.getCreatedAt()), iso(c.getUpdatedAt()),
                 documents.findByClaimIdOrderByCreatedAtAsc(c.getId()).stream().map(ClaimService::toDto).toList(), missing(c),
-                c.getDeliveryDate(), c.getDeliveryWindow(), c.getDeliveryNote(), c.getDeliveredAt() == null ? null : iso(c.getDeliveredAt()));
+                c.getDeliveryDate(), c.getDeliveryWindow(), c.getDeliveryNote(), c.getDeliveredAt() == null ? null : iso(c.getDeliveredAt()),
+                c.getBenefitChoice(), c.getCashAlternativeCents(), admin ? c.getOurCostCents() : null);
     }
 
     // ---------------- documents ----------------

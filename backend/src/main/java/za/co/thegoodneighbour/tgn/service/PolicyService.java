@@ -396,18 +396,112 @@ public class PolicyService {
             int missed = CoverRules.missedPayments(dues, received);
             String next = nextDebitDate(p);
             boolean soon = next != null && !LocalDate.parse(next).isAfter(today.plusDays(7));
-            if (missed == 0 && !soon) continue;
+            if (missed == 0 && !soon && p.getContinuationUntil() == null) continue;
             LocalDate oldest = CoverRules.oldestUnpaid(dues, missed);
             long owedHere = missed * p.getMonthlyTotalCents();
             owed += owedHere;
             if (soon && missed == 0) dueSoonCents += p.getMonthlyTotalCents();
             AppUser u = users.findById(p.getUserId()).orElse(null);
             rows.add(new CollectionRowDto(p.getId(), p.getReference(), p.getHolderName(), u == null ? "" : u.getPhone(), p.getMonthlyTotalCents(), p.getDebitDay(), next,
-                    (int) received, missed, oldest == null ? null : oldest.toString(), owedHere, missed >= lapseAfter, soon));
+                    (int) received, missed, oldest == null ? null : oldest.toString(), owedHere, missed >= lapseAfter, soon, p.getContinuationUntil()));
         }
         rows.sort(java.util.Comparator.comparingInt(CollectionRowDto::missed).reversed().thenComparing(r -> r.nextDebitDate() == null ? "" : r.nextDebitDate()));
         return new CollectionsDto(rows, active, rows.stream().filter(r -> r.missed() > 0).count(), rows.stream().filter(CollectionRowDto::shouldLapse).count(),
                 rows.stream().filter(r -> r.dueSoon() && r.missed() == 0).count(), owed, dueSoonCents, lapseAfter);
+    }
+
+    /** How long cover for the rest of the family carries on after the main member dies, while someone takes over paying. */
+    static final int CONTINUATION_DAYS = 60;
+
+    /**
+     * Called when a death claim is decided. The person's cover and premium end from their date of death (so we never keep charging for
+     * someone who has died, whether or not the claim is paid). If it is the covered main member, cover for everyone else continues for
+     * CONTINUATION_DAYS while staff help a successor take over; if nobody is left, the plan closes.
+     */
+    @Transactional
+    public void recordDeath(String policyId, String memberId, String diedOn, String claimantPhone) {
+        Policy p = policies.findById(policyId).orElse(null);
+        if (p == null) return;
+        LocalDate today = today();
+        String who;
+        if (memberId == null || memberId.isBlank()) {
+            if (p.getHolderDiedOn() != null || !p.isCoverMainMember()) return;     // already recorded, or the owner was never covered
+            p.markHolderDied(diedOn);
+            who = p.getHolderName();
+        } else {
+            PolicyMember m = p.getMembers().stream().filter(x -> x.getId().equals(memberId)).findFirst().orElse(null);
+            if (m == null || "deceased".equals(m.getStatus())) return;
+            m.markDeceased(diedOn);
+            who = m.getFullName();
+        }
+        recompute(p);
+        int left = p.activeMembers().size() + (p.coversHolder() ? 1 : 0);
+        boolean mainDied = memberId == null || memberId.isBlank();
+        if (left == 0) {
+            p.setStatus("cancelled");
+            p.markCancelled(today);
+            family.notifyAll(p, "cover", "Your plan has closed", "Nobody is left covered on " + p.getReference() + ", so the plan has closed. We're so sorry for your loss.");
+        } else if (mainDied) {
+            p.setContinuationUntil(today.plusDays(CONTINUATION_DAYS).toString());
+            support.save(new SupportRequest(p.getUserId(), "continuation_request", p.getReference(),
+                    who + ", the main member of plan " + p.getReference() + ", has passed away. Cover for the rest of the family continues until "
+                            + CoverRules.friendlyDate(p.getContinuationUntil()) + " while someone takes over the plan and its payments. Please contact the family to arrange this.", claimantPhone));
+            family.notifyAll(p, "cover", "Cover continues for the rest of the family", "We're so sorry for your loss. Cover for everyone else carries on until "
+                    + CoverRules.friendlyDate(p.getContinuationUntil()) + " while we help you decide who takes over the plan. Our team will contact you.");
+        } else {
+            family.notifyAll(p, "cover", "Cover for " + who + " has ended", who + " is no longer on the plan, and the monthly price is now " + CoverRules.rand(p.getMonthlyTotalCents()) + ". We're so sorry for your loss.");
+        }
+        audit.record("system", "policy.death.recorded", "policy", p.getId(), who + " passed away on " + diedOn + (mainDied && left > 0 ? "; cover continues to " + p.getContinuationUntil() : ""));
+        policies.save(p);
+    }
+
+    /**
+     * Staff hand the plan to a new owner after the owner or main member has died. The successor is either a covered family member (who
+     * becomes the main member and is priced as one) or a contributor who already pays a share (who becomes an owner who pays but isn't covered).
+     * Either way they need a verified TGN account.
+     */
+    @Transactional
+    public AdminPolicyDto setSuccessor(StaffUser staff, String policyId, SuccessorIn in) {
+        Policy p = policies.findById(policyId).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that policy."));
+        LocalDate today = today();
+        boolean byMember = in.memberId() != null && !in.memberId().isBlank(), byContributor = in.contributorId() != null && !in.contributorId().isBlank();
+        if (byMember == byContributor) throw CoverService.unprocessable("Choose either a covered family member or a contributor to take over.");
+        if (p.getHolderDiedOn() == null) {
+            if (in.ownerDiedOn() == null) throw CoverService.unprocessable("Record when the owner passed away first. If they were covered, approving their claim does it.");
+            if (LocalDate.parse(in.ownerDiedOn()).isAfter(today)) throw CoverService.unprocessable("The date of passing can't be in the future.");
+            p.markHolderDied(in.ownerDiedOn());
+        }
+        AppUser successor;
+        String name, idNumber, dob; boolean covered;
+        if (byMember) {
+            PolicyMember m = p.activeMembers().stream().filter(x -> x.getId().equals(in.memberId())).findFirst()
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "We can't find that family member on the plan."));
+            if (in.phone() == null) throw CoverService.unprocessable("Give the mobile number of the TGN account they will use.");
+            successor = users.findByPhone(in.phone()).orElseThrow(() -> CoverService.unprocessable("That person needs a TGN account first. Ask them to register with this number."));
+            if (CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today) < 18) throw CoverService.unprocessable("The new owner must be 18 or older.");
+            name = m.getFullName(); idNumber = m.getIdNumber(); dob = m.getDateOfBirth(); covered = true;
+            if (idNumber == null) throw CoverService.unprocessable("That person has no ID number on the plan. Add it first.");
+            m.remove();                                  // they are now the main member, not a separate member
+        } else {
+            PolicyContributor c = family.activeContributor(p, in.contributorId());
+            successor = users.findById(c.getUserId()).orElseThrow(() -> CoverService.unprocessable("That contributor has no account."));
+            if (in.idNumber() == null) throw CoverService.unprocessable("Add the new owner's ID number so we know who owns the plan.");
+            LocalDate born = SaId.dateOfBirth(in.idNumber(), today).orElseThrow(() -> CoverService.unprocessable("That ID number doesn't look right."));
+            if (CoverRules.age(born, today) < 18) throw CoverService.unprocessable("The new owner must be 18 or older.");
+            name = successor.getFullName(); idNumber = in.idNumber(); dob = born.toString(); covered = false;
+        }
+        if (!successor.isPhoneVerified()) throw CoverService.unprocessable("The new owner needs to verify their mobile number in the app first.");
+        if (policies.findByUserIdOrderByCreatedAtDesc(successor.getId()).stream().anyMatch(x -> !x.getId().equals(p.getId()) && Policy.OPEN_FOR_CHANGES.contains(x.getStatus())))
+            throw new ApiException(HttpStatus.CONFLICT, "That person already has a cover of their own, so they can't also own this plan.");
+        String previousOwner = p.getUserId();
+        p.handOver(successor.getId(), name, idNumber, dob, covered);
+        family.endContribution(p, successor.getId());
+        recompute(p);
+        audit.record(staff.getEmail(), "policy.successor", "policy", p.getId(), "ownership passed to " + name + (covered ? " (covered main member)" : " (pays, not covered)"));
+        inbox.notify(successor.getId(), "cover", "You now own a family plan", "You are now the owner of plan " + p.getReference() + ". Open your cover to see it.", "policy", p.getId());
+        if (!previousOwner.equals(successor.getId())) inbox.notify(previousOwner, "cover", "The plan has a new owner", name + " now owns plan " + p.getReference() + ".", "policy", p.getId());
+        family.notifyAll(p, "cover", "The plan has a new owner", name + " has taken over plan " + p.getReference() + ". Cover carries on as before.");
+        return new AdminPolicyDto(toDto(policies.save(p), true), customer(p));
     }
 
     /** Money received for this plan since it was approved (or, if it lapsed, since it lapsed), collected less reversed. */
@@ -449,7 +543,7 @@ public class PolicyService {
         LocalDate today = today();
         long base = policy.getBaseMonthlyCents();
         int mainBps = cfg.ageMultiplierBps(CoverRules.age(LocalDate.parse(policy.getHolderDob()), today));
-        boolean covered = policy.isCoverMainMember();
+        boolean covered = policy.coversHolder();
         long mainFee = covered ? CoverRules.personFee(base, 10000, mainBps) : 0;
         policy.setMainPricing(covered ? mainBps : 10000, mainFee);
         long total = mainFee;
@@ -516,6 +610,8 @@ public class PolicyService {
                 p.getCancelledAt(), iso(p.getCancelRequestedAt()), iso(p.getReinstateRequestedAt()),
                 p.getStartDate() != null && Set.of("active", "lapsed").contains(p.getStatus())
                         && CoverRules.withinCoolingOff(LocalDate.parse(p.getStartDate()), cover.config().getCoolingOffDays(), today()),
-                family.contributorsOf(p, true), family.ownerShareBps(p), family.ownerShareCents(p), family.paidThisMonth(p, null), p.isCoverMainMember());
+                family.contributorsOf(p, true), family.ownerShareBps(p), family.ownerShareCents(p), family.paidThisMonth(p, null), p.coversHolder(),
+                p.getMembers().stream().filter(m -> "deceased".equals(m.getStatus())).map(m -> new InMemoryDto(m.getFullName(), m.getRelationship(), m.getDeceasedOn())).toList(),
+                p.getHolderDiedOn(), p.getContinuationUntil());
     }
 }
