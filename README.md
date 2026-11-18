@@ -10,6 +10,7 @@ passes away the bundle is delivered to the family. Three independent projects li
 ```
 mobile/    React Native (Expo) · TypeScript · Expo Router   iOS + Android customer app (one codebase)
 admin/     React · Vite · TypeScript                        web dashboard for staff
+landing/   React · Vite · TypeScript                        public website with a live price builder and waiting list
 backend/   Java 21 · Spring Boot 4 · JPA · PostgreSQL/H2    REST API used by both
 ```
 
@@ -26,6 +27,9 @@ cd mobile && npm install && npx expo start        # EXPO_PUBLIC_API_BASE_URL def
 
 # 3. Admin dashboard  (http://localhost:5173)
 cd admin && npm install && npm run dev            # VITE_API_BASE_URL defaults to http://localhost:8080
+
+# 4. Public website  (http://localhost:5174)
+cd landing && npm install && npm run dev          # VITE_API_BASE_URL defaults to http://localhost:8080
 ```
 
 On a physical phone, set `EXPO_PUBLIC_API_BASE_URL` to your computer's LAN address. Environment variables are
@@ -59,6 +63,10 @@ docker compose up -d --build          # PostgreSQL + the API + automatic HTTPS
 For a **demo** server set `TGN_SEED_SAMPLE_COVER=true` and `TGN_SMS_MODE=log` (SMS codes then appear in
 `docker compose logs backend`). Back up the database and keep `TGN_PII_KEY` safe: ID numbers can't be read without it.
 Host the admin dashboard (`cd admin && VITE_API_BASE_URL=https://api.example.com npm run build`, upload `dist/`) on any static host.
+
+The public website is a static site too: `cd landing && VITE_API_BASE_URL=https://api.example.com VITE_SITE_URL=https://www.example.com npm run build`,
+then upload `dist/`. `VITE_SITE_URL` makes the WhatsApp and social share preview work. Add the site's address to
+`TGN_CORS_ALLOWED_ORIGINS` on the backend, and set `VITE_SUPPORT_WHATSAPP` / `VITE_SUPPORT_PHONE` to show contact details in the footer.
 The Docker files are written but have not been built or run yet.
 
 ## How it works
@@ -99,6 +107,22 @@ until your underwriter signs it off**.
 | Yearly increase | Reviewed yearly, capped at 10%, with notice |
 | Livestock | From your own farm. A herd guard stops selling more animal promises than **herd size × 25**, so a bundle that can't be honoured is never offered |
 | Preparation | Slaughter and dressing is separate and not included |
+
+## The public website
+
+`landing/` is the page people see before they have the app. It says plainly that TGN is **not open yet**, and its main
+button is a **waiting list** (`POST /api/waitlist`: a name, a mobile number or email, and a ticked consent box; it is
+rate limited to 5 sign-ups an hour per connection, silently drops bots that fill a hidden field, and answers the same
+whether or not you are already on the list). Staff see the list in the admin under **Waiting List**, can export it to CSV
+and can remove anyone who asks (POPIA); removals are audited.
+
+Its **price builder** calls the same `/api/cover/quote` endpoint as the app, and the rules section and FAQ read the live
+rules (`/api/cover`), so the website can never disagree with the app. Terms and Privacy are served from the same legal
+documents the app shows. If the API can't be reached the page still reads fine and just hides live prices.
+
+**Before you launch the page:** the copy says cover comes from "our farm". Make sure that is true by the time you open,
+and add your insurer and registration details to the footer once they exist. Nothing on the page claims to be licensed,
+underwritten or approved.
 
 ## Security and payments
 
