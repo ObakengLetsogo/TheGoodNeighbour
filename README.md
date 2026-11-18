@@ -208,7 +208,7 @@ underwritten or approved.
 - **Minimum share (margin guardrail):** every person who pays costs a collection fee, so each contributor's share must be worth at least a
   set amount a month (default R50, editable in Cover & Pricing). It is checked when inviting, accepting and changing a share, and the app
   only offers shares that clear it. Set it from the payment provider's real per-collection fee.
-- **Supplier prices:** staff upload the filled-in quote sheet (`docs/quote-sheet.csv`) under **Supplier Prices**. It works out the real cost of each hamper, sheep and cow
+- **Supplier prices:** staff upload the filled-in quote sheet (`docs/quote-sheet.csv`, also downloadable from the page; keep `admin/public/quote-sheet.csv` in step) under **Supplier Prices**. It works out the real cost of each hamper, sheep and cow
   from the lowest price for every part (prices in writing count first), flags anything missing, applies chosen costs to the catalogue (audited), and sends the payment fee and a
   typical bundle cost to the Profit Model.
 - **Funeral wishes:** the plan's owner records what each covered person would like (burial or cremation, where, the church, the music, anything else, and who to call

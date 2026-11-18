@@ -145,8 +145,6 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         </Card>
       ) : null}
 
-      {['pending_review', 'approved', 'active'].includes(p.status) && (p.continuationUntil || !p.coversMainMember) ? <HandOver p={p} onChange={onChange} /> : null}
-
       {p.contributors.length > 0 ? (
         <Card tab="Shared plan" accent="berry">
           <p className="muted small">People who share the monthly cost. The owner pays what is left. Cover starts when the payments together reach the monthly total.</p>
@@ -161,6 +159,8 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
           </table>
         </Card>
       ) : null}
+
+      {['pending_review', 'approved', 'active'].includes(p.status) && (p.continuationUntil || !p.coversMainMember) ? <HandOver p={p} onChange={onChange} /> : null}
 
       <Card tab="Payments" accent="gold">
         {p.payments.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
@@ -281,11 +281,13 @@ function HandOver({ p, onChange }: { p: Policy; onChange: (a: AdminPolicy) => vo
   };
   return (
     <Card tab="Hand over the plan" accent="ember">
-      <p className="muted small">{p.continuationUntil ? `The main member has passed away. Cover for everyone else carries on until ${dateShort(p.continuationUntil)}. Agree with the family who takes the plan over, then record it here. If nobody does by then, lapse the cover.` : 'If the person who owns this plan has passed away, hand it to the person taking over.'}</p>
+      <details className="fold" open={!!p.continuationUntil}>
+        <summary>{p.continuationUntil ? `The main member has passed away. Cover for everyone else carries on until ${dateShort(p.continuationUntil)}.` : 'The owner has passed away? Hand the plan to the person taking over.'}</summary>
+        <p className="muted small" style={{ marginTop: 10 }}>Agree with the family who takes the plan over, then record it here.{p.continuationUntil ? ' If nobody does by the date above, lapse the cover.' : ''}</p>
       <form onSubmit={submit} style={{ marginTop: 12 }}>
         <div className="row" style={{ gap: 16, marginBottom: 12 }}>
-          <label><input type="radio" checked={kind === 'member'} disabled={p.members.length === 0} onChange={() => setKind('member')} /> A covered family member</label>
-          <label><input type="radio" checked={kind === 'contributor'} disabled={active.length === 0} onChange={() => setKind('contributor')} /> Someone who pays a share</label>
+          <label className="row" style={{ gap: 8 }}><input type="radio" checked={kind === 'member'} disabled={p.members.length === 0} onChange={() => setKind('member')} />A covered family member</label>
+          <label className="row" style={{ gap: 8 }}><input type="radio" checked={kind === 'contributor'} disabled={active.length === 0} onChange={() => setKind('contributor')} />Someone who pays a share</label>
         </div>
         <div className="form-grid">
           {kind === 'member' ? (
@@ -304,6 +306,7 @@ function HandOver({ p, onChange }: { p: Policy; onChange: (a: AdminPolicy) => vo
         <button type="submit" disabled={busy} style={{ marginTop: 14 }}>Hand Over The Plan</button>
         {msg ? <p className="err" role="alert">{msg}</p> : null}
       </form>
+      </details>
     </Card>
   );
 }

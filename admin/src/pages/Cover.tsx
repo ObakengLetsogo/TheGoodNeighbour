@@ -73,8 +73,16 @@ function ConfigEditor({ initial }: { initial: CoverConfig }) {
           {num('lapseAfterMissedPayments', 'Lapse after missed payments')}
           {num('reinstateWithinDays', 'Reinstate within (days)')}
           {num('coolingOffDays', 'Cooling-off period (days)', 'Cancellations inside this are flagged to staff. Confirm the figure with your underwriter.')}
-          <label className="f">Smallest share a contributor may pay (rand a month)<input type="number" value={(c.minContributionCents ?? 5000) / 100} onChange={(e) => set('minContributionCents', Math.round(Number(e.target.value) * 100) as never)} /><span className="muted small">Every person who pays costs a collection fee, so tiny shares eat the margin. This stops a plan being split into many small debit orders. Set it from the payment provider's real fee.</span></label>
-          <label className="f">Cash alternative (% of our cost of the bundle)<input type="number" value={(c.cashAlternativeBps ?? 10000) / 100} onChange={(e) => set('cashAlternativeBps', Math.round(Number(e.target.value) * 100) as never)} /><span className="muted small">What the family gets if they take cash instead of the bundle. 100 means exactly what the bundle costs us, so cash never costs more than delivering. Rules may require it to be fair to the customer: check with your lawyer.</span></label>
+        </div>
+      </Card>
+      <Card tab="Cash and shared plans" accent="gold">
+        <div className="form-grid two">
+          <label className="f">Smallest share a contributor may pay (rand a month)
+            <input type="number" value={(c.minContributionCents ?? 5000) / 100} onChange={(e) => set('minContributionCents', Math.round(Number(e.target.value) * 100) as never)} />
+            <span className="muted small">Every person who pays costs a collection fee, so tiny shares eat the margin. Set this from your payment provider's real fee.</span></label>
+          <label className="f">Cash alternative (% of our cost of the bundle)
+            <input type="number" value={(c.cashAlternativeBps ?? 10000) / 100} onChange={(e) => set('cashAlternativeBps', Math.round(Number(e.target.value) * 100) as never)} />
+            <span className="muted small">100 means cash costs us exactly what the bundle would, so it never costs more. Ask your lawyer whether it must equal the stated value instead.</span></label>
         </div>
       </Card>
       <Card tab="Who can be covered" accent="berry">

@@ -33,7 +33,7 @@ export function WaitlistPage() {
     <>
       <div className="page-head">
         <div><h1>Waiting <span className="serif">List</span></h1><p className="muted">People who asked to hear when cover opens, from the website. They agreed to be contacted about this only.</p></div>
-        <button className="ghost" onClick={exportCsv} disabled={!data?.length}>Export CSV</button>
+        <button className="secondary" onClick={exportCsv} disabled={!data?.length}>Export CSV</button>
       </div>
       {data?.length ? (
         <div className="chips" aria-label="By province">
