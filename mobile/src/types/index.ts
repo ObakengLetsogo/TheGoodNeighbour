@@ -96,6 +96,8 @@ export interface Quote {
   main: PersonQuote;
   members: PersonQuote[];
   totalMonthlyCents: Cents;
+  /** False when the owner only pays and isn't a covered person: no price or age limit applies to them. */
+  mainCovered: boolean;
 }
 
 export interface QuoteMemberInput {
@@ -176,6 +178,8 @@ export interface Policy {
   ownerShareBps: number;
   ownerShareCents: Cents;
   ownerPaidThisMonthCents: Cents;
+  /** False when the owner only pays for the plan and isn't covered themselves. */
+  coversMainMember: boolean;
 }
 
 /** Someone who shares a plan's cost. phone is only shown to the owner. */
@@ -235,6 +239,8 @@ export interface ApplyInput {
   members: MemberInput[];
   acceptedTermsVersion: number;
   acceptedPrivacyVersion: number;
+  /** Leave out (or true) to cover yourself too. False when you only pay, for example for your parents. */
+  coverMainMember?: boolean;
 }
 
 export interface DebitOrderState {

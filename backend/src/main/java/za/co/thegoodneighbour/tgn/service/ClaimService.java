@@ -56,6 +56,7 @@ public class ClaimService {
         String name, relationship = null, memberId = null;
         LocalDate dob, coverFrom;
         if (in.memberId() == null || in.memberId().isBlank()) {
+            if (!policy.isCoverMainMember()) throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "The plan owner isn't covered on this plan. Please choose the person who passed away.");
             name = policy.getHolderName(); dob = LocalDate.parse(policy.getHolderDob());
             coverFrom = accidental ? start.plusDays(cfg.getAccidentalWaitingDays()) : LocalDate.parse(policy.getWaitingEndsOn());
         } else {

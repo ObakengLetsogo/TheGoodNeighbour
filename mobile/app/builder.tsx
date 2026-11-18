@@ -40,6 +40,7 @@ export default function Build() {
   const [step, setStep] = useState(0);
   const [selection, setSelection] = useState<Selection>(() =>
     editing ? Object.fromEntries(editing.bundle.lines.map((l) => [l.itemId, l.quantity])) : { 'grocery-5000': 1, sheep: 1 });
+  const [coverMe, setCoverMe] = useState(true);
   const [idNumber, setIdNumber] = useState('');
   const [idError, setIdError] = useState<string>();
   const [debitDay, setDebitDay] = useState<number>(25);
@@ -64,7 +65,8 @@ export default function Build() {
   );
   // The main member's age comes from their ID number (or, when editing, from the cover). Until then they are priced as a typical adult.
   const holderDobIso = useMemo(() => (editing ? editing.holder.dateOfBirth : dobFromSAId(idNumber) ?? undefined), [editing, idNumber]);
-  const { quote, loading: quoting, error: quoteError } = useQuote(items, quoteMembers, holderDobIso);
+  const coverMain = editing ? editing.coversMainMember : coverMe;
+  const { quote, loading: quoting, error: quoteError } = useQuote(items, quoteMembers, holderDobIso, coverMain);
 
   if (status === 'loading') return <Screen><ScreenHeader /><LoadingState rows={3} /></Screen>;
   if (status === 'error' || !options) return <Screen><ScreenHeader /><ErrorState message={error} onRetry={reload} /></Screen>;
@@ -80,8 +82,11 @@ export default function Build() {
   const holderAge = holderDob ? ageOn(holderDob) : null;
   const total = quote?.totalMonthlyCents ?? 0;
   const memberNames = editing ? editing.members.map((m) => m.fullName) : members.map((m) => m.fullName);
-  const people: PersonLine[] = quote ? [{ ...quote.main, name: user?.fullName }, ...quote.members.map((m, i) => ({ ...m, name: memberNames[i] }))] : [];
-  const canContinue = !!quote && quote.valid && !quoting;
+  const people: PersonLine[] = quote ? [...(quote.mainCovered ? [{ ...quote.main, name: user?.fullName }] : []), ...quote.members.map((m, i) => ({ ...m, name: memberNames[i] }))] : [];
+  // An owner who only pays has to cover someone, but that is asked on the family step, so earlier steps don't block on it.
+  const missingPeopleOnly = !!quote && !quote.valid && quote.problems.every((p) => p.startsWith('Add at least one person'));
+  const canContinue = !!quote && (quote.valid || (step < 2 && missingPeopleOnly)) && !quoting;
+  const shownProblem = quote?.problems.find((p) => step >= 2 || !p.startsWith('Add at least one person'));
   const isLast = step === STEPS.length - 1;
   const needsVerify = !editing && smsEnabled && !!user && !user.phoneVerified;
   const terms = legal.find((d) => d.slug === 'terms');
@@ -90,7 +95,8 @@ export default function Build() {
   const next = () => {
     if (!editing && step === 1) {
       if (!holderDob) return setIdError("That ID number doesn't look right. Please check it.");
-      if (holderAge! < options.mainMinAge || holderAge! > options.mainMaxAge) return setIdError(`This cover is for people aged ${options.mainMinAge} to ${options.mainMaxAge}.`);
+      if (coverMain && (holderAge! < options.mainMinAge || holderAge! > options.mainMaxAge)) return setIdError(`This cover is for people aged ${options.mainMinAge} to ${options.mainMaxAge}.`);
+      if (!coverMain && holderAge! < 18) return setIdError('You need to be 18 or older to own a plan.');
       setIdError(undefined);
     }
     setStep((s) => s + 1);
@@ -105,7 +111,7 @@ export default function Build() {
         router.replace({ pathname: '/policy/[id]', params: { id: editing.id, changed: '1' } });
       } else {
         if (!terms || !privacy) throw new Error("We couldn't load our terms. Please check your connection and try again.");
-        const p = await apply({ items, holderIdNumber: idNumber, debitDay, members, acceptedTermsVersion: terms.version, acceptedPrivacyVersion: privacy.version });
+        const p = await apply({ items, holderIdNumber: idNumber, debitDay, members, acceptedTermsVersion: terms.version, acceptedPrivacyVersion: privacy.version, coverMainMember: coverMe });
         router.replace({ pathname: '/policy/[id]', params: { id: p.id, applied: '1' } });
       }
     } catch (e) {
@@ -120,7 +126,7 @@ export default function Build() {
 
   const footer = (
     <>
-      {quote && !quote.valid && step !== 1 && step !== 2 ? <Text variant="bodyS" color={colors.danger} accessibilityLiveRegion="polite">{quote.problems[0]}</Text> : null}
+      {quote && !quote.valid && step !== 1 && step !== 2 && shownProblem ? <Text variant="bodyS" color={colors.danger} accessibilityLiveRegion="polite">{shownProblem}</Text> : null}
       {quoteError ? <Text variant="bodyS" color={colors.danger}>{quoteError}</Text> : null}
       {showSum && quote ? (
         <ScrollView style={{ maxHeight: 250 }} contentContainerStyle={{ paddingBottom: spacing.sm }}>
@@ -174,7 +180,7 @@ export default function Build() {
               <BundleSummary lines={quote.lines} totalValueCents={quote.bundleValueCents} />
             </Card>
           ) : null}
-          {quote && !quote.valid ? <Text variant="body" color={colors.danger} accessibilityLiveRegion="polite">{quote.problems[0]}</Text> : null}
+          {quote && !quote.valid && shownProblem ? <Text variant="body" color={colors.danger} accessibilityLiveRegion="polite">{shownProblem}</Text> : null}
           {!editing ? <Notice text="This price is for a typical adult. It updates as soon as we know your age and your family's ages and relationships, because everyone's price depends on both." /> : null}
           <Pressable onPress={() => setShowHow(!showHow)} accessibilityRole="button" accessibilityState={{ expanded: showHow }} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 }}>
             <Icon name="calculator-variant-outline" size={22} color={colors.olive} />
@@ -189,7 +195,12 @@ export default function Build() {
         <View style={{ gap: spacing.xl, marginTop: spacing.xl }}>
           <View style={{ gap: spacing.sm }}>
             <Text variant="displayM">Now, a little about you.</Text>
-            <Text variant="body" color={colors.muted}>{user?.fullName}, we need your ID number to check you're eligible.</Text>
+            <Text variant="body" color={colors.muted}>{user?.fullName}, {coverMe ? "we need your ID number to check you're eligible." : 'we need your ID number so we know who owns the plan.'}</Text>
+          </View>
+          <View style={{ gap: spacing.sm }}>
+            <Text variant="label" color={colors.inkSoft}>Who is this cover for?</Text>
+            <Choice selected={coverMe} title="Me and my family" text="You're covered too, and your age sets your own price." onPress={() => setCoverMe(true)} />
+            <Choice selected={!coverMe} title="My family only" text="You pay, but you aren't covered. For example, you're covering your parents. Your brothers and sisters can share the cost." onPress={() => setCoverMe(false)} />
           </View>
           {needsVerify ? (
             <Pressable onPress={() => router.push('/verify-phone')} accessibilityRole="button" style={[styles.notice, { backgroundColor: '#F8EAC2' }]}>
@@ -199,7 +210,7 @@ export default function Build() {
             </Pressable>
           ) : null}
           <Input label="ID Number" value={idNumber} onChangeText={(t) => { setIdNumber(t.replace(/\D/g, '').slice(0, 13)); setIdError(undefined); }} keyboardType="number-pad" maxLength={13} error={idError}
-            hint={holderDob ? `Born ${holderDob}, age ${holderAge}. Your own price at this age is ${formatZAR(quote?.main.feeCents ?? 0)} a month.` : 'Your 13-digit South African ID number. Your age sets your own price.'} />
+            hint={holderDob ? (coverMain ? `Born ${holderDob}, age ${holderAge}. Your own price at this age is ${formatZAR(quote?.main.feeCents ?? 0)} a month.` : `Born ${holderDob}, age ${holderAge}. You won't be priced or covered.`) : (coverMain ? 'Your 13-digit South African ID number. Your age sets your own price.' : 'Your 13-digit South African ID number. It is only used to know who owns the plan.')} />
           <View style={{ gap: spacing.sm }}>
             <Text variant="label" color={colors.inkSoft}>Which day of the month should the debit order go off?</Text>
             <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
@@ -213,8 +224,8 @@ export default function Build() {
       {!editing && step === 2 ? (
         <View style={{ gap: spacing.lg, marginTop: spacing.xl }}>
           <View style={{ gap: spacing.sm }}>
-            <Text variant="displayM">Who else matters?</Text>
-            <Text variant="body" color={colors.muted}>Add the people you'd like covered. Each pays a small monthly fee. You can also do this later.</Text>
+            <Text variant="displayM">{coverMe ? 'Who else matters?' : 'Who are you covering?'}</Text>
+            <Text variant="body" color={colors.muted}>{coverMe ? "Add the people you'd like covered. Each pays a small monthly fee. You can also do this later." : 'Add the people this plan covers, such as your parents. Each has their own price. You need at least one.'}</Text>
           </View>
           {members.map((m, i) => (
             <View key={`${m.fullName}${i}`} style={styles.member}>
@@ -225,6 +236,7 @@ export default function Build() {
               <Pressable onPress={() => setMembers(members.filter((_, j) => j !== i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${m.fullName}`}><Icon name="close" size={22} color={colors.muted} /></Pressable>
             </View>
           ))}
+          {!coverMe && members.length === 0 && !adding ? <Text variant="bodyS" color={colors.warning}>Add at least one person to continue.</Text> : null}
           {adding ? (
             <Card accent="berry" tabLabel="New family member">
               <MemberForm options={options} baseMonthlyCents={quote?.baseMonthlyCents ?? 0} existing={members} onCancel={() => setAdding(false)} submitLabel="Add To My Cover"
@@ -289,6 +301,19 @@ function Line({ label, value, bold }: { label: string; value: string; bold?: boo
   );
 }
 
+function Choice({ selected, title, text, onPress }: { selected: boolean; title: string; text: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${title}. ${text}`}
+      style={[styles.choice, selected && { borderColor: colors.olive, backgroundColor: colors.oliveLight }]}>
+      <Icon name={selected ? 'radiobox-marked' : 'radiobox-blank'} size={22} color={selected ? colors.olive : colors.muted} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="cardTitle">{title}</Text>
+        <Text variant="bodyS" color={colors.inkSoft}>{text}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function Notice({ text }: { text: string }) {
   return (
     <View style={styles.notice}>
@@ -304,4 +329,5 @@ const styles = StyleSheet.create({
   member: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.card, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
   notice: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', backgroundColor: '#F7ECD8', borderRadius: radii.md, padding: spacing.md },
   agree: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', minHeight: 44 },
+  choice: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md, padding: spacing.md },
 });

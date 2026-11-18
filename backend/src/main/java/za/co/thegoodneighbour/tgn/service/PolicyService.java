@@ -62,14 +62,17 @@ public class PolicyService {
         LocalDate dob = SaId.dateOfBirth(r.holderIdNumber(), today)
                 .orElseThrow(() -> CoverService.unprocessable("That ID number doesn't look right. Please check it and try again."));
         int age = CoverRules.age(dob, today);
-        if (age < cfg.getMainMinAge() || age > cfg.getMainMaxAge())
+        boolean coverMain = !Boolean.FALSE.equals(r.coverMainMember());
+        if (coverMain && (age < cfg.getMainMinAge() || age > cfg.getMainMaxAge()))
             throw CoverService.unprocessable("This cover is for people aged " + cfg.getMainMinAge() + " to " + cfg.getMainMaxAge() + ".");
+        if (!coverMain && age < 18) throw CoverService.unprocessable("You need to be 18 or older to own a plan.");
 
         List<MemberIn> members = r.members() == null ? List.of() : r.members();
-        QuoteDto q = cover.quote(r.items(), members.stream().map(m -> new QuoteMemberIn(m.relationship(), m.dateOfBirth())).toList(), dob, null);
+        QuoteDto q = cover.quote(r.items(), members.stream().map(m -> new QuoteMemberIn(m.relationship(), m.dateOfBirth())).toList(), dob, null, coverMain);
         if (!q.valid()) throw CoverService.unprocessable(q.problems().get(0));
 
         Policy policy = new Policy(user.getId(), user.getFullName(), r.holderIdNumber(), dob.toString(), r.debitDay());
+        policy.setCoverMainMember(coverMain);
         Set<String> ids = new HashSet<>(List.of(r.holderIdNumber()));
         for (MemberIn m : members) policy.addMember(buildMember(cfg, m, ids, today, null));
         policy.recordConsent(termsV, privacyV);
@@ -83,7 +86,7 @@ public class PolicyService {
         Policy policy = owned(user, policyId);
         requireOpen(policy);
         CoverConfig cfg = cover.config();
-        QuoteDto q = cover.quote(r.items(), memberQuote(policy), LocalDate.parse(policy.getHolderDob()), policy.getId());
+        QuoteDto q = cover.quote(r.items(), memberQuote(policy), LocalDate.parse(policy.getHolderDob()), policy.getId(), policy.isCoverMainMember());
         if (!q.valid()) throw CoverService.unprocessable(q.problems().get(0));
         List<BundleVersionDto> versions = new ArrayList<>(cover.versions(policy));
         BundleVersionDto old = versions.get(versions.size() - 1);
@@ -110,7 +113,7 @@ public class PolicyService {
         List<QuoteMemberIn> all = new ArrayList<>(memberQuote(policy));
         all.add(new QuoteMemberIn(m.relationship(), m.dateOfBirth()));
         BundleVersionDto cur = cover.current(policy);
-        QuoteDto q = cover.quote(cur.lines().stream().map(l -> new BundleLineIn(l.itemId(), l.quantity())).toList(), all, LocalDate.parse(policy.getHolderDob()), policy.getId());
+        QuoteDto q = cover.quote(cur.lines().stream().map(l -> new BundleLineIn(l.itemId(), l.quantity())).toList(), all, LocalDate.parse(policy.getHolderDob()), policy.getId(), policy.isCoverMainMember());
         // Only the new person can be a problem here; the existing bundle was valid when it was set.
         List<String> mine = q.problems().stream().filter(p -> !p.startsWith("Your cover needs") && !p.contains("temporarily unavailable")).toList();
         if (!mine.isEmpty()) throw CoverService.unprocessable(mine.get(0));
@@ -446,8 +449,9 @@ public class PolicyService {
         LocalDate today = today();
         long base = policy.getBaseMonthlyCents();
         int mainBps = cfg.ageMultiplierBps(CoverRules.age(LocalDate.parse(policy.getHolderDob()), today));
-        long mainFee = CoverRules.personFee(base, 10000, mainBps);
-        policy.setMainPricing(mainBps, mainFee);
+        boolean covered = policy.isCoverMainMember();
+        long mainFee = covered ? CoverRules.personFee(base, 10000, mainBps) : 0;
+        policy.setMainPricing(covered ? mainBps : 10000, mainFee);
         long total = mainFee;
         for (PolicyMember m : policy.activeMembers()) {
             int ageBps = cfg.ageMultiplierBps(CoverRules.age(LocalDate.parse(m.getDateOfBirth()), today));
@@ -512,6 +516,6 @@ public class PolicyService {
                 p.getCancelledAt(), iso(p.getCancelRequestedAt()), iso(p.getReinstateRequestedAt()),
                 p.getStartDate() != null && Set.of("active", "lapsed").contains(p.getStatus())
                         && CoverRules.withinCoolingOff(LocalDate.parse(p.getStartDate()), cover.config().getCoolingOffDays(), today()),
-                family.contributorsOf(p, true), family.ownerShareBps(p), family.ownerShareCents(p), family.paidThisMonth(p, null));
+                family.contributorsOf(p, true), family.ownerShareBps(p), family.ownerShareCents(p), family.paidThisMonth(p, null), p.isCoverMainMember());
     }
 }

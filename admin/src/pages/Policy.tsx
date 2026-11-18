@@ -76,7 +76,7 @@ function Detail({ value, onChange }: { value: AdminPolicy; onChange: (p: AdminPo
         <Card tab="Billing" accent="gold">
           <dl className="dl">
             <dt>Base price</dt><dd>{zar(p.baseMonthlyCents)}</dd>
-            <dt>Main member (age {p.holderAge})</dt><dd>{zar(p.mainFeeCents)} <span className="muted small">× {p.mainAgeBps / 100}% age</span></dd>
+            {p.coversMainMember ? <><dt>Main member (age {p.holderAge})</dt><dd>{zar(p.mainFeeCents)} <span className="muted small">× {p.mainAgeBps / 100}% age</span></dd></> : <><dt>Plan owner (age {p.holderAge})</dt><dd>Pays only. Not covered and not priced.</dd></>}
             <dt>Every month</dt><dd>{zar(p.monthlyTotalCents)}</dd>
             <dt>Debit day</dt><dd>The {ordinal(p.debitDay)}</dd>
             <dt>Debit order</dt><dd>{label(p.mandateStatus)}</dd>

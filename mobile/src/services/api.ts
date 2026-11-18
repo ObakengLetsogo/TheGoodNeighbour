@@ -49,8 +49,8 @@ const json = (body: unknown) => JSON.stringify(body);
 export const coverService = {
   options: () => request<CoverOptions>('/api/cover'),
   /** Live price. The server is authoritative; the app never calculates premiums itself. */
-  quote: (items: BundleLineInput[], members: QuoteMemberInput[], holderDateOfBirth?: string) =>
-    request<Quote>('/api/cover/quote', { method: 'POST', body: json({ items, members, holderDateOfBirth }) }),
+  quote: (items: BundleLineInput[], members: QuoteMemberInput[], holderDateOfBirth?: string, coverMainMember = true) =>
+    request<Quote>('/api/cover/quote', { method: 'POST', body: json({ items, members, holderDateOfBirth, coverMainMember }) }),
 };
 
 export const policyService = {

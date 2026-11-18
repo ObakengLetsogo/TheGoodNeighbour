@@ -198,4 +198,76 @@ class FamilyPlanFlowTest {
         assertEquals(404, call("DELETE", "/api/policies/" + pid + "/contributors/" + cc, a.token, null).statusCode());
         assertEquals(0, ok(call("DELETE", "/api/policies/" + pid + "/contributors/" + cc, owner.token, null), 200).get("contributors").size());
     }
+
+    // ---------- an owner who only pays (siblings covering their parents) ----------
+
+    private String applyBody(String holderId, boolean coverMe, String membersJson, String bundle) throws Exception {
+        return "{\"items\":[{\"itemId\":\"" + bundle + "\",\"quantity\":1}],\"holderIdNumber\":\"" + holderId + "\",\"debitDay\":25,\"members\":[" + membersJson + "]"
+                + (coverMe ? "" : ",\"coverMainMember\":false") + consent() + "}";
+    }
+
+    @Test void anOwnerWhoOnlyPaysIsNotPricedAndNeedsSomeoneElseCovered() throws Exception {
+        String parent = "{\"relationship\":\"parent\",\"dateOfBirth\":\"" + TestData.dobAged(62) + "\"}";
+        JsonNode none = ok(call("POST", "/api/cover/quote", null, "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1}],\"members\":[],\"holderDateOfBirth\":\"" + TestData.dobAged(40) + "\",\"coverMainMember\":false}"), 200);
+        assertFalse(none.get("valid").asBoolean());
+        assertTrue(none.get("problems").toString().contains("Add at least one person to cover"));
+        assertFalse(none.get("mainCovered").asBoolean());
+
+        JsonNode withParent = ok(call("POST", "/api/cover/quote", null, "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1}],\"members\":[" + parent + "],\"holderDateOfBirth\":\"" + TestData.dobAged(40) + "\",\"coverMainMember\":false}"), 200);
+        assertTrue(withParent.get("valid").asBoolean(), withParent.toString());
+        assertEquals(0, withParent.get("main").get("feeCents").asLong());
+        assertEquals(withParent.get("members").get(0).get("feeCents").asLong(), withParent.get("totalMonthlyCents").asLong());   // only the parent is paid for
+
+        JsonNode normal = ok(call("POST", "/api/cover/quote", null, "{\"items\":[{\"itemId\":\"grocery-5000\",\"quantity\":1}],\"members\":[" + parent + "],\"holderDateOfBirth\":\"" + TestData.dobAged(40) + "\"}"), 200);
+        assertTrue(normal.get("mainCovered").asBoolean());                                   // leaving it out keeps today's behaviour
+        assertTrue(normal.get("main").get("feeCents").asLong() > 0);
+    }
+
+    @Test void thePlanOwnerKeepsTheirOwnAgeOutOfItAndCannotBeClaimedFor() throws Exception {
+        Person owner = person("Owner Seventy", true); String s = staff();
+        String ownerId = TestData.saId(TestData.dobAged(70), 3);                     // 70 is over the main-member age limit
+        String mother = TestData.member("parent", "Mother Mokoena", 90 - 20, true, 4);   // 70
+        // covering themselves at 70 is refused (the main member limit), but only paying is allowed
+        assertEquals(422, call("POST", "/api/policies", owner.token, applyBody(ownerId, true, "", "grocery-5000")).statusCode());
+        String parentJson = TestData.member("parent", "Gogo Mokoena", 62, true, 5);
+        JsonNode p = ok(call("POST", "/api/policies", owner.token, applyBody(ownerId, false, parentJson, "grocery-5000")), 201);
+        String pid = p.get("id").asString();
+        assertFalse(p.get("coversMainMember").asBoolean());
+        assertEquals(0, p.get("mainFeeCents").asLong());
+        assertEquals(p.get("members").get(0).get("feeCents").asLong(), p.get("monthlyTotalCents").asLong());
+
+        ok(call("POST", "/api/admin/policies/" + pid + "/status", s, "{\"status\":\"approved\"}"), 200);
+        ok(call("POST", "/api/admin/policies/" + pid + "/payments", s, "{\"amountCents\":" + p.get("monthlyTotalCents").asLong() + ",\"paidOn\":\"" + TestData.today() + "\",\"reference\":\"EFT-OWN\"}"), 201);
+        String today = TestData.today().toString();
+        String claim = "{\"policyId\":\"" + pid + "\",\"dateOfDeath\":\"" + today + "\",\"causeOfDeath\":\"accidental\",\"claimantName\":\"Owner\",\"claimantPhone\":\"+27821234567\","
+                + "\"delivery\":{\"recipientName\":\"Sipho\",\"recipientPhone\":\"+27715550000\",\"addressLine\":\"12 Street\",\"suburb\":\"Seshego\",\"city\":\"Polokwane\",\"province\":\"Limpopo\",\"postalCode\":\"0742\"}";
+        HttpResponse<String> forOwner = call("POST", "/api/claims", owner.token, claim + "}");
+        assertEquals(422, forOwner.statusCode());
+        assertTrue(forOwner.body().contains("isn't covered"), forOwner.body());
+        String memberId = p.get("members").get(0).get("id").asString();
+        ok(call("POST", "/api/claims", owner.token, claim.replace("\"policyId\"", "\"memberId\":\"" + memberId + "\",\"policyId\"") + "}"), 201);   // the parent can be claimed for
+
+        // later changes keep the setting: the bundle can change and people can be added, and the owner still isn't priced
+        JsonNode changed = ok(call("POST", "/api/policies/" + pid + "/bundle", owner.token, "{\"items\":[{\"itemId\":\"grocery-7500\",\"quantity\":1}]}"), 200);
+        assertFalse(changed.get("coversMainMember").asBoolean());
+        assertEquals(0, changed.get("mainFeeCents").asLong());
+        JsonNode added = ok(call("POST", "/api/policies/" + pid + "/members", owner.token, TestData.member("parent", "Baba Mokoena", 66, true, 6)), 201);
+        assertEquals(0, added.get("mainFeeCents").asLong());
+        assertEquals(added.get("members").get(0).get("feeCents").asLong() + added.get("members").get(1).get("feeCents").asLong(), added.get("monthlyTotalCents").asLong());
+    }
+
+    @Test void aSiblingWhoSharesTheCostSeesWhoIsCoveredWithoutTheOwner() throws Exception {
+        Person owner = person("Owner Payer", true), sibling = person("Sibling Payer", true); String s = staff();
+        String parentJson = TestData.member("parent", "Gogo Dube", 62, true, 8);
+        JsonNode p = ok(call("POST", "/api/policies", owner.token, applyBody(TestData.saId(TestData.dobAged(35), 9), false, parentJson, "grocery-5000")), 201);
+        String pid = p.get("id").asString();
+        invite(owner, pid, "Sibling", sibling.phone, 30, 201);
+        JsonNode inv = ok(call("GET", "/api/me/invitations", sibling.token, null), 200).get("items").get(0);
+        assertEquals(1, inv.get("peopleCovered").asInt());                                   // just the parent, not the owner
+        ok(call("POST", "/api/me/invitations/" + inv.get("id").asString() + "/accept", sibling.token, null), 200);
+        JsonNode shared = ok(call("GET", "/api/me/shared-policies", sibling.token, null), 200).get(0);
+        assertEquals(1, shared.get("members").size());
+        assertEquals("parent", shared.get("members").get(0).get("relationship").asString());
+        assertTrue(shared.toString().contains("Gogo Dube"));
+    }
 }

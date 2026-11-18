@@ -19,7 +19,7 @@ export interface Policy {
   termsVersion?: number | null; privacyVersion?: number | null; consentAt?: string | null;
   lapsedAt?: string | null; reinstateUntil?: string | null; cancelledAt?: string | null;
   cancelRequestedAt?: string | null; reinstateRequestedAt?: string | null; withinCoolingOff: boolean;
-  contributors: Contributor[]; ownerShareBps: number; ownerShareCents: number; ownerPaidThisMonthCents: number;
+  contributors: Contributor[]; ownerShareBps: number; ownerShareCents: number; ownerPaidThisMonthCents: number; coversMainMember: boolean;
 }
 export interface AdminPolicy { policy: Policy; customer: Customer | null }
 export interface Delivery { recipientName: string; recipientPhone: string; addressLine: string; suburb: string; city: string; province: string; postalCode: string; instructions?: string | null }

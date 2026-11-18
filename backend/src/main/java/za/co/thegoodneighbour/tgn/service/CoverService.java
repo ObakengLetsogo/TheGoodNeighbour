@@ -59,7 +59,7 @@ public class CoverService {
 
     /** Prices a bundle and family and reports every problem. Never throws for rule problems. */
     @Transactional(readOnly = true)
-    public QuoteDto quote(List<BundleLineIn> lines, List<QuoteMemberIn> members, LocalDate holderDob, String excludePolicyId) {
+    public QuoteDto quote(List<BundleLineIn> lines, List<QuoteMemberIn> members, LocalDate holderDob, String excludePolicyId, boolean coverMain) {
         CoverConfig cfg = config();
         LocalDate today = LocalDate.now(clock);
         List<String> problems = new ArrayList<>();
@@ -91,10 +91,13 @@ public class CoverService {
         int typical = cfg.ageMultiplierBps(30);
 
         Integer holderAge = holderDob == null ? null : CoverRules.age(holderDob, today);
-        if (holderAge != null && (holderAge < cfg.getMainMinAge() || holderAge > cfg.getMainMaxAge()))
+        if (coverMain && holderAge != null && (holderAge < cfg.getMainMinAge() || holderAge > cfg.getMainMaxAge()))
             problems.add("This cover is for people aged " + cfg.getMainMinAge() + " to " + cfg.getMainMaxAge() + ".");
-        int mainAgeBps = holderAge == null ? typical : cfg.ageMultiplierBps(holderAge);
-        PersonQuoteDto main = new PersonQuoteDto("you", holderAge, 10000, mainAgeBps, CoverRules.personFee(base, 10000, mainAgeBps));
+        // An owner who only pays isn't a covered person, so no age limit or price applies to them, but they must be an adult.
+        if (!coverMain && holderAge != null && holderAge < 18) problems.add("You need to be 18 or older to own a plan.");
+        if (!coverMain && (members == null || members.isEmpty())) problems.add("Add at least one person to cover.");
+        int mainAgeBps = coverMain ? (holderAge == null ? typical : cfg.ageMultiplierBps(holderAge)) : 10000;
+        PersonQuoteDto main = new PersonQuoteDto("you", holderAge, 10000, mainAgeBps, coverMain ? CoverRules.personFee(base, 10000, mainAgeBps) : 0);
 
         List<PersonQuoteDto> people = new ArrayList<>();
         Map<String, Long> counts = new HashMap<>();
@@ -115,7 +118,7 @@ public class CoverService {
             total += person.feeCents();
         }
         List<String> distinct = problems.stream().distinct().toList();
-        return new QuoteDto(distinct.isEmpty(), distinct, out, value, base, main, people, total);
+        return new QuoteDto(distinct.isEmpty(), distinct, out, value, base, main, people, total, coverMain);
     }
 
     // ---------------- herd capacity ----------------

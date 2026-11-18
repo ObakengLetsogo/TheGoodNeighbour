@@ -36,7 +36,7 @@ export default function PolicyDetails() {
 
   const mine = claims.filter((c) => c.policyId === policy.id);
   const people: PersonLine[] = [
-    { role: 'you', name: policy.holder.name, age: policy.holderAge, relationshipBps: 10000, ageBps: policy.mainAgeBps, feeCents: policy.mainFeeCents },
+    ...(policy.coversMainMember ? [{ role: 'you' as const, name: policy.holder.name, age: policy.holderAge, relationshipBps: 10000, ageBps: policy.mainAgeBps, feeCents: policy.mainFeeCents }] : []),
     ...policy.members.map((m) => ({ role: m.relationship, name: m.fullName, age: m.age, relationshipBps: m.relationshipBps, ageBps: m.ageBps, feeCents: m.feeCents })),
   ];
   const open = ['pending_review', 'approved', 'active'].includes(policy.status);
@@ -202,7 +202,7 @@ export default function PolicyDetails() {
           <Icon name="account-circle-outline" size={28} color={colors.olive} />
           <View style={{ flex: 1 }}>
             <Text variant="cardTitle">{policy.holder.name}</Text>
-            <Text variant="bodyS">Main member</Text>
+            <Text variant="bodyS">{policy.coversMainMember ? 'Main member' : "Plan owner. You pay for this plan but aren't covered."}</Text>
           </View>
         </View>
         {policy.members.map((m) => (

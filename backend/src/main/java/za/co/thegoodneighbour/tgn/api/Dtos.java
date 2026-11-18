@@ -37,12 +37,12 @@ public final class Dtos {
     public record BundleLineIn(@NotBlank String itemId, @Min(0) @Max(20) int quantity) {}
     public record QuoteMemberIn(@NotBlank String relationship, @Pattern(regexp = DATE) String dateOfBirth) {}
     public record QuoteRequest(@NotNull List<@Valid BundleLineIn> items, List<@Valid QuoteMemberIn> members,
-                               @Pattern(regexp = DATE) String holderDateOfBirth) {}
+                               @Pattern(regexp = DATE) String holderDateOfBirth, Boolean coverMainMember) {}
     public record BundleLineDto(String itemId, String kind, String name, int quantity, long valueCents, long monthlyCents, List<String> contents) {}
     /** One person's price: base x relationship % x age %. role is "you" for the main member, otherwise the relationship. age is null while unknown. */
     public record PersonQuoteDto(String role, Integer age, int relationshipBps, int ageBps, long feeCents) {}
     public record QuoteDto(boolean valid, List<String> problems, List<BundleLineDto> lines, long bundleValueCents, long baseMonthlyCents,
-                           PersonQuoteDto main, List<PersonQuoteDto> members, long totalMonthlyCents) {}
+                           PersonQuoteDto main, List<PersonQuoteDto> members, long totalMonthlyCents, boolean mainCovered) {}
 
     // ---------- Auth ----------
     public record RegisterRequest(
@@ -82,7 +82,7 @@ public final class Dtos {
     public record ApplyRequest(@NotEmpty List<@Valid BundleLineIn> items,
                                @NotBlank @Pattern(regexp = ID13, message = "ID numbers have 13 digits.") String holderIdNumber,
                                @Min(1) @Max(31) int debitDay, List<@Valid MemberIn> members,
-                               @NotNull Integer acceptedTermsVersion, @NotNull Integer acceptedPrivacyVersion) {}
+                               @NotNull Integer acceptedTermsVersion, @NotNull Integer acceptedPrivacyVersion, Boolean coverMainMember) {}
     /** Every field is optional: only what is sent is changed. */
     public record EditMemberIn(@Size(min = 2, max = 100) String fullName,
                                @Pattern(regexp = ID13, message = "ID numbers have 13 digits.") String idNumber,
@@ -102,7 +102,7 @@ public final class Dtos {
                             String nextDebitDate, BundleVersionDto bundle, List<BundleVersionDto> bundleHistory,
                             List<MemberDto> members, List<PaymentDto> payments, Integer termsVersion, Integer privacyVersion, String consentAt,
                             String lapsedAt, String reinstateUntil, String cancelledAt, String cancelRequestedAt, String reinstateRequestedAt,
-                            boolean withinCoolingOff, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents) {}
+                            boolean withinCoolingOff, List<ContributorDto> contributors, int ownerShareBps, long ownerShareCents, long ownerPaidThisMonthCents, boolean coversMainMember) {}
     public record CancelRequestIn(@Size(max = 100) String reason, @Size(max = 1000) String note) {}
     public record ReinstateRequestIn(@Size(max = 1000) String note) {}
     public record DebitOrderState(String state, String message) {}

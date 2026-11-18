@@ -24,7 +24,7 @@ public final class Controllers {
         public CoverController(CoverService cover) { this.cover = cover; }
         @GetMapping public CoverOptionsDto options() { return cover.options(); }
         @PostMapping("/quote") public QuoteDto quote(@Valid @RequestBody QuoteRequest r) {
-            return cover.quote(r.items(), r.members(), r.holderDateOfBirth() == null ? null : java.time.LocalDate.parse(r.holderDateOfBirth()), null);
+            return cover.quote(r.items(), r.members(), r.holderDateOfBirth() == null ? null : java.time.LocalDate.parse(r.holderDateOfBirth()), null, !Boolean.FALSE.equals(r.coverMainMember()));
         }
     }
 

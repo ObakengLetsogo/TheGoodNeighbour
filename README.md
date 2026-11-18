@@ -193,6 +193,9 @@ underwritten or approved.
   once that number is verified; contributors see names, relationships, ages and prices, never ID numbers or anyone's phone number.
   Staff record which person paid when they log a payment. This is the foundation for the "cover your parents together" product.
   Open legal questions for a lawyer: a premium payer who is not the policyholder, and the consent of the people being covered.
+- **Cover only my parents:** when applying, the owner can choose "My family only". They then pay (and invite others to share the cost)
+  but are not a covered person: they aren't priced, have no age limit beyond being 18 or older, can't be claimed for, and the plan must
+  cover at least one other person. The choice is fixed at application and survives later bundle and member changes.
 
 ## Not built yet
 

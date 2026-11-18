@@ -25,6 +25,8 @@ public class Policy {
     @Convert(converter = PiiCrypto.class) private String holderIdNumber;
     private String holderDob;
     private int debitDay;
+    /** False when the owner only pays: they are not a covered person and are not priced or claimable. */
+    private boolean coverMainMember = true;
     /** JSON list of bundle versions (what the family is owed). The last is current; earlier ones can still apply during an upgrade's waiting period. */
     @Column(columnDefinition = "text") private String bundleVersionsJson;
     /** The reference monthly price: the bundle's cost times the base rate, before anyone's relationship or age is applied. */
@@ -100,6 +102,8 @@ public class Policy {
     public String getHolderIdNumber() { return holderIdNumber; }
     public String getHolderDob() { return holderDob; }
     public int getDebitDay() { return debitDay; }
+    public boolean isCoverMainMember() { return coverMainMember; }
+    public void setCoverMainMember(boolean v) { this.coverMainMember = v; }
     public long getMonthlyTotalCents() { return monthlyTotalCents; }
     public String getMandateStatus() { return mandateStatus; }
     public Instant getCreatedAt() { return createdAt; }
