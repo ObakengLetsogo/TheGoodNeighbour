@@ -57,3 +57,7 @@
 ,Undertaker,,,,,Standard funeral service without the coffin,"What is included, and what is extra",per service / per km / per day,,,,,,,,,
 ,Undertaker,,,,,Home-village transport (repatriation),"What is included, and what is extra",per service / per km / per day,,,,,,,,,
 ,Delivery,,,,,Our own delivery of a grocery hamper,"Van or bakkie hire, fuel, driver for a trip to a North West town",per trip,,,,,,,,,
+,Payment,,,,,Fee per successful collection,Debit order collection from a customer,per collection,,,,,,,,,
+,Payment,,,,,Fee per failed collection,What a failed or reversed collection costs,per failed collection,,,,,,,,,
+,Payment,,,,,Mandate set-up fee,Setting up a new debit order,per mandate,,,,,,,,,
+,Payment,,,,,Monthly platform fee,Any monthly or minimum fee,per month,,,,,,,,,

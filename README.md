@@ -208,6 +208,9 @@ underwritten or approved.
 - **Minimum share (margin guardrail):** every person who pays costs a collection fee, so each contributor's share must be worth at least a
   set amount a month (default R50, editable in Cover & Pricing). It is checked when inviting, accepting and changing a share, and the app
   only offers shares that clear it. Set it from the payment provider's real per-collection fee.
+- **Supplier prices:** staff upload the filled-in quote sheet (`docs/quote-sheet.csv`) under **Supplier Prices**. It works out the real cost of each hamper, sheep and cow
+  from the lowest price for every part (prices in writing count first), flags anything missing, applies chosen costs to the catalogue (audited), and sends the payment fee and a
+  typical bundle cost to the Profit Model.
 - **One claim per person:** the same person can't be claimed for twice unless the earlier claim was declined (a direct protection against paying twice).
 - **After a death:** when a death claim is decided (approved, or declined because it isn't payable) that person's **cover and premium end**
   from their date of death, so we never keep charging for someone who has died. Staff can tick "made in error" when declining a claim where

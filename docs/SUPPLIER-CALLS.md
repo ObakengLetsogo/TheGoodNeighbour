@@ -138,5 +138,7 @@ Take section 7 of [`STRATEGY.md`](STRATEGY.md) with you. The four questions, in 
 
 1. Fill in the row(s) in `quote-sheet.csv`: supplier, contact, price, minimum, lead time, valid-until, **written quote? (Y/N)**.
 2. Send a short thank-you message and ask for the price in writing if you don't have it.
-3. When about **10 rows per category** are filled in, send the sheet to the product team. We'll update the system's costs, re-run the profit model,
-   and tell you whether the plan makes money at the current prices, and what to change if it doesn't.
+3. When about **10 rows per category** are filled in, open the admin dashboard, go to **Supplier Prices** and upload the sheet. It works out what each hamper, sheep and cow
+   really costs us (the lowest price for each part, with prices in writing counted first), flags anything still missing or not in writing, and lets you apply the
+   costs to the catalogue and send the payment fee and typical bundle cost to the **Profit Model**. Then send it to the product team and we'll tell you whether the
+   plan makes money at those prices, and what to change if it doesn't.
