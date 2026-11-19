@@ -1,4 +1,4 @@
-import Svg, { Circle, ClipPath, Defs, Path } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, Path, Text as SvgText } from 'react-native-svg';
 import { View } from 'react-native';
 import { spacing } from '../theme';
 import { Text } from './Text';
@@ -38,12 +38,28 @@ export function Logo({ size = 72, showName = false, align = 'center' }: { size?:
   return (
     <View style={{ alignItems: align, gap: spacing.sm }} accessible accessibilityLabel="TGN, The Good Neighbour">
       <LogoMark size={size} />
-      <Text variant="display" style={{ fontFamily: 'Urbanist_900Black', fontSize: size * 0.79, lineHeight: size * 0.76, letterSpacing: -size * 0.03 }}>TGN</Text>
+      <Wordmark size={size} />
       {showName ? (
         <Text variant="body" style={{ fontSize: Math.max(16, size * 0.235), letterSpacing: -0.4 }}>
           The <Text variant="cardTitle" style={{ fontFamily: 'Urbanist_800ExtraBold', fontSize: Math.max(16, size * 0.235) }}>Good</Text>Neighbour
         </Text>
       ) : null}
     </View>
+  );
+}
+
+const INK = '#16171D';
+
+/**
+ * "TGN" in Urbanist Black, drawn as SVG so it can be made sturdier than the font alone allows: a round outline of the same ink
+ * thickens every stroke, and the letters are stretched a little wider so they sit squat and solid under the mark.
+ */
+function Wordmark({ size }: { size: number }) {
+  const fs = size * 0.86, h = fs * 0.78, w = size * 1.8, stroke = size * 0.032;
+  return (
+    <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <SvgText x={w / 2} y={h * 0.97} fontSize={fs} fontFamily="Urbanist_900Black" fontWeight="900" fill={INK} stroke={INK} strokeWidth={stroke} strokeLinejoin="round"
+        textAnchor="middle" textLength={w - stroke * 2} lengthAdjust="spacingAndGlyphs">TGN</SvgText>
+    </Svg>
   );
 }
