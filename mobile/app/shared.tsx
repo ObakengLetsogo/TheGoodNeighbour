@@ -126,7 +126,7 @@ function SharedCard({ plan, run, busy }: { plan: SharedPolicy; run: (key: string
           </View>
         ) : null}
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
-          <Button label={editing ? 'Done' : 'Change My Share'} variant="secondary" size="small" fullWidth={false} style={{ flex: 1 }} onPress={() => setEditing(!editing)} />
+          <Button label={editing ? 'Done' : 'Change Share'} variant="secondary" size="small" fullWidth={false} style={{ flex: 1 }} onPress={() => setEditing(!editing)} />
           <Button label="Leave Plan" variant="danger" size="small" fullWidth={false} loading={busy === `leave-${plan.contributorId}`} style={{ flex: 1 }}
             onPress={() => confirmAction('Leave This Plan?', `${plan.ownerName} will be told, and your share goes back to them.`, 'Leave', () => run(`leave-${plan.contributorId}`, () => leave(plan.contributorId)))} />
         </View>

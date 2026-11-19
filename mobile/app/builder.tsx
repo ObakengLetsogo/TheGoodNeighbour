@@ -143,7 +143,7 @@ export default function Build() {
             <Icon name={showSum ? 'chevron-down' : 'chevron-up'} size={16} color={colors.olive} />
           </View>
         </View>
-        <Text variant="price" style={{ fontSize: 24, opacity: quoting ? 0.5 : 1 }} accessibilityLiveRegion="polite">{quote ? formatZAR(total) : '–'}</Text>
+        <Text variant="price" style={{ fontSize: 24, opacity: quoting ? 0.5 : 1 }} accessibilityLiveRegion="polite">{quote && total > 0 ? formatZAR(total) : '–'}</Text>
       </Pressable>
       {!isLast ? (
         <Button label="Continue" icon="arrow-right" onPress={next} disabled={step === 0 ? !canContinue : step === 1 ? needsVerify : step === 2 ? adding || !canContinue : false} />
