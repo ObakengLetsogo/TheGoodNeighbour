@@ -27,11 +27,31 @@ public class StaffAuthService {
         this.staff = staff; this.tokens = tokens;
     }
 
+    /** Five wrong passwords for one email lock staff sign-in for that email for 15 minutes. Held in memory: it resets on restart, which is fine for a lockout. */
+    private static final int MAX_FAILURES = 5;
+    private static final java.time.Duration LOCK = java.time.Duration.ofMinutes(15);
+    private final java.util.concurrent.ConcurrentHashMap<String, java.util.ArrayDeque<Instant>> failures = new java.util.concurrent.ConcurrentHashMap<>();
+    /** A real bcrypt hash of nothing in particular, so an unknown email costs the same time as a wrong password. */
+    private final String dummyHash = encoder.encode("not-a-real-password");
+
     @Transactional
     public StaffSessionDto login(StaffLoginRequest r) {
-        StaffUser user = staff.findByEmail(r.email().trim().toLowerCase())
-                .filter(u -> encoder.matches(r.password(), u.getPasswordHash()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "That email and password don't match."));
+        String email = r.email().trim().toLowerCase();
+        if (failures.size() > 10_000) failures.clear();   // random emails can't grow this without limit
+        var recent = failures.computeIfAbsent(email, k -> new java.util.ArrayDeque<>());
+        synchronized (recent) {
+            Instant cutoff = Instant.now().minus(LOCK);
+            while (!recent.isEmpty() && recent.peekFirst().isBefore(cutoff)) recent.pollFirst();
+            if (recent.size() >= MAX_FAILURES) throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Too many attempts. Please try again in 15 minutes.");
+        }
+        Optional<StaffUser> found = staff.findByEmail(email);
+        boolean good = encoder.matches(r.password(), found.map(StaffUser::getPasswordHash).orElse(dummyHash)) && found.isPresent();
+        if (!good) {
+            synchronized (recent) { recent.addLast(Instant.now()); }
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "That email and password don't match.");
+        }
+        synchronized (recent) { recent.clear(); }
+        StaffUser user = found.get();
         byte[] raw = new byte[32];
         RANDOM.nextBytes(raw);
         String token = HexFormat.of().formatHex(raw);
