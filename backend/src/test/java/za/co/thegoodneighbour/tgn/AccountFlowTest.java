@@ -144,7 +144,7 @@ class AccountFlowTest {
     @Test void legalTextIsPublicDraftsAreFlaggedAndEditsBumpTheVersionAndAreAudited() throws Exception {
         JsonNode terms = ok(call("GET", "/api/legal/terms", null, null), 200);
         assertTrue(terms.get("draft").asBoolean());
-        assertTrue(terms.get("body").asString().contains("placeholder"));
+        assertTrue(terms.get("body").asString().contains("[company name]"));
         String s = staff();
         int v = terms.get("version").asInt();
         String body = terms.get("body").asString().replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
